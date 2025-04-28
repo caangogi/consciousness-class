@@ -35,31 +35,29 @@ const BannerOne = () => {
               <div className='flex-align gap-8 mb-16' data-aos='fade-down'>
                 <span className='w-8 h-8 bg-main-600 rounded-circle' />
                 <h5 className='text-main-600 mb-0'>
-                  {" "}
-                  Your Future, Achieve Success
+                  Transforma tu Vida desde Hoy
                 </h5>
               </div>
               <h1 className='display2 mb-24 wow bounceInLeft'>
-                Find Your{" "}
+                Descubre tu{" "}
                 <span
                   className='text-main-two-600 wow bounceInRight'
                   data-wow-duration='2s'
                   data-wow-delay='.5s'
                 >
-                  Ideal
-                </span>
-                Course, Build{" "}
+                  Verdadero Potencial,
+                </span>{" "}
+                Crea{" "}
                 <span
                   className='text-main-600 wow bounceInUp'
                   data-wow-duration='1s'
                   data-wow-delay='.5s'
                 >
-                  Skills
+                  Nuevas Realidades
                 </span>
               </h1>
               <p className='text-neutral-500 text-line-2 wow bounceInUp'>
-                Welcome to EduAll, where learning knows no bounds. Whether
-                you're a student, professional, or lifelong learner...
+                Bienvenido a Consciousness Class, la plataforma donde expandes tu conciencia, activas tu poder interior y diseñamos juntos la vida extraordinaria que mereces.
               </p>
               <div className='buttons-wrapper flex-align flex-wrap gap-24 mt-40'>
                 <Link
@@ -67,7 +65,7 @@ const BannerOne = () => {
                   className='btn btn-main rounded-pill flex-align gap-8'
                   data-aos='fade-right'
                 >
-                  Browse Courses
+                  Explorar Membresías
                   <i className='ph-bold ph-arrow-up-right d-flex text-lg' />
                 </Link>
                 <Link
@@ -75,7 +73,7 @@ const BannerOne = () => {
                   className='btn btn-outline-main rounded-pill flex-align gap-8'
                   data-aos='fade-left'
                 >
-                  About Us
+                  Conoce a Yenniser
                   <i className='ph-bold ph-arrow-up-right d-flex text-lg' />
                 </Link>
               </div>
@@ -101,11 +99,11 @@ const BannerOne = () => {
                 alt=''
                 className='curve-arrow position-absolute'
               />
-              <div
+              {/* <div
                 className='banner-box one px-24 py-12 rounded-12 bg-white fw-medium box-shadow-lg d-inline-block'
                 data-aos='fade-down'
               >
-                <span className='text-main-600'>36k+</span> Enrolled Students
+                <span className='text-main-600'>+36k</span> Almas en Transformación
                 <div className='enrolled-students mt-12'>
                   <img
                     src='assets/images/thumbs/enroll-student-img1.png'
@@ -138,7 +136,7 @@ const BannerOne = () => {
                     className='w-48 h-48 rounded-circle object-fit-cover transition-2'
                   />
                 </div>
-              </div>
+              </div> */}
               <div
                 className='banner-box two px-24 py-12 rounded-12 bg-white fw-medium box-shadow-lg flex-align d-inline-flex gap-16'
                 data-aos='fade-up'
@@ -147,8 +145,8 @@ const BannerOne = () => {
                   <i className='ph ph-watch' />
                 </span>
                 <div>
-                  <h6 className='mb-4'>20% OFF</h6>
-                  <span className=''>For All Courses</span>
+                  <h6 className='mb-4'>20% de Descuento</h6>
+                  <span>en Tu Primera Membresía</span>
                 </div>
               </div>
               <div
@@ -159,12 +157,12 @@ const BannerOne = () => {
                   <i className='ph ph-phone-call' />
                 </span>
                 <div>
-                  <span className=''>Online Supports</span>
+                  <span>Asistencia Personalizada</span>
                   <a
-                    href='tel:(704)555-0127'
+                    href='tel:+34664124979'
                     className='mt-8 fw-medium text-xl d-block text-main-600 hover-text-main-500'
                   >
-                    (704) 555-0127
+                    +34 664 12 49 79
                   </a>
                 </div>
               </div>

@@ -24,16 +24,13 @@ const ChooseUsOne = () => {
               <div className='mb-40'>
                 <div className='flex-align gap-8 mb-16 wow bounceInDown'>
                   <span className='w-8 h-8 bg-main-600 rounded-circle' />
-                  <h5 className='text-main-600 mb-0'>Why Choose Us</h5>
+                  <h5 className='text-main-600 mb-0'>¿Por qué Elegirnos?</h5>
                 </div>
                 <h2 className='mb-24  wow bounceIn'>
-                  Our Commitment to Excellence, Learn, Grow &amp; Success.
+                  Nuestro Compromiso: Despertar, Expandir y Transformar
                 </h2>
                 <p className='text-neutral-500 text-line-2  wow bounceInUp'>
-                  We are passionate about transforming lives through education.
-                  Founded with a vision to make learning accessible to all, we
-                  believe in the power of knowledge to unlock opportunities and
-                  shape the future.
+                  En Consciousness Class creemos en el poder de una mente y un ser despiertos. Acompañamos tu proceso de expansión con herramientas, espacios y comunidad que impulsan una vida más plena y consciente.
                 </p>
               </div>
               <ul>
@@ -46,7 +43,7 @@ const ChooseUsOne = () => {
                     <i className='ph-bold ph-checks' />
                   </span>
                   <span className='flex-grow-1 text-neutral-500'>
-                    9/10 Average Satisfaction Rate
+                    9/10 Satisfacción de Transformación Personal
                   </span>
                 </li>
                 <li
@@ -58,7 +55,7 @@ const ChooseUsOne = () => {
                     <i className='ph-bold ph-checks' />
                   </span>
                   <span className='flex-grow-1 text-neutral-500'>
-                    96% Completitation Rate
+                    96% Compromiso en Procesos de Expansión
                   </span>
                 </li>
                 <li
@@ -70,7 +67,7 @@ const ChooseUsOne = () => {
                     <i className='ph-bold ph-checks' />
                   </span>
                   <span className='flex-grow-1 text-neutral-500'>
-                    Friendly Environment &amp; Expert Teacher
+                    Entorno Consciente y Facilitadores Expertos
                   </span>
                 </li>
               </ul>
@@ -79,7 +76,7 @@ const ChooseUsOne = () => {
                   href='/about'
                   className='btn btn-main rounded-pill flex-align d-inline-flex gap-8'
                 >
-                  Read More
+                  Saber Más
                   <i className='ph-bold ph-arrow-up-right d-flex text-lg' />
                 </Link>
               </div>
@@ -96,14 +93,14 @@ const ChooseUsOne = () => {
                     4.6
                     <span className='text-neutral-100'>(2.4k)</span>
                   </span>
-                  <span className='text-neutral-500'>AVG Reviews</span>
+                  <span className='text-neutral-500'>Valoraciones Promedio</span>
                 </div>
               </div>
               <div
                 className='banner-box one style-two px-24 py-12 rounded-12 bg-white fw-medium box-shadow-lg d-inline-block'
                 data-aos='fade-left'
               >
-                <span className='text-main-600'>36k+</span> Enrolled Students
+                <span className='text-main-600'>+36k</span> Seres en Evolución
                 <div className='enrolled-students mt-12'>
                   <img
                     src='assets/images/thumbs/enroll-student-img1.png'

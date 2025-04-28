@@ -13,20 +13,19 @@ const FooterOne = () => {
         alt=''
         className='shape one animation-scalation'
       />
-      <div className='py-120 '>
+      <div className='py-120'>
         <div className='container container-two'>
           <div className='row row-cols-xxl-5 row-cols-lg-3 row-cols-sm-2 row-cols-1 gy-5'>
             <div className='col' data-aos='fade-up' data-aos-duration={300}>
               <div className='footer-item'>
                 <div className='footer-item__logo'>
                   <Link href='/'>
-                    {" "}
                     <img src='assets/images/logo/logo.png' alt='' />
                   </Link>
                 </div>
                 <p className='my-32'>
-                  EduAll exceeded all my expectations! The instructors were not
-                  only experts
+                  Consciousness Class ha transformado vidas, expandiendo
+                  mentes y corazones más allá de los límites conocidos.
                 </p>
                 <ul className='social-list flex-align gap-24'>
                   <li className='social-list__item'>
@@ -42,13 +41,12 @@ const FooterOne = () => {
                       href='https://www.twitter.com'
                       className='text-main-600 text-2xl hover-text-main-two-600'
                     >
-                      {" "}
                       <i className='ph-bold ph-twitter-logo' />
                     </Link>
                   </li>
                   <li className='social-list__item'>
                     <Link
-                      href='https://www.linkedin.com'
+                      href='https://www.instagram.com'
                       className='text-main-600 text-2xl hover-text-main-two-600'
                     >
                       <i className='ph-bold ph-instagram-logo' />
@@ -67,14 +65,14 @@ const FooterOne = () => {
             </div>
             <div className='col' data-aos='fade-up' data-aos-duration={400}>
               <div className='footer-item'>
-                <h4 className='footer-item__title mb-32'>Navigation</h4>
+                <h4 className='footer-item__title mb-32'>Navegación</h4>
                 <ul className='footer-menu'>
                   <li className='mb-16'>
                     <Link
                       href='/about'
                       className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                     >
-                      About us
+                      Sobre Nosotros
                     </Link>
                   </li>
                   <li className='mb-16'>
@@ -82,7 +80,7 @@ const FooterOne = () => {
                       href='/courses'
                       className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                     >
-                      Courses
+                      Programas
                     </Link>
                   </li>
                   <li className='mb-16'>
@@ -90,7 +88,7 @@ const FooterOne = () => {
                       href='/instructor'
                       className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                     >
-                      Instructor
+                      Facilitadores
                     </Link>
                   </li>
                   <li className='mb-16'>
@@ -98,7 +96,7 @@ const FooterOne = () => {
                       href='/faq'
                       className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                     >
-                      FAQs
+                      Preguntas Frecuentes
                     </Link>
                   </li>
                   <li className='mb-0'>
@@ -106,7 +104,7 @@ const FooterOne = () => {
                       href='/blog'
                       className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                     >
-                      Blogs
+                      Blog
                     </Link>
                   </li>
                 </ul>
@@ -114,14 +112,14 @@ const FooterOne = () => {
             </div>
             <div className='col' data-aos='fade-up' data-aos-duration={600}>
               <div className='footer-item'>
-                <h4 className='footer-item__title mb-32'>Category</h4>
+                <h4 className='footer-item__title mb-32'>Categorías</h4>
                 <ul className='footer-menu'>
                   <li className='mb-16'>
                     <Link
                       href='/courses'
                       className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                     >
-                      UI/UX Design
+                      Conciencia Emocional
                     </Link>
                   </li>
                   <li className='mb-16'>
@@ -129,7 +127,7 @@ const FooterOne = () => {
                       href='/courses'
                       className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                     >
-                      Web Development
+                      Expansión de la Mente
                     </Link>
                   </li>
                   <li className='mb-16'>
@@ -137,7 +135,7 @@ const FooterOne = () => {
                       href='/courses'
                       className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                     >
-                      Python Development
+                      Creación Consciente
                     </Link>
                   </li>
                   <li className='mb-16'>
@@ -145,7 +143,7 @@ const FooterOne = () => {
                       href='/courses'
                       className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                     >
-                      Digital Marketing
+                      Empoderamiento Personal
                     </Link>
                   </li>
                   <li className='mb-16'>
@@ -153,7 +151,7 @@ const FooterOne = () => {
                       href='/courses'
                       className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                     >
-                      Graphic Design
+                      Meditación y Energía
                     </Link>
                   </li>
                 </ul>
@@ -161,21 +159,21 @@ const FooterOne = () => {
             </div>
             <div className='col' data-aos='fade-up' data-aos-duration={800}>
               <div className='footer-item'>
-                <h4 className='footer-item__title mb-32'>Contact Us</h4>
+                <h4 className='footer-item__title mb-32'>Contáctanos</h4>
                 <div className='flex-align gap-20 mb-24'>
                   <span className='icon d-flex text-32 text-main-600'>
                     <i className='ph ph-phone' />
                   </span>
-                  <div className=''>
+                  <div>
                     <Link
-                      href='/tel:(207)555-0119'
+                      href='tel:(207)555-0119'
                       className='text-neutral-500 d-block hover-text-main-600 mb-4'
                     >
                       (207) 555-0119
                     </Link>
                     <Link
-                      href='/tel:(704)555-0127'
-                      className='text-neutral-500 d-block hover-text-main-600 mb-0'
+                      href='tel:(704)555-0127'
+                      className='text-neutral-500 d-block hover-text-main-600'
                     >
                       (704) 555-0127
                     </Link>
@@ -185,18 +183,18 @@ const FooterOne = () => {
                   <span className='icon d-flex text-32 text-main-600'>
                     <i className='ph ph-envelope-open' />
                   </span>
-                  <div className=''>
+                  <div>
                     <Link
-                      href='/mailto:dwallo@gmail.com'
+                      href='mailto:info@consciousnessclass.com'
                       className='text-neutral-500 d-block hover-text-main-600 mb-4'
                     >
-                      dwallo@gmail.com
+                      info@consciousnessclass.com
                     </Link>
                     <Link
-                      href='/mailto:eduAll@gmail.com'
-                      className='text-neutral-500 d-block hover-text-main-600 mb-0'
+                      href='mailto:contact@consciousnessclass.com'
+                      className='text-neutral-500 d-block hover-text-main-600'
                     >
-                      eduAll@gmail.com
+                      contact@consciousnessclass.com
                     </Link>
                   </div>
                 </div>
@@ -204,12 +202,12 @@ const FooterOne = () => {
                   <span className='icon d-flex text-32 text-main-600'>
                     <i className='ph ph-map-trifold' />
                   </span>
-                  <div className=''>
+                  <div>
                     <span className='text-neutral-500 d-block mb-4'>
-                      5488 srker Rd .
+                      Calle Luz Interior 5488
                     </span>
-                    <span className='text-neutral-500 d-block mb-0'>
-                      8745 doer Dr.
+                    <span className='text-neutral-500 d-block'>
+                      Ciudad Consciente, Planeta Tierra
                     </span>
                   </div>
                 </div>
@@ -217,16 +215,15 @@ const FooterOne = () => {
             </div>
             <div className='col' data-aos='fade-up' data-aos-duration={1000}>
               <div className='footer-item'>
-                <h4 className='footer-item__title mb-32'>Subscribe Here</h4>
+                <h4 className='footer-item__title mb-32'>Suscríbete</h4>
                 <p className='text-neutral-500'>
-                  Enter your email address to register to our newsletter
-                  subscription
+                  Recibe inspiración, herramientas y novedades directas a tu correo.
                 </p>
                 <form action='#' className='mt-24 position-relative'>
                   <input
                     type='email'
                     className='form-control bg-white shadow-none border border-neutral-30 rounded-pill h-52 ps-24 pe-48 focus-border-main-600'
-                    placeholder='Email...'
+                    placeholder='Correo electrónico...'
                   />
                   <button
                     type='submit'
@@ -240,28 +237,28 @@ const FooterOne = () => {
           </div>
         </div>
       </div>
+
       <div className='container'>
         {/* bottom Footer */}
         <div className='bottom-footer bg-main-25 border-top border-dashed border-main-100 border-0 py-32'>
           <div className='container container-two'>
             <div className='bottom-footer__inner flex-between gap-3 flex-wrap'>
               <p className='bottom-footer__text'>
-                {" "}
-                Copyright © 2025 <span className='fw-semibold'>EduAll</span>
-                All Rights Reserved.
+                Copyright © 2025{" "}
+                <span className='fw-semibold'>Consciousness Class</span>. Todos los derechos reservados.
               </p>
               <div className='footer-links'>
                 <Link
                   href='#'
                   className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                 >
-                  Privacy Policy
+                  Política de Privacidad
                 </Link>
                 <Link
                   href='#'
                   className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
                 >
-                  Terms &amp; Conditions
+                  Términos y Condiciones
                 </Link>
               </div>
             </div>

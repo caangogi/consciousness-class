@@ -14,9 +14,9 @@ import TestimonialsOne from "@/components/TestimonialsOne";
 import Animation from "@/helper/Animation";
 
 export const metadata = {
-  title: "EduAll - LMS, Tutors, Education & Online Course NEXT JS Template",
+  title: "Consciousness Class - Plataforma de Membresías para tu Expansión Personal",
   description:
-    "EduAll is a comprehensive and modern NEXT JS template designed for online education platforms, learning management systems (LMS), tutors, educational institutions, and online courses. It’s the perfect solution for creating an engaging and interactive online learning experience for students, educators, and institutions. Whether you’re offering online courses, running a tutoring platform, or managing an educational website, EduAll provides the tools to help you succeed. This template is tailored to meet the needs of educators, administrators, and students, providing a seamless and engaging user experience.",
+    "Consciousness Class es una plataforma de membresías diseñada para acompañarte en tu evolución personal y expansión de conciencia. Creada por Yenniser y desarrollada en NEXT.js, ofrece un espacio donde puedes desbloquear tu verdadero potencial a través de recursos exclusivos, guías transformadoras y una comunidad en crecimiento. Consciousness Class es el lugar donde la conciencia se convierte en acción, impulsándote a crear la vida que mereces. Ideal para buscadores de crecimiento interior, transformación y conexión auténtica.",
 };
 
 const page = () => {
@@ -37,14 +37,14 @@ const page = () => {
       {/* FeaturesOne */}
       <FeaturesOne />
 
-      {/* ExploreCourseOne */}
-      <ExploreCourseOne />
-
+      {/* ExploreCourseOne  TO-DO */}
+      {/* <ExploreCourseOne />
+ */}
       {/* AboutOne */}
       <AboutOne />
 
-      {/* InstructorOne */}
-      <InstructorOne />
+      {/* InstructorOne  TO-DO */}
+      {/* <InstructorOne /> */}
 
       {/* CHooseUsOne */}
       <ChooseUsOne />

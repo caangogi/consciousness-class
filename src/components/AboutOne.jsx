@@ -32,7 +32,7 @@ const AboutOne = () => {
                   </span>
                   <div>
                     <h6 className='mb-4'>20% OFF</h6>
-                    <span className='text-neutral-500'>For All Courses</span>
+                    <span className='text-neutral-500'>En Tu Primera Membresía</span>
                   </div>
                 </div>
                 <div className='row gy-4'>
@@ -54,33 +54,27 @@ const AboutOne = () => {
                         className='bg-main-600 rounded-12 text-center py-24 px-2 w-50-percent'
                         data-aos='fade-right'
                       >
-                        <VisibilitySensor
-                          partialVisibility
-                          offset={{ bottom: 200 }}
-                        >
+                        <VisibilitySensor partialVisibility offset={{ bottom: 200 }}>
                           {({ isVisible }) => (
                             <h1 className='mb-0 text-white counter'>
                               {isVisible ? <CountUp end={16} /> : null}K
                             </h1>
                           )}
                         </VisibilitySensor>
-                        <span className='text-white'>Years of experience</span>
+                        <span className='text-white'>Vidas Transformadas</span>
                       </div>
                       <div
                         className='bg-neutral-700 rounded-12 text-center py-24 px-2 w-50-percent'
                         data-aos='fade-left'
                       >
-                        <VisibilitySensor
-                          partialVisibility
-                          offset={{ bottom: 200 }}
-                        >
+                        <VisibilitySensor partialVisibility offset={{ bottom: 200 }}>
                           {({ isVisible }) => (
                             <h1 className='mb-0 text-white counter'>
                               {isVisible ? <CountUp end={3} /> : null}K
                             </h1>
                           )}
                         </VisibilitySensor>
-                        <span className='text-white'>Years of experience</span>
+                        <span className='text-white'>Conciencias Despiertas</span>
                       </div>
                     </div>
                     <img
@@ -102,14 +96,13 @@ const AboutOne = () => {
                 <div className='mb-40'>
                   <div className='flex-align gap-8 mb-16 wow bounceInDown'>
                     <span className='w-8 h-8 bg-main-600 rounded-circle' />
-                    <h5 className='text-main-600 mb-0 '>About EduAll</h5>
+                    <h5 className='text-main-600 mb-0 '>Sobre Consciousness Class</h5>
                   </div>
                   <h2 className='mb-24 wow bounceIn'>
-                    The Place Where You Can Achieve
+                    El Espacio Donde Tu Verdadero Ser Despierta
                   </h2>
                   <p className='text-neutral-500 text-line-2 wow bounceInUp'>
-                    Welcome to EduAll, where learning knows no bounds. Whether
-                    you're a student, professional, or lifelong learner...
+                    Consciousness Class es mucho más que una plataforma. Es un lugar de expansión, de reconexión con tu poder interior y de creación consciente de tu vida sin límites.
                   </p>
                 </div>
                 <div
@@ -121,10 +114,9 @@ const AboutOne = () => {
                     <img src='assets/images/icons/about-img1.png' alt='' />
                   </span>
                   <div className='flex-grow-1'>
-                    <h4 className='text-neutral-500 mb-12'>Our Mission</h4>
+                    <h4 className='text-neutral-500 mb-12'>Nuestra Misión</h4>
                     <p className='text-neutral-500'>
-                      Driven by a team of dedicated educators, technologists,
-                      and visionaries, we strive to create a supportive
+                      Inspirar a cada ser a reconocer su grandeza, accediendo a herramientas que potencian su evolución consciente y empoderamiento.
                     </p>
                   </div>
                 </div>
@@ -137,11 +129,9 @@ const AboutOne = () => {
                     <img src='assets/images/icons/about-img2.png' alt='' />
                   </span>
                   <div className='flex-grow-1'>
-                    <h4 className='text-neutral-500 mb-12'>Our Vision</h4>
+                    <h4 className='text-neutral-500 mb-12'>Nuestra Visión</h4>
                     <p className='text-neutral-500'>
-                      A professional seeking to upskill, or a lifelong learner
-                      exploring new horizons, we're here to accompany you every
-                      step of the way.{" "}
+                      Expandir la conciencia global, creando una comunidad donde cada elección sea una contribución a un mundo más consciente, libre y pleno.
                     </p>
                   </div>
                 </div>
@@ -154,7 +144,7 @@ const AboutOne = () => {
                     href='/course'
                     className='btn btn-main rounded-pill flex-align gap-8'
                   >
-                    Read More
+                    Saber Más
                     <i className='ph-bold ph-arrow-up-right d-flex text-lg' />
                   </Link>
                   <div className='flex-align gap-20'>
@@ -167,7 +157,7 @@ const AboutOne = () => {
                       <span className='mb-4'>
                         <img src='assets/images/thumbs/signature.png' alt='' />
                       </span>
-                      <span className='text-sm d-block'>CEO Of Company</span>
+                      <span className='text-sm d-block'>Fundadora de Consciousness Class</span>
                     </div>
                   </div>
                 </div>

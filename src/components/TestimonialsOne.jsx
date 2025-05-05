@@ -62,28 +62,15 @@ const TestimonialsOne = () => {
       <div className='container'>
         <div className='row gy-5'>
           <div className='col-lg-6'>
-            <div className='testimonials__thumbs-slider pe-lg-5 me-xxl-5'>
-              <div
-                className='testimonials__thumbs wow bounceIn'
-                data-tilt=''
-                data-tilt-max={15}
-                data-tilt-speed={500}
-                data-tilt-perspective={5000}
-                data-tilt-full-page-listening=''
-              >
-                <img src='assets/images/thumbs/testimonial-img1.png' alt='' />
-              </div>
-              <div
-                className='testimonials__thumbs wow bounceIn'
-                data-tilt=''
-                data-tilt-max={15}
-                data-tilt-speed={500}
-                data-tilt-perspective={5000}
-                data-tilt-full-page-listening=''
-              >
-                <img src='assets/images/thumbs/testimonial-img2.png' alt='' />
-              </div>
-            </div>
+            <video 
+              src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2FTESTIMONIOS.mp4?alt=media&token=7b2a94d5-caa4-4f0a-becc-7fd9d26d0639"
+              controls
+              style={{
+                width: '100%'
+              }}
+            >
+
+            </video>
           </div>
           <div className='col-lg-6'>
             <div className='testimonials__content'>
@@ -95,9 +82,6 @@ const TestimonialsOne = () => {
                 <h2 className='mb-24 wow bounceIn'>
                   Experiencias Reales de Transformación en Consciousness Class
                 </h2>
-                <p className='text-neutral-500 text-line-2 wow bounceInUp'>
-                  Más de 16.000 almas ya están expandiendo su conciencia con nosotros.
-                </p>
               </div>
               <div className='testimonials__slider'>
                 <div className='testimonials-item'>
@@ -123,7 +107,7 @@ const TestimonialsOne = () => {
                     Laura Fernández
                   </h4>
                   <span className='text-neutral-700' data-aos='fade-left'>
-                    Terapeuta Holística
+                    Terapeuta Holística 
                   </span>
                 </div>
                 <div className='testimonials-item'>

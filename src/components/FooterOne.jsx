@@ -15,7 +15,7 @@ const FooterOne = () => {
       />
       <div className='py-120'>
         <div className='container container-two'>
-          <div className='row row-cols-xxl-5 row-cols-lg-3 row-cols-sm-2 row-cols-1 gy-5'>
+          <div className='row row-cols-xxl-4 row-cols-lg-3 row-cols-sm-2 row-cols-1 gy-5'>
             <div className='col' data-aos='fade-up' data-aos-duration={300}>
               <div className='footer-item'>
                 <div className='footer-item__logo'>
@@ -30,39 +30,16 @@ const FooterOne = () => {
                 <ul className='social-list flex-align gap-24'>
                   <li className='social-list__item'>
                     <Link
-                      href='https://www.facebook.com'
-                      className='text-main-600 text-2xl hover-text-main-two-600'
-                    >
-                      <i className='ph-bold ph-facebook-logo' />
-                    </Link>
-                  </li>
-                  <li className='social-list__item'>
-                    <Link
-                      href='https://www.twitter.com'
-                      className='text-main-600 text-2xl hover-text-main-two-600'
-                    >
-                      <i className='ph-bold ph-twitter-logo' />
-                    </Link>
-                  </li>
-                  <li className='social-list__item'>
-                    <Link
                       href='https://www.instagram.com'
                       className='text-main-600 text-2xl hover-text-main-two-600'
                     >
                       <i className='ph-bold ph-instagram-logo' />
                     </Link>
                   </li>
-                  <li className='social-list__item'>
-                    <Link
-                      href='https://www.pinterest.com'
-                      className='text-main-600 text-2xl hover-text-main-two-600'
-                    >
-                      <i className='ph-bold ph-pinterest-logo' />
-                    </Link>
-                  </li>
                 </ul>
               </div>
             </div>
+
             <div className='col' data-aos='fade-up' data-aos-duration={400}>
               <div className='footer-item'>
                 <h4 className='footer-item__title mb-32'>Navegación</h4>
@@ -99,86 +76,13 @@ const FooterOne = () => {
                       Preguntas Frecuentes
                     </Link>
                   </li>
-                  <li className='mb-0'>
-                    <Link
-                      href='/blog'
-                      className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
-                    >
-                      Blog
-                    </Link>
-                  </li>
                 </ul>
               </div>
             </div>
-            <div className='col' data-aos='fade-up' data-aos-duration={600}>
-              <div className='footer-item'>
-                <h4 className='footer-item__title mb-32'>Categorías</h4>
-                <ul className='footer-menu'>
-                  <li className='mb-16'>
-                    <Link
-                      href='/courses'
-                      className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
-                    >
-                      Conciencia Emocional
-                    </Link>
-                  </li>
-                  <li className='mb-16'>
-                    <Link
-                      href='/courses'
-                      className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
-                    >
-                      Expansión de la Mente
-                    </Link>
-                  </li>
-                  <li className='mb-16'>
-                    <Link
-                      href='/courses'
-                      className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
-                    >
-                      Creación Consciente
-                    </Link>
-                  </li>
-                  <li className='mb-16'>
-                    <Link
-                      href='/courses'
-                      className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
-                    >
-                      Empoderamiento Personal
-                    </Link>
-                  </li>
-                  <li className='mb-16'>
-                    <Link
-                      href='/courses'
-                      className='text-neutral-500 hover-text-main-600 hover-text-decoration-underline'
-                    >
-                      Meditación y Energía
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            </div>
+
             <div className='col' data-aos='fade-up' data-aos-duration={800}>
               <div className='footer-item'>
                 <h4 className='footer-item__title mb-32'>Contáctanos</h4>
-                <div className='flex-align gap-20 mb-24'>
-                  <span className='icon d-flex text-32 text-main-600'>
-                    <i className='ph ph-phone' />
-                  </span>
-                  <div>
-                    <Link
-                      href='tel:(207)555-0119'
-                      className='text-neutral-500 d-block hover-text-main-600 mb-4'
-                    >
-                      (207) 555-0119
-                    </Link>
-                    <Link
-                      href='tel:(704)555-0127'
-                      className='text-neutral-500 d-block hover-text-main-600'
-                    >
-                      (704) 555-0127
-                    </Link>
-                  </div>
-                </div>
                 <div className='flex-align gap-20 mb-24'>
                   <span className='icon d-flex text-32 text-main-600'>
                     <i className='ph ph-envelope-open' />
@@ -186,33 +90,15 @@ const FooterOne = () => {
                   <div>
                     <Link
                       href='mailto:info@consciousnessclass.com'
-                      className='text-neutral-500 d-block hover-text-main-600 mb-4'
+                      className='text-neutral-500 d-block hover-text-main-600'
                     >
                       info@consciousnessclass.com
                     </Link>
-                    <Link
-                      href='mailto:contact@consciousnessclass.com'
-                      className='text-neutral-500 d-block hover-text-main-600'
-                    >
-                      contact@consciousnessclass.com
-                    </Link>
-                  </div>
-                </div>
-                <div className='flex-align gap-20 mb-24'>
-                  <span className='icon d-flex text-32 text-main-600'>
-                    <i className='ph ph-map-trifold' />
-                  </span>
-                  <div>
-                    <span className='text-neutral-500 d-block mb-4'>
-                      Calle Luz Interior 5488
-                    </span>
-                    <span className='text-neutral-500 d-block'>
-                      Ciudad Consciente, Planeta Tierra
-                    </span>
                   </div>
                 </div>
               </div>
             </div>
+
             <div className='col' data-aos='fade-up' data-aos-duration={1000}>
               <div className='footer-item'>
                 <h4 className='footer-item__title mb-32'>Suscríbete</h4>
@@ -239,7 +125,6 @@ const FooterOne = () => {
       </div>
 
       <div className='container'>
-        {/* bottom Footer */}
         <div className='bottom-footer bg-main-25 border-top border-dashed border-main-100 border-0 py-32'>
           <div className='container container-two'>
             <div className='bottom-footer__inner flex-between gap-3 flex-wrap'>

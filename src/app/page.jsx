@@ -31,9 +31,6 @@ const page = () => {
       {/* BannerOne */}
       <BannerOne />
 
-      {/* BrandOne */}
-      <BrandOne />
-
       {/* FeaturesOne */}
       <FeaturesOne />
 
@@ -49,14 +46,8 @@ const page = () => {
       {/* CHooseUsOne */}
       <ChooseUsOne />
 
-      {/* CounterOne */}
-      <CounterOne />
-
       {/* TestimonialsOne */}
       <TestimonialsOne />
-
-      {/* BlogOne */}
-      <BlogOne />
 
       {/* CertificateOne */}
       <CertificateOne />

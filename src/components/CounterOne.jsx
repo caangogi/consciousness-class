@@ -1,6 +1,7 @@
 "use client";
 import CountUp from "react-countup";
 import VisibilitySensor from "react-visibility-sensor";
+
 const CounterOne = () => {
   return (
     <section className='counter py-120'>
@@ -15,7 +16,6 @@ const CounterOne = () => {
               <span className='w-80 h-80 flex-center d-inline-flex bg-white text-main-600 text-40 rounded-circle box-shadow-md mb-24'>
                 <i className='animate__wobble ph ph-users' />
               </span>
-
               <VisibilitySensor partialVisibility offset={{ bottom: 200 }}>
                 {({ isVisible }) => (
                   <h2 className='display-four mb-16 text-neutral-700 counter'>
@@ -24,7 +24,7 @@ const CounterOne = () => {
                 )}
               </VisibilitySensor>
               <span className='text-neutral-500 text-lg'>
-                Successfully Trained
+                Vidas Impactadas
               </span>
             </div>
           </div>
@@ -45,7 +45,7 @@ const CounterOne = () => {
                 )}
               </VisibilitySensor>
               <span className='text-neutral-500 text-lg'>
-                Courses Completed
+                Sesiones de Expansión
               </span>
             </div>
           </div>
@@ -66,7 +66,7 @@ const CounterOne = () => {
                 )}
               </VisibilitySensor>
               <span className='text-neutral-500 text-lg'>
-                Satisfaction Rate
+                Porcentaje de Transformación
               </span>
             </div>
           </div>
@@ -87,7 +87,7 @@ const CounterOne = () => {
                 )}
               </VisibilitySensor>
               <span className='text-neutral-500 text-lg'>
-                Students Community
+                Comunidad Consciente
               </span>
             </div>
           </div>

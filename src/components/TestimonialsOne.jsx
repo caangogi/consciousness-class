@@ -12,7 +12,6 @@ const TestimonialsOne = () => {
         const mainSlider = $(".testimonials__slider");
 
         if (thumbsSlider.length && mainSlider.length) {
-          // Initialize the sliders
           thumbsSlider.slick({
             slidesToShow: 1,
             slidesToScroll: 1,
@@ -42,12 +41,12 @@ const TestimonialsOne = () => {
     return () => {
       if (typeof window !== "undefined") {
         const $ = require("jquery");
-        // Destroy sliders on unmount
         $(".testimonials__thumbs-slider").slick("unslick");
         $(".testimonials__slider").slick("unslick");
       }
     };
   }, []);
+
   return (
     <section className='testimonials py-120 position-relative z-1 bg-main-25'>
       <img
@@ -63,42 +62,26 @@ const TestimonialsOne = () => {
       <div className='container'>
         <div className='row gy-5'>
           <div className='col-lg-6'>
-            <div className='testimonials__thumbs-slider pe-lg-5 me-xxl-5'>
-              <div
-                className='testimonials__thumbs wow bounceIn'
-                data-tilt=''
-                data-tilt-max={15}
-                data-tilt-speed={500}
-                data-tilt-perspective={5000}
-                data-tilt-full-page-listening=''
-              >
-                <img src='assets/images/thumbs/testimonial-img1.png' alt='' />
-              </div>
-              <div
-                className='testimonials__thumbs wow bounceIn'
-                data-tilt=''
-                data-tilt-max={15}
-                data-tilt-speed={500}
-                data-tilt-perspective={5000}
-                data-tilt-full-page-listening=''
-              >
-                <img src='assets/images/thumbs/testimonial-img2.png' alt='' />
-              </div>
-            </div>
+            <video 
+              src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2FTESTIMONIOS.mp4?alt=media&token=7b2a94d5-caa4-4f0a-becc-7fd9d26d0639"
+              controls
+              style={{
+                width: '100%'
+              }}
+            >
+
+            </video>
           </div>
           <div className='col-lg-6'>
             <div className='testimonials__content'>
               <div className='section-heading style-left'>
                 <div className='flex-align gap-8 mb-16 wow bounceInDown'>
                   <span className='w-8 h-8 bg-main-600 rounded-circle' />
-                  <h5 className='text-main-600 mb-0'>What Our Students Say</h5>
+                  <h5 className='text-main-600 mb-0'>Lo que Dicen Nuestros Miembros</h5>
                 </div>
                 <h2 className='mb-24 wow bounceIn'>
-                  Testimonials from Happy Learners for EduAll
+                  Experiencias Reales de Transformación en Consciousness Class
                 </h2>
-                <p className='text-neutral-500 text-line-2 wow bounceInUp'>
-                  16+ million Students are already learning on EduAll Platform
-                </p>
               </div>
               <div className='testimonials__slider'>
                 <div className='testimonials-item'>
@@ -107,37 +90,24 @@ const TestimonialsOne = () => {
                     data-aos='fade-left'
                     data-aos-duration={800}
                   >
-                    <li className='text-warning-600 text-xl d-flex'>
-                      <i className='ph-fill ph-star' />
-                    </li>
-                    <li className='text-warning-600 text-xl d-flex'>
-                      <i className='ph-fill ph-star' />
-                    </li>
-                    <li className='text-warning-600 text-xl d-flex'>
-                      <i className='ph-fill ph-star' />
-                    </li>
-                    <li className='text-warning-600 text-xl d-flex'>
-                      <i className='ph-fill ph-star' />
-                    </li>
-                    <li className='text-warning-600 text-xl d-flex'>
-                      <i className='ph-fill ph-star-half' />
-                    </li>
+                    <li className='text-warning-600 text-xl d-flex'><i className='ph-fill ph-star' /></li>
+                    <li className='text-warning-600 text-xl d-flex'><i className='ph-fill ph-star' /></li>
+                    <li className='text-warning-600 text-xl d-flex'><i className='ph-fill ph-star' /></li>
+                    <li className='text-warning-600 text-xl d-flex'><i className='ph-fill ph-star' /></li>
+                    <li className='text-warning-600 text-xl d-flex'><i className='ph-fill ph-star-half' /></li>
                   </ul>
                   <p
                     className='text-neutral-700'
                     data-aos='fade-left'
                     data-aos-duration={1200}
                   >
-                    "Enrolling in courses at EduAll was one of the best
-                    decisions I've made for my career. The flexibility of the
-                    online learning platform allowed me to study at my own pace
-                    while balancing my work”
+                    "Consciousness Class ha sido un antes y un después en mi vida. Encontré herramientas, comunidad y energía para crear la realidad que siempre soñé."
                   </p>
                   <h4 className='mt-48 mb-8' data-aos='fade-left'>
-                    Kathryn Murphy
+                    Laura Fernández
                   </h4>
                   <span className='text-neutral-700' data-aos='fade-left'>
-                    Software Developer
+                    Terapeuta Holística 
                   </span>
                 </div>
                 <div className='testimonials-item'>
@@ -146,37 +116,24 @@ const TestimonialsOne = () => {
                     data-aos='fade-left'
                     data-aos-duration={800}
                   >
-                    <li className='text-warning-600 text-xl d-flex'>
-                      <i className='ph-fill ph-star' />
-                    </li>
-                    <li className='text-warning-600 text-xl d-flex'>
-                      <i className='ph-fill ph-star' />
-                    </li>
-                    <li className='text-warning-600 text-xl d-flex'>
-                      <i className='ph-fill ph-star' />
-                    </li>
-                    <li className='text-warning-600 text-xl d-flex'>
-                      <i className='ph-fill ph-star' />
-                    </li>
-                    <li className='text-warning-600 text-xl d-flex'>
-                      <i className='ph-fill ph-star-half' />
-                    </li>
+                    <li className='text-warning-600 text-xl d-flex'><i className='ph-fill ph-star' /></li>
+                    <li className='text-warning-600 text-xl d-flex'><i className='ph-fill ph-star' /></li>
+                    <li className='text-warning-600 text-xl d-flex'><i className='ph-fill ph-star' /></li>
+                    <li className='text-warning-600 text-xl d-flex'><i className='ph-fill ph-star' /></li>
+                    <li className='text-warning-600 text-xl d-flex'><i className='ph-fill ph-star-half' /></li>
                   </ul>
                   <p
                     className='text-neutral-700'
                     data-aos='fade-left'
                     data-aos-duration={1200}
                   >
-                    "Signing up for courses at EduAll was quite possibly of the
-                    best choice I've made for my vocation. The adaptability of
-                    the internet learning stage permitted me to learn at my own
-                    speed while adjusting my work"
+                    "Cada sesión, cada herramienta y cada espacio dentro de Consciousness Class ha sido una chispa de expansión para mi vida y mi emprendimiento."
                   </p>
                   <h4 className='mt-48 mb-8' data-aos='fade-left'>
-                    John Doe
+                    Martín Ruiz
                   </h4>
                   <span className='text-neutral-700' data-aos='fade-left'>
-                    UX/UI Designer
+                    Mentor de Negocios Conscientes
                   </span>
                 </div>
               </div>

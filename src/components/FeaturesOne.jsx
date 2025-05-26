@@ -13,7 +13,6 @@ const FeaturesOne = () => {
     pauseOnHover: true,
     arrows: false,
     infinite: true,
-
     responsive: [
       {
         breakpoint: 991,
@@ -38,6 +37,7 @@ const FeaturesOne = () => {
       },
     ],
   };
+  
   return (
     <section className='features py-120 position-relative overflow-hidden'>
       <img
@@ -53,14 +53,15 @@ const FeaturesOne = () => {
       <div className='container'>
         <div className='section-heading text-center'>
           <h2 className='mb-24 wow bounceIn'>
-            Explore 4,000+ Free Online Courses For Students
+          ¿Qué más es posible para ti?
           </h2>
           <p className='wow bounceInUp'>
-            Welcome to our diverse and dynamic course catalog. we're dedicated
-            to providing you with access to high-quality education
+            Bienvenido a Consciousness Class. Accede a herramientas únicas que activan tu poder interior y te acompañan en tu evolución consciente.
           </p>
         </div>
+
         <Slider {...settings} className='features-slider'>
+
           <div className='px-8' data-aos='zoom-in' data-aos-duration={400}>
             <div className='features-item item-hover animation-item bg-main-25 border border-neutral-30 rounded-16 transition-1 hover-bg-main-600 hover-border-main-600'>
               <span className='mb-32 w-110 h-110 flex-center bg-white rounded-circle'>
@@ -71,21 +72,21 @@ const FeaturesOne = () => {
                 />
               </span>
               <h4 className='mb-16 transition-1 item-hover__text'>
-                Language Learning
+                Expansión de Tu Conciencia
               </h4>
               <p className='transition-1 item-hover__text text-line-2'>
-                Courses teaching languages such as English, Spanish, French,
-                Mandarin etc
+                Accede a sesiones, entrenamientos y herramientas diseñadas para expandir tu energía y tu conciencia.
               </p>
               <Link
                 href='/course-list-view'
                 className='item-hover__text flex-align gap-8 text-main-600 mt-24 hover-text-decoration-underline transition-1'
               >
-                View Category
+                Ver Recursos
                 <i className='ph ph-arrow-right' />
               </Link>
             </div>
           </div>
+
           <div className='px-8' data-aos='zoom-in' data-aos-duration={800}>
             <div className='features-item item-hover animation-item bg-main-25 border border-neutral-30 rounded-16 transition-1 hover-bg-main-600 hover-border-main-600'>
               <span className='mb-32 w-110 h-110 flex-center bg-white rounded-circle'>
@@ -96,21 +97,21 @@ const FeaturesOne = () => {
                 />
               </span>
               <h4 className='mb-16 transition-1 item-hover__text'>
-                Creative Arts &amp; Design
+                Creatividad y Expresión Auténtica
               </h4>
               <p className='transition-1 item-hover__text text-line-2'>
-                Courses on graphic design, digital art, photography, video
-                editing
+                Desbloquea tu autenticidad a través del arte, el diseño consciente y nuevas formas de comunicación energética.
               </p>
               <Link
                 href='/course-list-view'
                 className='item-hover__text flex-align gap-8 text-main-600 mt-24 hover-text-decoration-underline transition-1'
               >
-                View Category
+                Ver Recursos
                 <i className='ph ph-arrow-right' />
               </Link>
             </div>
           </div>
+
           <div className='px-8' data-aos='zoom-in' data-aos-duration={1200}>
             <div className='features-item item-hover animation-item bg-main-25 border border-neutral-30 rounded-16 transition-1 hover-bg-main-600 hover-border-main-600'>
               <span className='mb-32 w-110 h-110 flex-center bg-white rounded-circle'>
@@ -121,47 +122,23 @@ const FeaturesOne = () => {
                 />
               </span>
               <h4 className='mb-16 transition-1 item-hover__text'>
-                Health &amp; Fitness
+                Bienestar Energético Integral Consciente
               </h4>
               <p className='transition-1 item-hover__text text-line-2'>
-                Courses on nutrition, fitness training, yoga, meditation,
-                wellness coaching...
+                Reconecta tu cuerpo, mente y energía mediante prácticas integrativas de expansión y sanación consciente.
               </p>
               <Link
                 href='/course-list-view'
                 className='item-hover__text flex-align gap-8 text-main-600 mt-24 hover-text-decoration-underline transition-1'
               >
-                View Category
+                Ver Recursos
                 <i className='ph ph-arrow-right' />
               </Link>
             </div>
           </div>
-          <div className='px-8' data-aos='zoom-in' data-aos-duration={1600}>
-            <div className='features-item item-hover animation-item bg-main-25 border border-neutral-30 rounded-16 transition-1 hover-bg-main-600 hover-border-main-600'>
-              <span className='mb-32 w-110 h-110 flex-center bg-white rounded-circle'>
-                <img
-                  src='assets/images/icons/feature-icon2.png'
-                  className='animate__bounce'
-                  alt=''
-                />
-              </span>
-              <h4 className='mb-16 transition-1 item-hover__text'>
-                Creative Arts &amp; Design
-              </h4>
-              <p className='transition-1 item-hover__text text-line-2'>
-                Courses on graphic design, digital art, photography, video
-                editing
-              </p>
-              <Link
-                href='/course-list-view'
-                className='item-hover__text flex-align gap-8 text-main-600 mt-24 hover-text-decoration-underline transition-1'
-              >
-                View Category
-                <i className='ph ph-arrow-right' />
-              </Link>
-            </div>
-          </div>
+
         </Slider>
+
         <div className='flex-align gap-16 mt-40 justify-content-center'>
           <button
             type='button'

@@ -15,10 +15,9 @@ const BlogOne = () => {
       />
       <div className='container'>
         <div className='section-heading text-center'>
-          <h2 className='mb-24 wow bounceIn'>Recent Articles</h2>
+          <h2 className='mb-24 wow bounceIn'>Últimos Artículos</h2>
           <p className='wow bounceInUp'>
-            Consectetur adipisicing elit, sed do eiusmod tempor inc idid unt ut
-            labore et dolore magna aliqua enim ad...
+            Explora nuevas posibilidades, expande tu conciencia y descubre herramientas que transforman tu realidad.
           </p>
         </div>
         <div className='row gy-4'>
@@ -32,19 +31,19 @@ const BlogOne = () => {
                 <Link href='/blog-details' className='w-100 h-100'>
                   <img
                     src='assets/images/thumbs/blog-img1.png'
-                    alt='Blog Image'
+                    alt='Imagen Blog'
                     className='scale-hover-item__img rounded-12 cover-img transition-2'
                   />
                 </Link>
               </div>
               <div className='p-24 pt-32'>
-                <div className=''>
+                <div>
                   <span className='px-20 py-8 bg-main-two-600 rounded-8 text-white fw-medium mb-20'>
-                    Student life
+                    Vida Consciente
                   </span>
                   <h4 className='mb-28'>
                     <Link href='/blog-details' className='link text-line-2'>
-                      The Importance of Diversity in Higher Education
+                      Cómo Crear tu Realidad Desde la Conciencia
                     </Link>
                   </h4>
                   <div className='flex-align gap-14 flex-wrap my-20'>
@@ -72,17 +71,15 @@ const BlogOne = () => {
                     </div>
                   </div>
                   <p className='text-neutral-500 text-line-2'>
-                    Unlock the secrets to effective time management in the
-                    digital learning space...
+                    Aprende cómo tu percepción, energía y elecciones pueden dar forma a una nueva vida.
                   </p>
                 </div>
                 <div className='pt-24 border-top border-neutral-50 mt-28 border-dashed border-0'>
                   <Link
                     href='/blog-details'
                     className='flex-align gap-8 text-main-600 hover-text-decoration-underline transition-1 fw-semibold'
-                    tabIndex={0}
                   >
-                    Read More
+                    Leer Más
                     <i className='ph ph-arrow-right' />
                   </Link>
                 </div>
@@ -99,19 +96,19 @@ const BlogOne = () => {
                 <Link href='/blog-details' className='w-100 h-100'>
                   <img
                     src='assets/images/thumbs/blog-img2.png'
-                    alt='Blog Image'
+                    alt='Imagen Blog'
                     className='scale-hover-item__img rounded-12 cover-img transition-2'
                   />
                 </Link>
               </div>
               <div className='p-24 pt-32'>
-                <div className=''>
+                <div>
                   <span className='px-20 py-8 bg-success-600 rounded-8 text-white fw-medium mb-20'>
-                    Freedom
+                    Libertad Personal
                   </span>
                   <h4 className='mb-28'>
                     <Link href='/blog-details' className='link text-line-2'>
-                      The Importance of Diversity in Higher Education
+                      Elige Diferente: El Poder de las Decisiones Conscientes
                     </Link>
                   </h4>
                   <div className='flex-align gap-14 flex-wrap my-20'>
@@ -139,17 +136,15 @@ const BlogOne = () => {
                     </div>
                   </div>
                   <p className='text-neutral-500 text-line-2'>
-                    Unlock the secrets to effective time management in the
-                    digital learning space...
+                    Descubre cómo una sola elección puede transformar por completo tu camino de vida.
                   </p>
                 </div>
                 <div className='pt-24 border-top border-neutral-50 mt-28 border-dashed border-0'>
                   <Link
                     href='/blog-details'
                     className='flex-align gap-8 text-main-600 hover-text-decoration-underline transition-1 fw-semibold'
-                    tabIndex={0}
                   >
-                    Read More
+                    Leer Más
                     <i className='ph ph-arrow-right' />
                   </Link>
                 </div>
@@ -166,19 +161,19 @@ const BlogOne = () => {
                 <Link href='/blog-details' className='w-100 h-100'>
                   <img
                     src='assets/images/thumbs/blog-img3.png'
-                    alt='Blog Image'
+                    alt='Imagen Blog'
                     className='scale-hover-item__img rounded-12 cover-img transition-2'
                   />
                 </Link>
               </div>
               <div className='p-24 pt-32'>
-                <div className=''>
+                <div>
                   <span className='px-20 py-8 bg-main-two-600 rounded-8 text-white fw-medium mb-20'>
-                    Online
+                    Conexión
                   </span>
                   <h4 className='mb-28'>
                     <Link href='/blog-details' className='link text-line-2'>
-                      The Importance of Diversity in Higher Education
+                      Herramientas para Elevar tu Energía Cada Día
                     </Link>
                   </h4>
                   <div className='flex-align gap-14 flex-wrap my-20'>
@@ -206,17 +201,15 @@ const BlogOne = () => {
                     </div>
                   </div>
                   <p className='text-neutral-500 text-line-2'>
-                    Unlock the secrets to effective time management in the
-                    digital learning space...
+                    Eleva tu vibración diaria con prácticas simples que transforman tu bienestar y conexión interior.
                   </p>
                 </div>
                 <div className='pt-24 border-top border-neutral-50 mt-28 border-dashed border-0'>
                   <Link
                     href='/blog-details'
                     className='flex-align gap-8 text-main-600 hover-text-decoration-underline transition-1 fw-semibold'
-                    tabIndex={0}
                   >
-                    Read More
+                    Leer Más
                     <i className='ph ph-arrow-right' />
                   </Link>
                 </div>

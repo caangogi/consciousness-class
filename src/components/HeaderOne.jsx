@@ -3,8 +3,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import $ from "jquery";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 const HeaderOne = () => {
+  const  { signOut } = useAuth();
   let pathname = usePathname();
   const [scroll, setScroll] = useState(false);
   const [isMenuActive, setIsMenuActive] = useState(false);
@@ -203,6 +205,7 @@ const HeaderOne = () => {
                       </li>
                     )
                   )}
+                 
                 </ul>
               </div>
               {/* Menu End  */}
@@ -239,6 +242,13 @@ const HeaderOne = () => {
                 <i className='ph ph-list' />
               </button>
             </div>
+
+            <div className='header-right d-block'
+              onClick={signOut}
+            >
+              Cerrar sesión 
+            </div>
+
             {/* Header Right End  */}
           </nav>
         </div>

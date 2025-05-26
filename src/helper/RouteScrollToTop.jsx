@@ -57,9 +57,7 @@ const RouteScrollToTop = () => {
     return () => {
       window.removeEventListener("scroll", updateProgress);
       window.removeEventListener("scroll", handleScroll);
-      document
-        .querySelector(".progress-wrap")
-        .removeEventListener("click", handleClick);
+      document?.querySelector(".progress-wrap")?.removeEventListener("click", handleClick);
     };
   }, []);
 

@@ -20,7 +20,7 @@ const page = () => {
       <HeaderOne />
 
       {/* Breadcrumb */}
-      <Breadcrumb title={"Sign In"} />
+      <Breadcrumb title={"Entra a tu cuenta"} />
 
       {/* SignInInner */}
       <SignInInner />

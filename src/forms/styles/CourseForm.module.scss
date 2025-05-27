@@ -1,0 +1,170 @@
+@import '../styles/shared';
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 18px; // Espacio entre grupos de campos en la misma fila (vertical en móvil)
+  margin-bottom: 24px;
+
+  @include tablet {
+    flex-direction: row;
+    gap: 24px; // Espacio horizontal entre grupos de campos en tablet+
+  }
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px; // Espacio entre label, input y mensaje de error/ayuda
+  flex: 1; // Para que los grupos en una fila compartan espacio
+
+  &.fullWidth { // Para campos que ocupan toda la fila
+    flex-basis: 100%;
+  }
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: $text-primary-color;
+  margin-bottom: 2px; // Pequeño ajuste si el gap del formGroup no es suficiente
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 1rem;
+  color: $text-primary-color;
+  background-color: $white;
+  border: 1px solid $input-border-color;
+  border-radius: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  appearance: none; // Quitar apariencia nativa para select
+
+  &::placeholder {
+    color: $text-placeholder-color;
+    opacity: 1;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $input-focus-border-color;
+    box-shadow: 0 0 0 3px $input-focus-shadow-color;
+  }
+
+  &.invalid {
+    border-color: $error-color;
+    &:focus {
+      box-shadow: 0 0 0 3px rgba($error-color, 0.25);
+    }
+  }
+
+  &:disabled {
+    background-color: $disabled-bg-color;
+    color: $disabled-text-color;
+    cursor: not-allowed;
+    border-color: $border-color;
+  }
+}
+
+.textarea {
+  min-height: 120px;
+  resize: vertical; // Permitir redimensionar verticalmente
+  font-family: inherit; // Asegurar que hereda la fuente correcta
+}
+
+.selectWrapper { // Para añadir una flecha personalizada al select
+  position: relative;
+  width: 100%;
+
+  &::after {
+    content: '▼'; // O un SVG como background-image
+    font-size: 0.8rem;
+    color: $text-secondary-color;
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none; // Para que no interfiera con el click en el select
+  }
+
+  .select { // El select dentro del wrapper no necesita la flecha por defecto
+    padding-right: 40px; // Espacio para la flecha personalizada
+  }
+   .select:disabled + &::after { // Ocultar flecha si está deshabilitado
+     display: none;
+   }
+}
+
+
+.errorMessage,
+.helpText {
+  font-size: 0.8rem;
+  margin-top: 2px; // Pequeño espacio si el gap del formGroup no es suficiente
+}
+
+.errorMessage {
+  color: $error-color;
+  font-weight: 500;
+}
+
+.helpText {
+  color: $text-secondary-color;
+}
+
+.imagePreview {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    max-height: 150px;
+    border-radius: 6px;
+    margin-top: 10px;
+    border: 1px solid $border-color;
+    object-fit: cover;
+}
+
+.submitButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: $white;
+  background-color: $primary-color;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  margin-top: 24px; // Espacio sobre el botón
+
+  &:hover:not(:disabled) {
+    background-color: $primary-dark-color;
+    box-shadow: 0 2px 8px rgba($primary-color, 0.3);
+  }
+
+  &:disabled {
+    background-color: lighten($primary-color, 20%);
+    color: rgba($white, 0.8);
+    cursor: not-allowed;
+  }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba($white, 0.5);
+    border-top-color: $white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 10px;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

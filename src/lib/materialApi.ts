@@ -80,6 +80,9 @@ export async function uploadFileToStorage(
     headers: { 'Content-Type': file.type },
     body: file,
   });
+
+  console.log('res at material fornt api::: ', res)
+
   if (!res.ok) throw new Error('Upload failed');
 }
 

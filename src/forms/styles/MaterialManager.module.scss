@@ -1,0 +1,284 @@
+// src/components/course-wizard/styles/_MaterialManager.module.scss
+
+@import 'shared';
+
+.materialManager {
+    padding: $spacing-xl;
+    background-color: $surface-color;
+    border-radius: $border-radius-lg; // Bordes más suaves
+    box-shadow: $shadow-elevation-2; // Sombra más pronunciada pero suave
+    max-width: 900px; // Limitar ancho para legibilidad
+    margin: $spacing-xl auto; // Centrar el componente
+    
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xl; // Espacio entre secciones
+  
+    @include tablet {
+      padding: $spacing-xxl;
+    }
+  }
+  
+  .sectionTitle {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $text-primary-color; // Color de texto principal
+    text-align: center;
+    margin-bottom: $spacing-lg; // Espacio inferior
+  
+    @include tablet {
+      font-size: $font-size-xxl;
+      text-align: left;
+      margin-bottom: $spacing-xl;
+    }
+  }
+  
+  .subsectionTitle {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-semibold;
+      color: $primary-dark-color; // Un toque de color primario para los títulos de sección
+      margin-bottom: $spacing-lg;
+      padding-bottom: $spacing-sm;
+      border-bottom: 2px solid lighten($border-color, 5%); // Borde inferior más marcado
+  }
+  
+  .formGroup {
+    margin-bottom: $spacing-lg; // Espaciado vertical
+  
+    &.colSpan2 {
+      @include tablet {
+        grid-column: span 2;
+      }
+    }
+  }
+  
+  .formLabel {
+    display: block;
+    font-size: $font-size-sm;
+    color: $text-secondary-color;
+    margin-bottom: $spacing-xs;
+    font-weight: $font-weight-medium;
+  }
+  
+  .formControl, .formSelect {
+    @include form-field-base; // Aplica los estilos base de campo de formulario
+  }
+  
+  .formCard {
+    background-color: $background-color; // Un tono ligeramente diferente para la tarjeta interna
+    border-radius: $border-radius-lg;
+    padding: $spacing-xl;
+    box-shadow: $shadow-elevation-1; // Sombra más sutil para la tarjeta interna
+    
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg; // Espacio entre elementos dentro de la tarjeta
+    
+    @include tablet {
+      padding: $spacing-xl;
+    }
+  }
+  
+  .formGrid {
+    display: grid;
+    gap: $spacing-lg; // Aumenta el gap para un look más limpio
+    grid-template-columns: 1fr; 
+  
+    @include tablet {
+      grid-template-columns: 1.2fr 2fr 0.8fr; 
+      align-items: end; 
+    }
+  }
+  
+  .uploadButtonContainer {
+      display: flex;
+      justify-content: center; // Centrar el botón en móvil
+      
+      @include tablet {
+          justify-content: flex-end; // Alinear a la derecha en tablet/desktop
+          height: 100%; 
+          align-items: flex-end; 
+      }
+  }
+  
+  .fileNamePreview {
+      font-size: $font-size-sm;
+      color: $text-secondary-color;
+      margin-top: $spacing-sm; // Más espacio
+      word-break: break-all;
+      font-weight: $font-weight-normal;
+      padding: $spacing-xs $spacing-sm;
+      background-color: lighten($primary-light-color, 15%); // Un fondo sutil para el nombre del archivo
+      border-radius: $border-radius-sm;
+      display: inline-block; // Para que el padding y background funcionen
+  }
+  
+  .errorMessage {
+    background-color: lighten($error-color, 35%);
+    color: $error-color;
+    border: 1px solid lighten($error-color, 20%);
+    border-radius: $border-radius-md;
+    padding: $spacing-md;
+    margin-top: $spacing-lg; // Más espacio
+    font-size: $font-size-sm;
+    text-align: center;
+    font-weight: $font-weight-medium;
+  }
+  
+  .hintMessage {
+      font-size: $font-size-sm;
+      color: $text-secondary-color;
+      margin-top: $spacing-md;
+      text-align: center;
+      background-color: lighten($warning-color, 35%);
+      border: 1px solid lighten($warning-color, 20%);
+      border-radius: $border-radius-md;
+      padding: $spacing-md;
+      font-weight: $font-weight-medium;
+  }
+  
+  .formActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-md;
+    margin-top: $spacing-xl;
+    justify-content: space-between; // Espacio entre los botones
+  
+    .buttonPrimary {
+      @include button-base($primary-color, $text-light-color, $primary-dark-color);
+      flex-grow: 1;
+      font-weight: $font-weight-semibold; // Más énfasis
+  
+      @include tablet {
+          flex-grow: 0;
+          min-width: 150px; // Ancho mínimo para los botones de navegación
+      }
+  
+      &.buttonNext {
+          margin-left: auto; // Empuja el botón "Siguiente" a la derecha
+      }
+    }
+  
+    .buttonSecondary {
+      @include button-base($background-color, $text-secondary-color, darken($background-color, 5%));
+      border: 1px solid $border-color; // Añadir un borde
+      flex-grow: 1;
+      font-weight: $font-weight-semibold;
+  
+      @include tablet {
+          flex-grow: 0;
+          min-width: 150px;
+      }
+    }
+  
+    .spinner {
+      border: 3px solid rgba($white, 0.3); // Grosor del spinner
+      border-top: 3px solid $white;
+      border-radius: 50%;
+      width: 1.2em;
+      height: 1.2em;
+      animation: spin 0.8s linear infinite; // Animación más rápida
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: $spacing-sm; // Más espacio
+    }
+  
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  }
+  
+  .materialsListContainer {
+      margin-top: $spacing-xxl; // Más espacio antes de la lista
+      border: 1px solid $border-color;
+      border-radius: $border-radius-lg;
+      overflow: hidden;
+      box-shadow: $shadow-elevation-1; // Sombra sutil para la lista completa
+  }
+  
+  .materialsList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .materialItem {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: $spacing-md $spacing-lg; // Más padding horizontal
+    border-bottom: 1px solid lighten($border-color, 3%);
+    background-color: $surface-color;
+    transition: background-color $transition-speed-normal $transition-ease-out;
+  
+    &:last-child {
+      border-bottom: none;
+    }
+  
+    &:hover {
+      background-color: lighten($primary-light-color, 10%); // Fondo de hover más sutil y alineado
+    }
+  
+    @include tablet {
+      flex-direction: row;
+      align-items: center;
+      padding: $spacing-md $spacing-xl; // Aumentar padding en desktop
+    }
+  }
+  
+  .materialLink {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: $text-primary-color; 
+    font-weight: $font-weight-medium;
+    margin-bottom: $spacing-sm; 
+  
+    &:hover {
+      color: $primary-dark-color;
+      text-decoration: underline;
+    }
+  
+    @include tablet {
+      margin-bottom: 0;
+    }
+  }
+  
+  .materialTypeBadge {
+      background-color: $primary-light-color; // Color de badge más integrado
+      color: $primary-dark-color;
+      font-size: $font-size-xs;
+      font-weight: $font-weight-bold; // Texto del badge en negrita
+      padding: $spacing-xxs $spacing-sm; // Aumentar padding
+      border-radius: $border-radius-sm;
+      margin-right: $spacing-sm;
+      white-space: nowrap; 
+      text-transform: uppercase; // Mayúsculas para el tipo
+  }
+  
+  .materialFileName {
+      font-size: $font-size-base;
+      word-break: break-all;
+      font-weight: $font-weight-normal;
+  }
+  
+  .actionButtonDelete {
+    @include button-base(lighten($error-color, 10%), $white, $error-color); // Base del botón de error
+    padding: $spacing-xs $spacing-md;
+    font-size: $font-size-sm;
+    margin-left: auto;
+    font-weight: $font-weight-medium;
+  }
+  
+  .emptyState {
+    text-align: center;
+    color: $text-secondary-color;
+    font-size: $font-size-base;
+    padding: $spacing-xxl 0; // Más padding para centrar
+    background-color: lighten($background-color, 2%);
+    border-radius: $border-radius-md;
+    margin-top: 0; // Se elimina el margin-top porque está en el contenedor
+  }
+  

@@ -10,6 +10,8 @@ import {
   Module as ModuleType,
 } from '@/lib/moduleApi';
 
+import styles from '../styles/ModuleManager.module.scss'
+
 interface ModuleManagerProps {
   courseId: string;
   modules: ModuleType[];
@@ -141,108 +143,148 @@ export default function ModuleManager({
     }
   };
 
-  return (
-    <div className="container mt-4">
-      <div className="card">
-        <div className="card-header">Gestión de Módulos</div>
-        <div className="card-body">
-          <form onSubmit={handleAdd} noValidate>
-            <div className="mb-3">
-              <label className="form-label">Título</label>
-              <input
-                type="text"
-                className={`form-control ${errors.title ? 'is-invalid' : ''}`}
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                disabled={loading}
-              />
-              {errors.title && <div className="invalid-feedback">{errors.title}</div>}
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Orden</label>
-              <input
-                type="number"
-                className={`form-control ${errors.order ? 'is-invalid' : ''}`}
-                value={order}
-                onChange={e => setOrder(Number(e.target.value))}
-                disabled={loading}
-              />
-              {errors.order && <div className="invalid-feedback">{errors.order}</div>}
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Descripción (opcional)</label>
-              <textarea
-                rows={2}
-                className="form-control"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            {submitError && <div className="alert alert-danger">{submitError}</div>}
-            <div className="d-flex justify-content-between mb-4">
-              <button type="button" className="btn btn-secondary" onClick={onBack} disabled={loading}>Atrás</button>
-              <button type="submit" className="btn btn-primary" disabled={loading}>Añadir</button>
-              <button type="button" className="btn btn-primary" onClick={onNext} disabled={!items.length}>Siguiente</button>
-            </div>
-          </form>
+  const sortedItems = [...items].sort((a, b) => a.order - b.order);
 
-          {items.length === 0 ? (
-            <p className="text-muted">No hay módulos aún.</p>
-          ) : (
-            items.sort((a, b) => a.order - b.order).map(mod => (
-              <div key={mod.id} className="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                  {editingId === mod.id ? (
-                    <>
-                      <input
-                        className={`form-control mb-2 ${errors.title ? 'is-invalid' : ''}`}
-                        value={editTitle}
-                        onChange={e => setEditTitle(e.target.value)}
-                        disabled={loading}
-                      />
-                      {errors.title && <div className="invalid-feedback">{errors.title}</div>}
-                      <input
-                        type="number"
-                        className={`form-control mb-2 ${errors.order ? 'is-invalid' : ''}`}
-                        value={editOrder}
-                        onChange={e => setEditOrder(Number(e.target.value))}
-                        disabled={loading}
-                      />
-                      {errors.order && <div className="invalid-feedback">{errors.order}</div>}
-                      <textarea
-                        rows={2}
-                        className="form-control mb-2"
-                        value={editDescription}
-                        onChange={e => setEditDescription(e.target.value)}
-                        disabled={loading}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <h5>{mod.title}</h5>
-                      <p className="mb-1 text-muted">Orden: {mod.order}</p>
-                      {mod.description && <p className="mb-0">{mod.description}</p>}
-                    </>
-                  )}
-                </div>
-                <div className="btn-group btn-group-sm">
-                  {editingId === mod.id ? (
-                    <> 
-                      <button onClick={handleSave} disabled={loading} className="btn btn-success">Guardar</button>
-                      <button onClick={() => setEditingId(null)} disabled={loading} className="btn btn-secondary">Cancelar</button>
-                    </>
-                  ) : (
-                    <> 
-                      <button onClick={() => startEdit(mod)} disabled={loading} className="btn btn-secondary">Editar</button>
-                      <button onClick={() => handleDelete(mod.id)} disabled={loading} className="btn btn-danger">Eliminar</button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
+  return (
+    <div className={styles.managerContainer}>
+      <h2 className={styles.sectionTitle}>Gestión de Módulos</h2>
+
+      <form onSubmit={handleAdd} noValidate className={styles.addModuleForm}>
+        <div className={styles.formRow}>
+          <div className={styles.formGroup}>
+            <label htmlFor="newModuleTitle" className={styles.label}>Título del Nuevo Módulo</label>
+            <input
+              id="newModuleTitle"
+              type="text"
+              className={`${styles.input} ${errors.title ? styles.invalid : ''}`}
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              disabled={loading}
+              placeholder="Ej: Introducción a..."
+            />
+            {errors.title && <span className={styles.errorMessage}>{errors.title}</span>}
+          </div>
+          <div className={`${styles.formGroup} ${styles.orderField}`}>
+            <label htmlFor="newModuleOrder" className={styles.label}>Orden</label>
+            <input
+              id="newModuleOrder"
+              type="number"
+              className={`${styles.input} ${errors.order ? styles.invalid : ''}`}
+              value={order}
+              onChange={e => setOrder(Number(e.target.value))}
+              disabled={loading}
+            />
+            {errors.order && <span className={styles.errorMessage}>{errors.order}</span>}
+          </div>
         </div>
+        <div className={styles.formGroup} style={{ marginBottom: 'var(--spacing-lg)' }}> {/* Usando variable CSS o string */}
+          <label htmlFor="newModuleDescription" className={styles.label}>Descripción (Opcional)</label>
+          <textarea
+            id="newModuleDescription"
+            rows={3}
+            className={styles.textarea}
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            disabled={loading}
+            placeholder="Breve descripción del contenido del módulo..."
+          />
+        </div>
+        <div className={`${styles.buttonGroup} ${styles.end}`}>
+          <button type="submit" className={styles.button} disabled={loading}>
+            {/* <FaPlus className={styles.icon} />  */}
+            {loading ? 'Añadiendo...' : 'Añadir Módulo'}
+          </button>
+        </div>
+      </form>
+
+      {submitError && <div className={styles.globalError}>{submitError}</div>}
+
+      <div className={styles.moduleList}>
+        {sortedItems.length === 0 && !loading ? (
+          <p className={styles.noModulesMessage}>Aún no has añadido ningún módulo. ¡Empieza creando el primero!</p>
+        ) : (
+          sortedItems.map(mod => (
+            <div key={mod.id} className={styles.moduleItem}>
+              {editingId === mod.id ? (
+                <div className={styles.editForm}>
+                  <div className={styles.formGroup} style={{ marginBottom: 'var(--spacing-md)' }}>
+                    <label htmlFor={`editTitle-${mod.id}`} className={styles.label}>Título</label>
+                    <input
+                      id={`editTitle-${mod.id}`}
+                      className={`${styles.input} ${errors.editTitle ? styles.invalid : ''}`}
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                      disabled={loading}
+                    />
+                    {errors.editTitle && <span className={styles.errorMessage}>{errors.editTitle}</span>}
+                  </div>
+                  <div className={styles.formGroup} style={{ marginBottom: 'var(--spacing-md)' }}>
+                    <label htmlFor={`editOrder-${mod.id}`} className={styles.label}>Orden</label>
+                    <input
+                      id={`editOrder-${mod.id}`}
+                      type="number"
+                      className={`${styles.input} ${errors.editOrder ? styles.invalid : ''}`}
+                      value={editOrder}
+                      onChange={e => setEditOrder(Number(e.target.value))}
+                      disabled={loading}
+                    />
+                    {errors.editOrder && <span className={styles.errorMessage}>{errors.editOrder}</span>}
+                  </div>
+                  <div className={styles.formGroup} style={{ marginBottom: 'var(--spacing-md)' }}>
+                    <label htmlFor={`editDesc-${mod.id}`} className={styles.label}>Descripción</label>
+                    <textarea
+                      id={`editDesc-${mod.id}`}
+                      rows={3}
+                      className={styles.textarea}
+                      value={editDescription}
+                      onChange={e => setEditDescription(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className={`${styles.buttonGroup} ${styles.end}`}>
+                    <button onClick={() => setEditingId(null)} disabled={loading} className={styles.buttonSecondary}>
+                      {/* <FaTimes className={styles.icon} /> */}
+                       Cancelar
+                    </button>
+                    <button onClick={handleSave} disabled={loading} className={styles.buttonSuccess}>
+                      {/* <FaSave className={styles.icon} /> */}
+                       Guardar Cambios
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className={styles.moduleHeader}>
+                    <h4 className={styles.moduleTitle}>{mod.title}</h4>
+                    <div className={`${styles.actions} ${styles.buttonGroup}`}>
+                      <button onClick={() => startEdit(mod)} disabled={loading} className={`${styles.buttonSecondary} ${styles.buttonSmall}`}>
+                        {/* <FaEdit className={styles.icon} /> */}
+                         Editar
+                      </button>
+                      <button onClick={() => handleDelete(mod.id)} disabled={loading} className={`${styles.buttonDanger} ${styles.buttonSmall}`}>
+                        {/* <FaTrash className={styles.icon} /> */}
+                         Eliminar
+                      </button>
+                    </div>
+                  </div>
+                  <p className={styles.moduleOrder}>Orden: {mod.order}</p>
+                  {mod.description && <p className={styles.moduleDescription}>{mod.description}</p>}
+                </>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className={styles.buttonGroup} style={{ marginTop: 'var(--spacing-xl)'}}>
+        <button type="button" className={styles.buttonSecondary} onClick={onBack} disabled={loading}>
+          {/* <FaArrowLeft className={styles.icon} /> */}
+           Atrás
+        </button>
+        <button type="button" className={styles.button} onClick={onNext} disabled={items.length === 0 || loading}>
+           Siguiente
+           {/* <FaArrowRight className={styles.icon} style={{marginRight: 0, marginLeft: 'var(--spacing-sm)'}}/> */}
+        </button>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-// src/components/MaterialManager.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -17,6 +16,8 @@ import {
 } from '@/lib/materialApi';
 import type { LessonRecord as LessonType } from '@/lib/lessonApi';
 import type { Module } from '@/lib/moduleApi';
+
+import styles from '../styles/MaterialManager.module.scss';
 
 interface MaterialManagerProps {
   courseId: string;
@@ -43,19 +44,32 @@ export default function MaterialManager({
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<MaterialType[]>([]);
 
-  // Cuando cambia la lección, obtenemos moduleId y fetch de materiales
   useEffect(() => {
-    if (!selectedLesson) return;
+    if (!selectedLesson) {
+      setItems([]);
+      return;
+    }
     const lesson = lessons.find(l => l.id === selectedLesson);
-    if (!lesson) return;
+    if (!lesson) {
+      setItems([]);
+      return;
+    }
+    // Asegúrate de que el token esté disponible antes de hacer la llamada
+    if (!token) {
+        setError("Autenticación requerida para listar materiales.");
+        return;
+    }
     const dto: ListMaterialsByLessonDTO = {
       courseId,
       moduleId: lesson.moduleId,
       lessonId: selectedLesson,
     };
-    listMaterials(dto, token!)
+    listMaterials(dto, token)
       .then(fetched => setItems(fetched))
-      .catch(err => setError(err.message));
+      .catch(err => {
+        console.error("Error al listar materiales:", err);
+        setError(err.message || "Error al cargar los materiales.");
+      });
   }, [selectedLesson, lessons, courseId, token]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,9 +80,14 @@ export default function MaterialManager({
 
   const handleUpload = async () => {
     if (!selectedLesson || !file) {
-      setError('Selecciona lección y fichero');
+      setError('Por favor, selecciona una lección y un archivo para subir.');
       return;
     }
+    if (!token) {
+        setError("Autenticación requerida para subir material.");
+        return;
+    }
+
     const lesson = lessons.find(l => l.id === selectedLesson)!;
     setUploading(true);
     setError(null);
@@ -79,7 +98,7 @@ export default function MaterialManager({
         fileName: file.name,
         contentType: file.type,
       };
-      const { uploadUrl, downloadUrl, path } = await getUploadUrl(dtoUrl, token!);
+      const { uploadUrl, downloadUrl } = await getUploadUrl(dtoUrl, token);
 
       await uploadFileToStorage(uploadUrl, file);
 
@@ -91,7 +110,7 @@ export default function MaterialManager({
         url: downloadUrl,
         metadata: { size: file.size, mimeType: file.type },
       };
-      const { id } = await createMaterialRecord(dtoCreate, token!);
+      const { id } = await createMaterialRecord(dtoCreate, token);
 
       const newMat: MaterialType = {
         id,
@@ -100,16 +119,25 @@ export default function MaterialManager({
       };
       setItems(prev => [...prev, newMat]);
       onAddMaterial(newMat);
-      setFile(null);
+      setFile(null); // Limpiar el input de archivo
+      // Opcional: Mostrar un mensaje de éxito
     } catch (err: any) {
-      setError(err.message || 'Error al subir material');
+      console.error('Error al subir material:', err);
+      setError(err.message || 'Error al subir material. Inténtalo de nuevo.');
     } finally {
       setUploading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este material?')) return;
+    if (!confirm('¿Estás seguro de que quieres eliminar este material? Esta acción no se puede deshacer.')) return;
+    if (!token) {
+        setError("Autenticación requerida para eliminar material.");
+        return;
+    }
+
+    setUploading(true); // Usar 'uploading' para indicar cualquier operación de red
+    setError(null);
     try {
       const lesson = lessons.find(l => l.id === selectedLesson)!;
       const dto: DeleteMaterialDTO = {
@@ -118,114 +146,158 @@ export default function MaterialManager({
         lessonId: selectedLesson,
         materialId: id,
       };
-      await deleteMaterial(dto, token!);
+      await deleteMaterial(dto, token);
       setItems(prev => prev.filter(m => m.id !== id));
+      // Opcional: Mostrar un mensaje de éxito
     } catch (err: any) {
-      setError(err.message || 'Error al eliminar material');
+      console.error('Error al eliminar material:', err);
+      setError(err.message || 'Error al eliminar material. Por favor, inténtalo de nuevo.');
+    } finally {
+      setUploading(false);
     }
   };
 
+  // Función auxiliar para extraer el nombre del archivo de la URL
+  const getFileNameFromUrl = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      // Decodificar el componente del path para manejar espacios y caracteres especiales
+      const decodedPath = decodeURIComponent(urlObj.pathname);
+      const parts = decodedPath.split('/');
+      return parts[parts.length - 1] || 'Archivo sin nombre';
+    } catch (e) {
+      return url; // Fallback si la URL no es válida
+    }
+  };
+
+
   return (
-    <div className="container py-4">
-      <h3 className="mb-4">Gestión de Materiales</h3>
+    <div className={styles.materialManager}>
+      <h3 className={styles.sectionTitle}>Gestión de Materiales del Curso</h3>
         
       {/* Selector de Lección */}
-      <div className="mb-3">
-        <label htmlFor="lessonSelect" className="form-label">Lección</label>
+      <div className={styles.formGroup}>
+        <label htmlFor="lessonSelect" className={styles.formLabel}>Lección asociada</label>
         <select
           id="lessonSelect"
-          className="form-select" 
+          className={styles.formSelect} 
           value={selectedLesson}
           onChange={e => setSelectedLesson(e.target.value)}
+          disabled={uploading}
         >
-              <option value="">-- Selecciona lección --</option>
-              {lessons.map(l => {
-                // Buscamos el módulo de esta lección
-                const mod = modules.find(m => m.id === l.moduleId);
-                const modTitle = mod ? mod.title : '—';
-                return (
-                  <option key={l.id} value={l.id}>
-                    {l.title} (Módulo: {modTitle})
-                  </option>
-                );
-              })}
-          </select>
+          <option value="">-- Selecciona una lección --</option>
+          {lessons.map(l => {
+            const mod = modules.find(m => m.id === l.moduleId);
+            const modTitle = mod ? mod.title : 'Módulo Desconocido';
+            return (
+              <option key={l.id} value={l.id}>
+                {l.title} (Módulo: {modTitle})
+              </option>
+            );
+          })}
+        </select>
+        {lessons.length === 0 && (
+            <p className={styles.hintMessage}>
+                No hay lecciones creadas para este curso. Por favor, ve al paso anterior para añadir lecciones.
+            </p>
+        )}
       </div>
 
       {/* Subida de Material */}
       {selectedLesson && (
-        <div className="card mb-4 p-3">
-          <div className="row g-3">  
-            <div className="col-md-4">
-              <label className="form-label">Tipo</label>
-              <select
-                className="form-select"
-                value={type}
-                onChange={e => setType(e.target.value as any)}
-              >
-                <option value="video">Video</option>
-                <option value="audio">Audio</option>
-                <option value="pdf">PDF</option>
-                <option value="image">Imagen</option>
-              </select>
+        <div className={styles.formCard}>
+            <h4 className={styles.subsectionTitle}>Subir Nuevo Material</h4>
+            <div className={styles.formGrid}> 
+                <div className={styles.formGroup}>
+                    <label htmlFor="materialType" className={styles.formLabel}>Tipo de Material</label>
+                    <select
+                        id="materialType"
+                        className={styles.formSelect}
+                        value={type}
+                        onChange={e => setType(e.target.value as any)}
+                        disabled={uploading}
+                    >
+                        <option value="video">Video</option>
+                        <option value="audio">Audio</option>
+                        <option value="pdf">PDF</option>
+                        <option value="image">Imagen</option>
+                    </select>
+                </div>
+                <div className={`${styles.formGroup} ${styles.colSpan2}`}>
+                    <label htmlFor="materialFile" className={styles.formLabel}>Seleccionar Archivo</label>
+                    <input
+                        id="materialFile"
+                        type="file"
+                        className={styles.formControl}
+                        onChange={handleFileChange}
+                        disabled={uploading}
+                    />
+                    {file && <p className={styles.fileNamePreview}>Archivo seleccionado: <strong>{file.name}</strong></p>}
+                </div>
+                <div className={styles.uploadButtonContainer}>
+                    <button
+                        className={styles.buttonPrimary}
+                        onClick={handleUpload}
+                        disabled={uploading || !file}
+                    >
+                        {uploading ? (
+                            <>
+                                <span className={styles.spinner} /> Subiendo...
+                            </>
+                        ) : (
+                            <>
+                                Subir Material
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
-            <div className="col-md-6">
-              <label className="form-label">Archivo</label>
-              <input
-                type="file"
-                className="form-control"
-                onChange={handleFileChange}
-              />
-            </div>
-            <div className="col-md-2 d-flex align-items-end">
-              <button
-                className="btn btn-primary w-100"
-                onClick={handleUpload}
-                disabled={uploading || !file}
-              >
-                {uploading
-                  ? <span className="spinner-border spinner-border-sm" />
-                  : 'Subir'}
-              </button>
-            </div>
-          </div>
-          {error && <div className="alert alert-danger mt-3">{error}</div>}
+            {error && <div className={styles.errorMessage}>{error}</div>}
         </div>
       )}
 
       {/* Lista de Materiales */}
-      <div className="mb-4">
-        {items.length === 0
-          ? <p className="text-muted">No hay materiales.</p>
-          : (
-            <ul className="list-group">
-              {items.map(m => (
-                <li
-                  key={m.id}
-                  className="list-group-item d-flex justify-content-between align-items-center"
-                >
-                  <a href={m.url} target="_blank" className="link-primary">
-                    [{m.type.toUpperCase()}] {m.url.split('/').pop()}
-                  </a>
-                  <button
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => handleDelete(m.id)}
-                  >
-                    Eliminar
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+      <div className={styles.materialsListContainer}>
+        <h4 className={styles.subsectionTitle}>Materiales de la Lección Seleccionada</h4>
+        {selectedLesson ? (
+            items.length === 0 ? (
+                <p className={styles.emptyState}>No hay materiales subidos para esta lección.</p>
+            ) : (
+                <ul className={styles.materialsList}>
+                    {items.map(m => (
+                        <li
+                            key={m.id}
+                            className={styles.materialItem}
+                        >
+                            <a href={m.url} target="_blank" rel="noopener noreferrer" className={styles.materialLink}>
+                                <span className={styles.materialTypeBadge}>{m.type}</span> 
+                                <span className={styles.materialFileName}>{getFileNameFromUrl(m.url)}</span>
+                            </a>
+                            <button
+                                className={styles.actionButtonDelete}
+                                onClick={() => handleDelete(m.id)}
+                                disabled={uploading}
+                            >
+                                Eliminar
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )
+        ) : (
+            <p className={styles.emptyState}>Por favor, selecciona una lección para ver o añadir sus materiales.</p>
+        )}
       </div>
 
       {/* Navegación */}
-      <div className="d-flex justify-content-between">
-        <button className="btn btn-secondary" onClick={onBack}>Atrás</button>
+      <div className={styles.formActions}>
+        <button className={styles.buttonSecondary} onClick={onBack} disabled={uploading}>
+            Atrás
+        </button>
         <button
-          className="btn btn-success"
+          className={`${styles.buttonPrimary} ${styles.buttonNext}`}
           onClick={onNext}
-          disabled={items.length === 0}
+          /* disabled={uploading || (selectedLesson && items.length === 0)} */
         >
           Siguiente
         </button>

@@ -1,0 +1,244 @@
+// src/components/course-wizard/styles/_shared.scss
+
+
+$primary-color: #4A90E2; // Azul moderno y amigable
+$primary-dark-color: #357ABD; // Versión más oscura para hover/active
+$primary-light-color: #A9D1F5; // Versión más clara
+
+$secondary-color: #6C757D; // Gris neutro para elementos secundarios
+$secondary-dark-color: #5A6268;
+
+$text-primary-color: #333333; // Texto principal oscuro para buena legibilidad
+$text-secondary-color: #666666; // Texto secundario, descripciones
+$text-light-color: #FFFFFF; // Texto sobre fondos oscuros
+
+$background-color: #F8F9FA; // Fondo general de la aplicación
+$surface-color: #FFFFFF; // Fondo de tarjetas, paneles, etc.
+$border-color: #E0E0E0; // Bordes sutiles
+
+$success-color: #28A745; // Verde para éxito
+$error-color: #DC3545; // Rojo para errores
+$warning-color: #FFC107; // Amarillo para advertencias
+$info-color: #17A2B8; // Azul claro para información
+
+$white: #FFFFFF;
+$black: #000000;
+
+// 3. Espaciado (basado en una escala modular, por ejemplo, múltiplos de 4 u 8)
+$spacing-xxs: 4px;
+$spacing-xs: 8px;
+$spacing-sm: 12px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-xxl: 48px;
+
+// 4. Tipografía
+$font-size-xs: 0.75rem; // 12px
+$font-size-sm: 0.875rem; // 14px
+$font-size-base: 1rem; // 16px
+$font-size-lg: 1.25rem; // 20px
+$font-size-xl: 1.5rem; // 24px
+$font-size-xxl: 2rem; // 32px
+
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// 5. Bordes y Sombras
+$border-radius-sm: 4px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+
+$shadow-color-light: rgba(0, 0, 0, 0.05);
+$shadow-color-medium: rgba(0, 0, 0, 0.1);
+$shadow-color-heavy: rgba(0, 0, 0, 0.2);
+
+$shadow-elevation-1: 0 1px 3px $shadow-color-light, 0 1px 2px $shadow-color-light;
+$shadow-elevation-2: 0 3px 6px $shadow-color-medium, 0 3px 6px $shadow-color-light;
+$shadow-elevation-3: 0 10px 20px $shadow-color-medium, 0 6px 6px $shadow-color-medium;
+
+
+// 6. Transiciones
+$transition-speed-fast: 0.15s;
+$transition-speed-normal: 0.3s;
+$transition-speed-slow: 0.5s;
+$transition-ease-in-out: ease-in-out;
+$transition-ease-out: ease-out;
+
+// 7. Breakpoints para Responsive Design (Mobile First)
+$breakpoint-mobile: 480px;
+$breakpoint-tablet: 768px;
+$breakpoint-desktop: 1024px;
+$breakpoint-large-desktop: 1200px;
+
+// --- Variables de Color ---
+$primary-color: #4A90E2;
+$primary-dark-color: #357ABD;
+$accent-color: #50E3C2;
+
+$background-color: #f4f7f6;
+$surface-color: #FFFFFF;
+
+$border-color: #E0E0E0;
+$input-border-color: #CED4DA;
+$input-focus-border-color: $primary-color;
+$input-focus-shadow-color: rgba($primary-color, 0.25);
+
+$text-primary-color: #333333;
+$text-secondary-color: #757575;
+$text-disabled-color: #BDBDBD;
+$text-placeholder-color: #A0A0A0;
+
+$error-color: #D32F2F;
+$success-color: #388E3C;
+$warning-color: #FCA120; // Nueva variable para advertencias
+
+$white: #FFFFFF;
+$black: #000000;
+
+$disabled-bg-color: #E9ECEF;
+$disabled-text-color: #333333;
+
+$shadow-color-light: rgba(0, 0, 0, 0.08);
+$shadow-color-medium: rgba(0, 0, 0, 0.12);
+$shadow-color: rgba(0, 0, 0, 0.16);
+
+
+// --- Tipografía ---
+$font-family-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+$font-size-base: 1rem; // 16px
+$font-size-sm: 0.875rem; // 14px
+$font-size-xs: 0.75rem;  // 12px
+$font-size-lg: 1.125rem; // 18px
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+$line-height-base: 1.6;
+
+// --- Espaciado ---
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-xxl: 40px;
+
+// --- Bordes ---
+$border-radius-sm: 4px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+
+// --- Breakpoints (Puntos de quiebre para responsividad) ---
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px; // Tablet
+$breakpoint-lg: 992px; // Desktop
+$breakpoint-xl: 1200px;
+
+// --- Mixins de Responsividad ---
+@mixin small-mobile {
+  @media (max-width: ($breakpoint-sm - 1)) {
+    @content;
+  }
+}
+
+@mixin mobile {
+  @media (min-width: $breakpoint-sm) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (min-width: $breakpoint-md) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: $breakpoint-lg) {
+    @content;
+  }
+}
+
+@mixin large-desktop {
+  @media (min-width: $breakpoint-xl) {
+    @content;
+  }
+}
+
+// --- Mixin para apariencia de input/select/textarea base ---
+@mixin form-field-base {
+  width: 100%;
+  padding: $spacing-sm $spacing-md; // 8px 16px, puedes ajustarlo
+  font-size: $font-size-base;
+  font-family: $font-family-sans;
+  color: $text-primary-color;
+  background-color: $surface-color;
+  border: 1px solid $input-border-color;
+  border-radius: $border-radius-md;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  appearance: none; // Quitar apariencia nativa para select
+
+  &::placeholder {
+    color: $text-placeholder-color;
+    opacity: 1;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $input-focus-border-color;
+    box-shadow: 0 0 0 3px $input-focus-shadow-color;
+  }
+
+  &.invalid { // Para aplicar directamente si es necesario, aunque prefiero un contenedor
+    border-color: $error-color;
+    &:focus {
+      box-shadow: 0 0 0 3px rgba($error-color, 0.25);
+    }
+  }
+
+  &:disabled {
+    background-color: $disabled-bg-color;
+    color: $text-disabled-color;
+    cursor: not-allowed;
+    border-color: $border-color;
+  }
+}
+
+// --- Mixin para botones base ---
+@mixin button-base($bg-color: $primary-color, $text-color: $white, $hover-bg-color: $primary-dark-color) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-sm $spacing-lg; // 8px 24px
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $text-color;
+  background-color: $bg-color;
+  border: none;
+  border-radius: $border-radius-md;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: $hover-bg-color;
+    box-shadow: 0 2px 8px rgba($bg-color, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  // Para iconos dentro de botones
+  .icon {
+    margin-right: $spacing-sm;
+    // Estilos adicionales para el icono si es necesario
+  }
+}

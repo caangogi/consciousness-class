@@ -1,0 +1,223 @@
+@import '../styles/shared';
+
+// --- Estilos del Wizard ---
+.wizardContainer {
+  background-color: $background-color;
+  padding: 20px 10px; // Padding para móviles
+
+  @include tablet {
+    padding: 40px 20px;
+  }
+}
+
+.wizardCard {
+  background-color: $surface-color;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px $shadow-color;
+  overflow: hidden; // Para que el header redondeado se vea bien
+  margin: 0 auto;
+  max-width: 900px; // Limitar el ancho en pantallas grandes
+}
+
+.wizardHeader {
+  padding: 24px;
+  border-bottom: 1px solid $border-color;
+
+  @include tablet {
+    padding: 30px 40px;
+  }
+
+  .title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: $primary-color;
+    margin-bottom: 20px;
+    text-align: center;
+
+    @include tablet {
+      font-size: 2.2rem;
+      text-align: left;
+    }
+  }
+}
+
+.progressBarContainer {
+  height: 10px;
+  background-color: lighten($border-color, 5%);
+  border-radius: 5px;
+  overflow: hidden;
+
+  .progressBar {
+    height: 100%;
+    background: linear-gradient(90deg, $primary-color, lighten($accent-color, 10%));
+    transition: width 0.4s ease-in-out;
+    border-radius: 5px;
+  }
+}
+
+.stepTabs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column; // Apilado en móvil
+  border-bottom: 1px solid $border-color;
+  background-color: lighten($primary-color, 45%); // Un fondo muy sutil para las tabs
+
+  @include tablet {
+    flex-direction: row; // En línea para tablet y más
+    justify-content: space-around; // O space-between / center
+  }
+
+  .stepTabItem {
+    flex-grow: 1; // Para que ocupen el espacio disponible en tablet+
+
+    &:not(:last-child) {
+      @include tablet {
+        border-right: 1px solid $border-color; // Separadores en tablet+
+      }
+    }
+  }
+
+  .stepTabButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 15px 10px;
+    background-color: transparent;
+    border: none;
+    color: $text-secondary-color;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    text-align: center;
+    border-bottom: 1px solid $border-color; // Separadores en móvil
+
+    @include tablet {
+      font-size: 1rem;
+      padding: 18px 20px;
+      border-bottom: none; // Quitar borde inferior en tablet+
+    }
+
+    .stepNumber {
+      display: none; // Ocultar números por defecto para un look más limpio
+
+      @include tablet { // Mostrar en tablet y más grandes
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: $border-color;
+        color: $text-secondary-color;
+        margin-right: 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: background-color 0.2s ease, color 0.2s ease;
+      }
+    }
+
+    &:hover:not(.active):not(.disabled) {
+      background-color: lighten($primary-color, 40%);
+      color: $primary-dark-color;
+    }
+
+    &.active {
+      color: $white;
+      background-color: $primary-color;
+      font-weight: 600;
+      border-bottom-color: $primary-color; // En móvil
+
+      @include tablet {
+         border-bottom: 3px solid $accent-color; // Indicador activo más prominente
+         background-color: transparent; // Sin fondo en tablet para que el borde destaque
+         color: $primary-color;
+      }
+
+      .stepNumber {
+        @include tablet {
+          background-color: $primary-color;
+          color: $white;
+        }
+      }
+    }
+
+    &.completed { // Un estilo para pasos completados pero no activos
+        color: $primary-dark-color; // Un poco más oscuro que el texto normal
+        .stepNumber {
+             @include tablet {
+                background-color: lighten($primary-color, 20%);
+                color: $white;
+             }
+        }
+    }
+    
+    &.disabled {
+      color: $text-disabled-color;
+      cursor: not-allowed;
+      pointer-events: none;
+
+      .stepNumber {
+        @include tablet {
+          background-color: lighten($text-disabled-color, 20%);
+          color: $text-secondary-color;
+        }
+      }
+    }
+  }
+}
+
+.stepContent {
+  padding: 24px;
+
+  @include tablet {
+    padding: 30px 40px;
+  }
+}
+
+.accessDeniedContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  background-color: $surface-color;
+  border-radius: 8px;
+  margin: 40px auto;
+  max-width: 500px;
+  box-shadow: 0 2px 8px $shadow-color;
+
+  .icon { // Necesitarías un SVG o un icono de fuente
+    font-size: 3rem;
+    color: $error-color;
+    margin-bottom: 15px;
+  }
+  .title {
+    font-size: 1.5rem;
+    color: $text-primary-color;
+    margin-bottom: 10px;
+  }
+  .message {
+    color: $text-secondary-color;
+    margin-bottom: 20px;
+  }
+  .actionButton {
+    padding: 10px 20px;
+    background-color: $primary-color;
+    color: $white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    text-decoration: none;
+
+    &:hover {
+      background-color: $primary-dark-color;
+    }
+  }
+}

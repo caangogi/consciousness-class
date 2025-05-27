@@ -6,6 +6,8 @@ import type { Module } from '@/lib/moduleApi';
 import type { LessonRecord as Lesson } from '@/lib/lessonApi';
 import type { MaterialPersistence as Material } from '@/lib/materialApi';
 
+import styles from '../styles/ReviewStep.module.scss'; // Importar el módulo SCSS
+
 interface ReviewStepProps {
   course: Course;
   modules: Module[];
@@ -29,32 +31,91 @@ export default function ReviewStep({
     onPublish();
   };
 
+  // Función auxiliar para extraer el nombre del archivo de la URL
+  const getFileNameFromUrl = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      const decodedPath = decodeURIComponent(urlObj.pathname);
+      const parts = decodedPath.split('/');
+      return parts[parts.length - 1] || 'Archivo sin nombre';
+    } catch (e) {
+      return url;
+    }
+  };
+
+  // Función auxiliar para obtener el icono/miniatura según el tipo de material
+  const getMaterialThumbnail = (material: Material) => {
+    switch (material.type) {
+      case 'video':
+        return <span className={styles.materialIcon}>🎬</span>; // O un SVG de video
+      case 'audio':
+        return <span className={styles.materialIcon}>🎵</span>; // O un SVG de audio
+      case 'pdf':
+        return <span className={styles.materialIcon}>📄</span>; // O un SVG de PDF
+      case 'image':
+        // Si hay una URL de miniatura real en el futuro, usarla aquí.
+        // Por ahora, si es una imagen, podemos mostrar una miniatura si la URL lo permite
+        // o un icono genérico. Para esta revisión, usaremos la URL completa de la imagen.
+        return (
+            <img
+                src={material.url}
+                alt={getFileNameFromUrl(material.url)}
+                className={styles.materialImageThumbnail}
+                onError={(e) => { // Fallback en caso de que la imagen no cargue
+                    e.currentTarget.src = 'https://via.placeholder.com/60?text=IMG'; // Placeholder
+                    e.currentTarget.className = styles.materialIconPlaceholder; // Aplicar clase de icono si falla
+                }}
+            />
+        );
+      default:
+        return <span className={styles.materialIcon}>📦</span>; // Icono genérico
+    }
+  };
+
+
   return (
-    <div className="container py-4">
-      <h2 className="mb-4">Revisión del Curso</h2>
+    <div className={styles.reviewStep}>
+      <h2 className={styles.sectionTitle}>Revisa los Detalles de tu Curso</h2>
 
       {/* Datos del Curso */}
-      <div className="card mb-4">
-        <div className="card-header">
-          <h3 className="h5 mb-0">Datos del Curso</h3>
+      <div className={styles.reviewCard}>
+        <div className={styles.cardHeader}>
+          <h3 className={styles.cardTitle}>Información General del Curso</h3>
         </div>
-        <div className="card-body">
-          <p><strong>Título:</strong> {course.title}</p>
-          <p><strong>Descripción:</strong> {course.description}</p>
+        <div className={styles.cardBody}>
+          <p className={styles.detailItem}>
+            <strong className={styles.detailLabel}>Título:</strong> <span className={styles.detailValue}>{course.title}</span>
+          </p>
+          <p className={styles.detailItem}>
+            <strong className={styles.detailLabel}>Descripción:</strong> <span className={styles.detailValue}>{course.description}</span>
+          </p>
           {course.coverImageUrl && (
-            <img
-              src={course.coverImageUrl}
-              alt="Portada"
-              className="img-fluid mb-3"
-              style={{ maxHeight: '200px' }}
-            />
+            <div className={styles.coverImageContainer}>
+              <strong className={styles.detailLabel}>Imagen de Portada:</strong>
+              <img
+                src={course.coverImageUrl}
+                alt="Portada del curso"
+                className={styles.coverImage}
+              />
+            </div>
           )}
-          <p><strong>Precio:</strong> ${course.price.toFixed(2)}</p>
-          <p><strong>Idioma:</strong> {course.language}</p>
-          <p><strong>Nivel:</strong> {course.level}</p>
-          { (course.tags ?? []).length > 0 && (
-              <p>
-                <strong>Etiquetas:</strong> {(course.tags ?? []).join(', ')}
+          <p className={styles.detailItem}>
+            <strong className={styles.detailLabel}>Precio:</strong> <span className={styles.detailValue}>${course.price.toFixed(2)}</span>
+          </p>
+          <p className={styles.detailItem}>
+            <strong className={styles.detailLabel}>Idioma:</strong> <span className={styles.detailValue}>{course.language}</span>
+          </p>
+          <p className={styles.detailItem}>
+            <strong className={styles.detailLabel}>Nivel:</strong> <span className={styles.detailValue}>{course.level}</span>
+          </p>
+          { (course.tags && course.tags.length > 0) && (
+              <p className={styles.detailItem}>
+                <strong className={styles.detailLabel}>Etiquetas:</strong>{' '}
+                <span className={styles.detailValue}>
+                  {course.tags.map(tag => (
+                    <span key={tag} className={styles.tagBadge}>{tag}</span>
+                  ))}
+                </span>
               </p>
             )
           }
@@ -62,66 +123,92 @@ export default function ReviewStep({
       </div>
 
       {/* Estructura de Contenido */}
-      <div className="card mb-4">
-        <div className="card-header">
-          <h3 className="h5 mb-0">Estructura de Contenido</h3>
+      <div className={styles.reviewCard}>
+        <div className={styles.cardHeader}>
+          <h3 className={styles.cardTitle}>Estructura del Contenido</h3>
         </div>
-        <div className="card-body">
-          {modules.map(mod => (
-            <div key={mod.id} className="mb-3">
-              <h5 className="mb-2">
-                {mod.title} <small className="text-muted">(Orden {mod.order})</small>
-              </h5>
-              <ul className="list-group">
-                {lessons
-                  .filter(l => l.moduleId === mod.id)
-                  .sort((a, b) => a.order - b.order)
-                  .map(l => (
-                    <li key={l.id} className="list-group-item">
-                      {l.title}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          ))}
+        <div className={styles.cardBody}>
+          {modules.length === 0 ? (
+            <p className={styles.emptyState}>No hay módulos creados para este curso.</p>
+          ) : (
+            modules
+              .sort((a, b) => a.order - b.order)
+              .map(mod => (
+                <div key={mod.id} className={styles.moduleSection}>
+                  <h4 className={styles.moduleTitle}>
+                    {mod.title} <span className={styles.moduleOrder}>(Orden {mod.order})</span>
+                  </h4>
+                  <ul className={styles.lessonList}>
+                    {lessons
+                      .filter(l => l.moduleId === mod.id)
+                      .sort((a, b) => a.order - b.order)
+                      .map(l => (
+                        <li key={l.id} className={styles.lessonItem}>
+                          {l.title}
+                        </li>
+                      ))}
+                    {lessons.filter(l => l.moduleId === mod.id).length === 0 && (
+                      <li className={styles.emptyLessonItem}>No hay lecciones en este módulo.</li>
+                    )}
+                  </ul>
+                </div>
+              ))
+          )}
         </div>
       </div>
 
-      {/* Materiales Adjuntos */}
-      <div className="card mb-4">
-        <div className="card-header">
-          <h3 className="h5 mb-0">Materiales Adjuntos</h3>
+      {/* Materiales Adjuntos - ¡Aquí es donde cambiaremos! */}
+      <div className={styles.reviewCard}>
+        <div className={styles.cardHeader}>
+          <h3 className={styles.cardTitle}>Materiales Adjuntos por Lección</h3>
         </div>
-        <div className="card-body">
+        <div className={styles.cardBody}>
           {materials.length === 0 ? (
-            <p className="text-muted">No hay materiales añadidos.</p>
+            <p className={styles.emptyState}>No hay materiales adjuntos a ninguna lección.</p>
           ) : (
-            <ul className="list-group">
-              {materials.map(mat => {
-                const lesson = lessons.find(l => l.id === mat.lessonId);
+            // Agrupar materiales por lección para una mejor visualización
+            lessons.sort((a, b) => a.order - b.order).map(lesson => {
+                const materialsForLesson = materials.filter(m => m.lessonId === lesson.id);
+                if (materialsForLesson.length === 0) {
+                    return null; // No mostrar la lección si no tiene materiales
+                }
                 return (
-                  <li key={mat.id} className="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                      <strong>{lesson?.title ?? 'Lección'}:</strong>{' '}
-                      <span className="badge bg-secondary me-2">{mat.type.toUpperCase()}</span>
-                      <a href={mat.url} target="_blank" rel="noopener noreferrer">
-                        Ver
-                      </a>
+                    <div key={lesson.id} className={styles.lessonMaterialsGroup}>
+                        <h5 className={styles.lessonMaterialsTitle}>
+                            <span className={styles.lessonMaterialsTitleIcon}>📚</span>
+                            {lesson.title}
+                        </h5>
+                        <div className={styles.materialsGrid}>
+                            {materialsForLesson.map(mat => (
+                                <div key={mat.id} className={styles.materialThumbnailCard}>
+                                    <div className={styles.thumbnailContent}>
+                                        {getMaterialThumbnail(mat)}
+                                        <span className={styles.thumbnailFileName}>{getFileNameFromUrl(mat.url)}</span>
+                                    </div>
+                                    <a
+                                        href={mat.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={styles.thumbnailViewButton}
+                                    >
+                                        Ver
+                                    </a>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                  </li>
                 );
-              })}
-            </ul>
+            })
           )}
         </div>
       </div>
 
       {/* Acciones */}
-      <div className="d-flex justify-content-between">
-        <button className="btn btn-outline-secondary" onClick={onBack}>
+      <div className={styles.formActions}>
+        <button className={styles.buttonSecondary} onClick={onBack}>
           Atrás
         </button>
-        <button className="btn btn-success" onClick={handlePublish}>
+        <button className={styles.buttonPrimary} onClick={handlePublish}>
           Publicar Curso
         </button>
       </div>

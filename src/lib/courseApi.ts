@@ -15,8 +15,8 @@ export interface CreateCourseDTO {
   whatYouWillLearn: string[];
   whyChooseThisCourse: string[];
   idealFor: string[];
-  enrollCallToAction: string;
   moduleIds: string[];
+  type: 'course' | 'membership'; // Added type property
 }
 
 /**

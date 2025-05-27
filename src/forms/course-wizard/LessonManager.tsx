@@ -13,6 +13,8 @@ import {
 } from '@/lib/lessonApi';
 import type { Module } from '@/lib/moduleApi';
 
+import styles from '../styles/LessonManager.module.scss'; // Importar el módulo SCSS
+
 interface LessonManagerProps {
   courseId: string;
   modules: Module[];
@@ -65,7 +67,7 @@ export default function LessonManager({
         setLoading(false);
       }
     })();
-  }, [selectedModule]);
+  }, [selectedModule, token]); // Añadir token a las dependencias
 
   // Add new lesson
   const handleAdd = async (e: React.FormEvent) => {
@@ -83,11 +85,8 @@ export default function LessonManager({
       order,
       overview: overview.trim() || undefined,
       content: content.trim(),
-      faqs: [],
+      faqs: [], // Asumo que FAQs se manejarían en otro paso o componente
     };
-
-    console.log('CouserId::: >', courseId )
-    console.log('DTO CouserId::: >', dto.courseId )
 
     try {
       const { id } = await createLesson(dto, token!);
@@ -123,11 +122,11 @@ export default function LessonManager({
       title: editTitle.trim(),
       content: editContent.trim(),
       overview: editOverview.trim() || undefined,
-      faqs: [],
+      // faqs: [], // Mantener faqs como un array vacío o manejar su actualización
     };
     try {
       await updateLesson(dto, token!);
-      setItems(prev => prev.map(l => l.id === editingId ? { ...l, title: dto.title, order: editOrder, overview: dto.overview, content: dto.content } : l));
+      setItems(prev => prev.map(l => l.id === editingId ? { ...l, title: dto.title!, order: editOrder, overview: dto.overview, content: dto.content! } : l));
       setEditingId(null);
     } catch (err: any) {
       setError(err.message || 'Error al actualizar lección');
@@ -151,24 +150,23 @@ export default function LessonManager({
     }
   };
 
-return (
-    <div className="container py-4">
-      {/* Título */}
-      <h3 className="mb-4">Gestión de Lecciones</h3>
+  return (
+    <div className={styles.lessonManager}>
+      <h3 className={styles.sectionTitle}>Gestión de Lecciones</h3>
 
       {/* Selector de Módulo */}
-      <div className="mb-3">
-        <label htmlFor="moduleSelect" className="form-label">
+      <div className={styles.formGroup}>
+        <label htmlFor="moduleSelect" className={styles.formLabel}>
           Módulo
         </label>
         <select
           id="moduleSelect"
-          className="form-select"
+          className={styles.formSelect}
           value={selectedModule}
           onChange={e => setSelectedModule(e.target.value)}
           disabled={loading}
         >
-          <option value="">-- Selecciona módulo --</option>
+          <option value="">-- Selecciona un módulo --</option>
           {modules.map(m => (
             <option key={m.id} value={m.id}>
               {m.title}
@@ -180,27 +178,20 @@ return (
       {/* Formulario de Añadir / Editar */}
       {selectedModule && (
         <form
-          onSubmit={
-            editingId
-              ? e => {
-                  e.preventDefault();
-                  handleSave();
-                }
-              : handleAdd
-          }
-          className="card card-body mb-4"
+          onSubmit={editingId ? e => { e.preventDefault(); handleSave(); } : handleAdd}
+          className={styles.formCard}
           noValidate
         >
-          <div className="row g-3">
+          <div className={styles.formGrid}>
             {/* Título */}
-            <div className="col-md-6">
-              <label htmlFor="lessonTitle" className="form-label">
+            <div className={styles.formGroup}>
+              <label htmlFor="lessonTitle" className={styles.formLabel}>
                 Título
               </label>
               <input
                 id="lessonTitle"
                 type="text"
-                className="form-control"
+                className={styles.formControl}
                 value={editingId ? editTitle : title}
                 onChange={e =>
                   editingId
@@ -213,14 +204,14 @@ return (
             </div>
 
             {/* Orden */}
-            <div className="col-md-2">
-              <label htmlFor="lessonOrder" className="form-label">
+            <div className={styles.formGroup}>
+              <label htmlFor="lessonOrder" className={styles.formLabel}>
                 Orden
               </label>
               <input
                 id="lessonOrder"
                 type="number"
-                className="form-control"
+                className={styles.formControl}
                 value={editingId ? editOrder : order}
                 onChange={e =>
                   editingId
@@ -234,14 +225,14 @@ return (
             </div>
 
             {/* Resumen */}
-            <div className="col-12">
-              <label htmlFor="lessonOverview" className="form-label">
+            <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+              <label htmlFor="lessonOverview" className={styles.formLabel}>
                 Resumen
               </label>
               <textarea
                 id="lessonOverview"
                 rows={2}
-                className="form-control"
+                className={styles.formControl}
                 value={editingId ? editOverview : overview}
                 onChange={e =>
                   editingId
@@ -253,14 +244,14 @@ return (
             </div>
 
             {/* Contenido */}
-            <div className="col-12">
-              <label htmlFor="lessonContent" className="form-label">
+            <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+              <label htmlFor="lessonContent" className={styles.formLabel}>
                 Contenido
               </label>
               <textarea
                 id="lessonContent"
                 rows={6}
-                className="form-control"
+                className={styles.formControl}
                 value={editingId ? editContent : content}
                 onChange={e =>
                   editingId
@@ -274,18 +265,18 @@ return (
           </div>
 
           {error && (
-            <div className="alert alert-danger mt-3">{error}</div>
+            <div className={styles.errorMessage}>{error}</div>
           )}
 
-          {/* Botones */}
-          <div className="d-flex gap-2 mt-4">
+          {/* Botones del formulario */}
+          <div className={styles.formActions}>
             <button
               type="button"
               onClick={onBack}
               disabled={loading}
-              className="btn btn-secondary"
+              className={styles.buttonSecondary}
             >
-              Atrás
+              {/* <span className={styles.icon}>&larr;</span> */} Atrás
             </button>
 
             {editingId ? (
@@ -294,15 +285,15 @@ return (
                   type="button"
                   onClick={handleSave}
                   disabled={loading}
-                  className="btn btn-success"
+                  className={styles.buttonSuccess}
                 >
-                  Guardar
+                  {/* <span className={styles.icon}>&#10003;</span> */} Guardar
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditingId(null)}
                   disabled={loading}
-                  className="btn btn-outline-secondary"
+                  className={styles.buttonOutline}
                 >
                   Cancelar
                 </button>
@@ -311,69 +302,73 @@ return (
               <button
                 type="submit"
                 disabled={loading}
-                className="btn btn-primary"
+                className={styles.buttonPrimary}
               >
-                Añadir
+                {/* <span className={styles.icon}>+</span> */} Añadir Lección
               </button>
             )}
 
             <button
               type="button"
               onClick={onNext}
-              disabled={!items.length}
-              className="btn btn-primary ms-auto"
+              disabled={!items.length || loading}
+              className={`${styles.buttonPrimary} ${styles.buttonNext}`}
             >
-              Siguiente
+              Siguiente {/* <span className={styles.icon}>&rarr;</span> */}
             </button>
           </div>
         </form>
       )}
 
       {/* Listado de Lecciones por Módulo */}
-      {items.length === 0 ? (
-        <p className="text-muted">No hay lecciones.</p>
-      ) : (
-        modules.map(mod => {
-          const moduleLessons = items.filter(l => l.moduleId === mod.id);
-          if (!moduleLessons.length) return null;
-          return (
-            <div key={mod.id} className="mb-4">
-              <h5 className="mb-2">{mod.title}</h5>
-              <ul className="list-group">
-                {moduleLessons
-                  .sort((a, b) => a.order - b.order)
-                  .map(l => (
-                    <li
-                      key={l.id}
-                      className="list-group-item d-flex justify-content-between align-items-center"
-                    >
-                      <div>
-                        {l.title} <small className="text-muted">(Orden {l.order})</small>
-                      </div>
-                      <div className="btn-group btn-group-sm" role="group" aria-label="Acciones">
-                        <button
-                          onClick={() => startEdit(l)}
-                          disabled={loading}
-                          className="btn btn-sm btn-primary"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDelete(l.id)}
-                          disabled={loading}
-                          className="btn btn-sm btn-danger"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          );
-        })
+      {selectedModule && items.filter(l => l.moduleId === selectedModule).length === 0 && (
+        <p className={styles.emptyState}>No hay lecciones en este módulo.</p>
+      )}
+
+      {selectedModule && (
+        <div className={styles.lessonsListContainer}>
+          {modules.map(mod => {
+            const moduleLessons = items.filter(l => l.moduleId === mod.id);
+            if (!moduleLessons.length) return null;
+            return (
+              <div key={mod.id} className={styles.moduleSection}>
+                <h5 className={styles.moduleTitle}>{mod.title}</h5>
+                <ul className={styles.lessonsList}>
+                  {moduleLessons
+                    .sort((a, b) => a.order - b.order)
+                    .map(l => (
+                      <li
+                        key={l.id}
+                        className={styles.lessonItem}
+                      >
+                        <div>
+                          <span className={styles.lessonItemTitle}>{l.title}</span>{' '}
+                          <span className={styles.lessonItemOrder}>(Orden {l.order})</span>
+                        </div>
+                        <div className={styles.lessonActions}>
+                          <button
+                            onClick={() => startEdit(l)}
+                            disabled={loading}
+                            className={styles.actionButtonEdit}
+                          >
+                             {/* <span className={styles.icon}>📝</span> */} Editar
+                          </button>
+                          <button
+                            onClick={() => handleDelete(l.id)}
+                            disabled={loading}
+                            className={styles.actionButtonDelete}
+                          >
+                             {/* <span className={styles.icon}>🗑️</span> */} Eliminar
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
-
 }

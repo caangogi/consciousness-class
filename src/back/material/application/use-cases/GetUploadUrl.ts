@@ -11,13 +11,13 @@ export class GetUploadUrl {
     Result<{ uploadUrl: string; downloadUrl: string; path: string }, Error>
   > {
     try {
-      const urls = await this.repo.getUploadUrl(
-        dto.lessonId,
-        dto.fileName,
-        dto.contentType
-      );
+      // Corrected: Pass the entire dto object to the repository method
+      const urls = await this.repo.getUploadUrl(dto);
       return Result.ok(urls);
     } catch (err: any) {
+
+      console.log('GetUpload Error:::>', err)
+
       return Result.err(err);
     }
   }

@@ -28,7 +28,7 @@ async function main() {
   // Configuración CORS
   const corsConfig = [
     {
-      origin: ['http://localhost:3000', 'https://tu-dominio.com'],
+      origin: ['http://localhost:3000', 'https://3000-firebase-consciousness-class-1748280678993.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev'],
       method: ['GET','POST','PUT','DELETE','HEAD','OPTIONS'],
       responseHeader: ['Content-Type','Access-Control-Allow-Origin'],
       maxAgeSeconds: 3600

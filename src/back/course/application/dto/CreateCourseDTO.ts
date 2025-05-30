@@ -1,3 +1,5 @@
+import { MembershipDetails } from '../../domain/Course'; 
+
 export interface CreateCourseDTO {
   title: string;
   description: string;
@@ -5,12 +7,11 @@ export interface CreateCourseDTO {
   price: number;
   language: string;
   level: string;
-  instructorId: string;
+  instructorId: string; 
   tags?: string[];
   whatYouWillLearn: string[];
   whyChooseThisCourse: string[];
   idealFor: string[];
-  enrollCallToAction: string;
-  moduleIds?: string[]; 
   type: 'course' | 'membership';
+  membershipDetails?: MembershipDetails; 
 }

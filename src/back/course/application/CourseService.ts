@@ -5,7 +5,9 @@ import { UpdateCourse } from './use-cases/UpdateCourse';
 import { DeleteCourse } from './use-cases/DeleteCourse';
 import { ICourseRepository } from '../domain/ICourseRepository';
 import { CreateCourseDTO } from './dto/CreateCourseDTO';
-import { UpdateCourseDTO } from './use-cases/UpdateCourse';
+import { UpdateCourseDTO } from './dto/UpdateCourseDTO'; // <--- CORREGIDO: Importar desde el directorio DTO
+import { Result } from '../../share/utils/Result'; // Añadir si no está (aunque ya la tienes)
+import { Course } from '../domain/Course'; // Añadir si no está (aunque ya la tienes)
 
 export class CourseService {
   private createCourseUC: CreateCourse;
@@ -22,23 +24,23 @@ export class CourseService {
     this.deleteCourseUC = new DeleteCourse(repo);
   }
 
-  register(dto: CreateCourseDTO) {
+  register(dto: CreateCourseDTO): Promise<Result<string, Error>> { // Añadir tipo de retorno explícito
     return this.createCourseUC.execute(dto);
   }
 
-  getById(id: string) {
+  getById(id: string): Promise<Result<Course, Error>> { // Añadir tipo de retorno explícito
     return this.getCourseUC.execute(id);
   }
 
-  listByInstructor(instructorId: string) {
+  listByInstructor(instructorId: string): Promise<Result<Course[], Error>> { // Añadir tipo de retorno explícito
     return this.listCoursesUC.execute(instructorId);
   }
 
-  update(dto: UpdateCourseDTO) {
+  update(dto: UpdateCourseDTO): Promise<Result<void, Error>> { // Añadir tipo de retorno explícito
     return this.updateCourseUC.execute(dto);
   }
 
-  delete(id: string) {
+  delete(id: string): Promise<Result<void, Error>> { // Añadir tipo de retorno explícito
     return this.deleteCourseUC.execute(id);
   }
 }

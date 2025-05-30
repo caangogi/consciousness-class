@@ -1,4 +1,8 @@
+// src/lib/courseApi.ts
 import { apiFetch } from './apiClient';
+// Importamos los tipos del dominio para reutilizarlos en el DTO del frontend
+import { MembershipDetails, MembershipPlanType, CustomDurationDetails } from '@back/course/domain/Course';
+
 
 /**
  * DTO para crear o actualizar un curso.
@@ -16,7 +20,9 @@ export interface CreateCourseDTO {
   whyChooseThisCourse: string[];
   idealFor: string[];
   moduleIds: string[];
-  type: 'course' | 'membership'; // Added type property
+  type: 'course' | 'membership';
+  // AÑADIDO: Propiedad membershipDetails
+  membershipDetails?: MembershipDetails; // Opcional, solo relevante si type es 'membership'
 }
 
 /**

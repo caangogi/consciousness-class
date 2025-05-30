@@ -1,113 +1,110 @@
-@import '../styles/shared';
+// src/styles/CourseForm.module.scss (o el nombre de tu archivo de estilos del formulario)
+
+@import 'shared'; // Asegúrate de que esta ruta sea correcta
+
+// Variables que pueden faltar o ser inconsistentes con _shared.scss
+// Si estas no están en _shared.scss, añádelas allí o redefínelas aquí.
+// Idealmente, todas las variables de color y espaciado deberían estar en _shared.scss.
+
+// Ejemplo de cómo deberían estar definidas en _shared.scss
+// $input-border-color: $border-color;
+// $input-focus-border-color: $primary-color;
+// $input-focus-shadow-color: lighten($primary-color, 35%);
+// $text-placeholder-color: $text-secondary-color;
+// $disabled-bg-color: lighten($border-color, 3%);
+// $disabled-text-color: lighten($text-secondary-color, 15%);
+
 
 .formRow {
   display: flex;
   flex-direction: column;
-  gap: 18px; // Espacio entre grupos de campos en la misma fila (vertical en móvil)
-  margin-bottom: 24px;
+  gap: $spacing-lg; // Usar variable de espaciado para 18px -> 24px
+  margin-bottom: $spacing-xl; // Usar variable de espaciado para 24px -> 32px
 
   @include tablet {
     flex-direction: row;
-    gap: 24px; // Espacio horizontal entre grupos de campos en tablet+
+    gap: $spacing-xl; // Usar variable de espaciado para 24px
   }
 }
 
 .formGroup {
   display: flex;
   flex-direction: column;
-  gap: 6px; // Espacio entre label, input y mensaje de error/ayuda
-  flex: 1; // Para que los grupos en una fila compartan espacio
+  gap: $spacing-xs; // Usar variable de espaciado para 6px
+  flex: 1;
 
-  &.fullWidth { // Para campos que ocupan toda la fila
+  &.fullWidth {
     flex-basis: 100%;
   }
 }
 
 .label {
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: $font-size-sm; // Usar variable de fuente para 0.9rem -> 14px
+  font-weight: $font-weight-medium; // Usar variable de peso de fuente para 500
   color: $text-primary-color;
-  margin-bottom: 2px; // Pequeño ajuste si el gap del formGroup no es suficiente
+  margin-bottom: $spacing-xxs; // Usar variable de espaciado para 2px
 }
 
+// Unificar estilos de input, textarea y select usando el mixin de _shared.scss
 .input,
 .textarea,
 .select {
-  width: 100%;
-  padding: 12px 16px;
-  font-size: 1rem;
-  color: $text-primary-color;
-  background-color: $white;
-  border: 1px solid $input-border-color;
-  border-radius: 8px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  appearance: none; // Quitar apariencia nativa para select
+  @include form-field-base; // Aplica la base de estilos de formulario
 
+  // Ajustes específicos si es necesario, pero la mayoría ya está en el mixin
+  // Eliminar redundancias aquí si el mixin ya las cubre
+  // Ej: padding, border, border-radius, transition, appearance, &:focus, &:disabled
+  
   &::placeholder {
-    color: $text-placeholder-color;
-    opacity: 1;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: $input-focus-border-color;
-    box-shadow: 0 0 0 3px $input-focus-shadow-color;
+    color: $text-secondary-color; // Usar variable de placeholder
+    opacity: 0.7; // Mejor un poco de opacidad
   }
 
   &.invalid {
     border-color: $error-color;
-    &:focus {
-      box-shadow: 0 0 0 3px rgba($error-color, 0.25);
-    }
-  }
-
-  &:disabled {
-    background-color: $disabled-bg-color;
-    color: $disabled-text-color;
-    cursor: not-allowed;
-    border-color: $border-color;
+    box-shadow: 0 0 0 3px lighten($error-color, 30%); // Ajustar a la sombra estándar de enfoque con error
   }
 }
 
 .textarea {
   min-height: 120px;
-  resize: vertical; // Permitir redimensionar verticalmente
-  font-family: inherit; // Asegurar que hereda la fuente correcta
+  resize: vertical;
+  // font-family: inherit; // Ya en form-field-base
 }
 
-.selectWrapper { // Para añadir una flecha personalizada al select
+.selectWrapper {
   position: relative;
   width: 100%;
 
   &::after {
-    content: '▼'; // O un SVG como background-image
-    font-size: 0.8rem;
+    content: '▼'; // Puedes usar un SVG icon como url() en background-image
+    font-size: $font-size-sm; // Usar variable de fuente para 0.8rem
     color: $text-secondary-color;
     position: absolute;
-    right: 16px;
+    right: $spacing-md; // Usar variable de espaciado para 16px
     top: 50%;
     transform: translateY(-50%);
-    pointer-events: none; // Para que no interfiera con el click en el select
+    pointer-events: none;
   }
 
-  .select { // El select dentro del wrapper no necesita la flecha por defecto
-    padding-right: 40px; // Espacio para la flecha personalizada
+  .select {
+    padding-right: $spacing-xl; // Usar variable de espaciado para 40px
   }
-   .select:disabled + &::after { // Ocultar flecha si está deshabilitado
-     display: none;
-   }
+  .select:disabled + &::after {
+    display: none;
+  }
 }
 
 
 .errorMessage,
 .helpText {
-  font-size: 0.8rem;
-  margin-top: 2px; // Pequeño espacio si el gap del formGroup no es suficiente
+  font-size: $font-size-sm; // Usar variable de fuente para 0.8rem
+  margin-top: $spacing-xxs; // Usar variable de espaciado para 2px
 }
 
 .errorMessage {
   color: $error-color;
-  font-weight: 500;
+  font-weight: $font-weight-medium; // Usar variable de peso de fuente para 500
 }
 
 .helpText {
@@ -119,38 +116,27 @@
     max-width: 100%;
     height: auto;
     max-height: 150px;
-    border-radius: 6px;
-    margin-top: 10px;
+    border-radius: $border-radius-md; // Usar variable de borde para 6px -> 8px
+    margin-top: $spacing-sm; // Usar variable de espaciado para 10px -> 12px
     border: 1px solid $border-color;
     object-fit: cover;
+    box-shadow: $shadow-elevation-1; // Añadir una sombra sutil
 }
 
+// Botón de submit
 .submitButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: 14px 20px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: $white;
-  background-color: $primary-color;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
-  margin-top: 24px; // Espacio sobre el botón
+  @include button-base($primary-color, $text-light-color, $primary-dark-color);
+  padding: $spacing-md $spacing-lg; // Ajustar padding para 14px 20px
+  font-size: $font-size-lg; // Ajustar font-size para 1.1rem -> 20px
+  font-weight: $font-weight-semibold; // Ajustar font-weight para 600
+  margin-top: $spacing-xl; // Usar variable de espaciado para 24px
 
   &:hover:not(:disabled) {
-    background-color: $primary-dark-color;
-    box-shadow: 0 2px 8px rgba($primary-color, 0.3);
+    box-shadow: $shadow-elevation-2; // Usar sombra predefinida
   }
 
-  &:disabled {
-    background-color: lighten($primary-color, 20%);
-    color: rgba($white, 0.8);
-    cursor: not-allowed;
-  }
+  // Los estilos de disabled ya están en button-base, se pueden eliminar aquí si no hay overrides.
+  // &:disabled { ... }
 
   .spinner {
     width: 20px;
@@ -159,7 +145,7 @@
     border-top-color: $white;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
-    margin-right: 10px;
+    margin-right: $spacing-sm; // Usar variable de espaciado para 10px
   }
 }
 
@@ -167,4 +153,86 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+// --- Beneficios (Ya revisados y están bien) ---
+// Estos estilos ya estaban bastante bien y usan variables.
+// Solo me aseguraría de que $spacing-sm, $spacing-xs, $spacing-md, etc.
+// estén alineados con las variables definidas en _shared.scss.
+
+.benefitsInputContainer {
+    display: flex;
+    gap: $spacing-sm;
+    align-items: center;
+    width: 100%;
+
+    .formControl {
+        flex-grow: 1;
+    }
+}
+
+.addBenefitButton {
+    @include button-base($primary-color, $text-light-color, $primary-dark-color);
+    padding: $spacing-sm $spacing-md;
+    font-size: $font-size-sm;
+    flex-shrink: 0;
+}
+
+.benefitsChipContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+    margin-top: $spacing-md;
+    padding: $spacing-sm;
+    border: 1px solid lighten($border-color, 5%);
+    border-radius: $border-radius-md;
+    background-color: lighten($background-color, 3%);
+    min-height: 40px;
+    align-items: flex-start;
+}
+
+.benefitChip {
+    display: inline-flex;
+    align-items: center;
+    background-color: lighten($primary-color, 30%);
+    color: $primary-dark-color;
+    padding: $spacing-xxs $spacing-sm;
+    border-radius: $border-radius-lg;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    gap: $spacing-xxs;
+    border: 1px solid lighten($primary-color, 25%);
+    box-shadow: $shadow-elevation-1; // Usar variable de sombra
+}
+
+.removeBenefitButton {
+    background: none;
+    border: none;
+    color: $primary-dark-color;
+    font-size: $font-size-base;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 $spacing-xxs;
+    transition: color $transition-speed-fast $transition-ease-out;
+
+    &:hover {
+        color: $error-color;
+    }
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+}
+
+.errorMessage {
+    color: $error-color;
+    font-size: $font-size-sm;
+    margin-top: $spacing-xs;
+    padding-left: $spacing-xs;
+    font-weight: $font-weight-medium;
+}
+
+.formControl.invalid {
+    border-color: $error-color;
+    box-shadow: 0 0 0 3px lighten($error-color, 30%); // Consistencia con el box-shadow de focus
 }

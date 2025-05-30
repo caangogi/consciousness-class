@@ -10,28 +10,33 @@ export interface LessonProps {
   courseId: string;
   moduleId: string;
   title: string;
-  content: string;             // rich text o Markdown
+  content: string;
   order: number;
-  overview?: string;           // párrafo de resumen
-  faqs?: FAQ[];                // sección de preguntas frecuentes
+  overview?: string;
+  faqs?: FAQ[]; 
   createdAt: Date;
   updatedAt?: Date;
+
+ 
+  totalDuration?: number;
+  materialCount?: number; 
 }
 
 /**
- * Ahora incluye courseId y moduleId, junto con los demás campos sin las fechas.
+ * Ahora incluye courseId y moduleId, junto con los demás campos sin las fechas,
+ * y las nuevas métricas agregadas.
  */
 export interface LessonPersistence
   extends Omit<LessonProps, 'createdAt' | 'updatedAt'> {
   id: string;
-  createdAt: string;           // ISO
-  updatedAt?: string;          // ISO
+  createdAt: string; // ISO
+  updatedAt?: string; // ISO
 }
 
 export class Lesson {
   private constructor(
     public readonly id: UniqueEntityID,
-    private props: LessonProps
+    private props: LessonProps & { createdAt: Date; updatedAt?: Date; totalDuration: number; materialCount: number }
   ) {}
 
   // —— Getters ——
@@ -66,37 +71,55 @@ export class Lesson {
     return this.props.updatedAt;
   }
 
+  get totalDuration(): number | undefined { return this.props.totalDuration; }
+  get materialCount(): number | undefined { return this.props.materialCount; }
+
   // —— Comportamientos ——
   public updateDetails(
     title: string,
     content: string,
     overview?: string,
     faqs?: FAQ[]
-  ): void {
+  ): Result<void, Error> { // Cambiado a Result para consistencia
     if (!title.trim()) {
-      throw new Error('Lesson title cannot be empty');
+      return Result.err(new Error('Lesson title cannot be empty'));
     }
     if (!content.trim()) {
-      throw new Error('Lesson content cannot be empty');
+      return Result.err(new Error('Lesson content cannot be empty'));
     }
     this.props.title = title;
     this.props.content = content;
     this.props.overview = overview;
     this.props.faqs = faqs;
     this.props.updatedAt = new Date();
+    return Result.ok(undefined);
   }
 
-  public changeOrder(newOrder: number): void {
+  public changeOrder(newOrder: number): Result<void, Error> {
     if (newOrder < 0) {
-      throw new Error('Order must be non-negative');
+      return Result.err(new Error('Order must be non-negative'));
     }
     this.props.order = newOrder;
     this.props.updatedAt = new Date();
+    return Result.ok(undefined); 
   }
+
+  public updateMetrics({
+    totalDuration,
+    materialCount,
+  }: {
+    totalDuration?: number;
+    materialCount?: number;
+  }): void {
+    if (totalDuration !== undefined) this.props.totalDuration = totalDuration;
+    if (materialCount !== undefined) this.props.materialCount = materialCount;
+    this.props.updatedAt = new Date(); 
+  }
+
 
   // —— Fábrica ——
   public static create(
-    props: Omit<LessonProps, 'createdAt'> &
+    props: Omit<LessonProps, 'createdAt' | 'totalDuration' | 'materialCount'> &
       Partial<Pick<LessonProps, 'overview' | 'faqs'>>,
     id?: UniqueEntityID
   ): Result<Lesson, Error> {
@@ -116,44 +139,38 @@ export class Lesson {
       return Result.err(new Error('Order must be non-negative'));
     }
     const now = new Date();
-    const full: LessonProps = {
+    // Construimos las propiedades internas completas, inicializando las métricas a 0
+    const internalProps: LessonProps & { createdAt: Date; updatedAt?: Date; totalDuration: number; materialCount: number } = {
       ...props,
       createdAt: now,
-      updatedAt: undefined,
+      updatedAt: undefined, 
+      totalDuration: 0,  
+      materialCount: 0    
     };
-    return Result.ok(new Lesson(id ?? new UniqueEntityID(), full));
+    return Result.ok(new Lesson(id ?? new UniqueEntityID(), internalProps));
   }
 
   // —— Serialización ——
   public toPersistence(): LessonPersistence {
-    const p: LessonPersistence = {
+    const { createdAt, updatedAt, ...rest } = this.props; 
+    return {
       id: this.id.toString(),
-      courseId: this.props.courseId,    // <-- incluido
-      moduleId: this.props.moduleId,
-      title: this.props.title,
-      content: this.props.content,
-      order: this.props.order,
-      createdAt: this.props.createdAt.toISOString(),
-      // sólo incluimos overview/faqs si existen
-      ...(this.props.overview && { overview: this.props.overview }),
-      ...(this.props.faqs && { faqs: this.props.faqs }),
-      ...(this.props.updatedAt && { updatedAt: this.props.updatedAt.toISOString() }),
+      ...rest,
+      createdAt: createdAt.toISOString(),
+      ...(updatedAt && { updatedAt: updatedAt.toISOString() }),
     };
-    return p;
   }
 
   public static fromPersistence(p: LessonPersistence): Lesson {
-    const props: LessonProps = {
-      courseId: p.courseId,            // <-- recuperado
-      moduleId: p.moduleId,
-      title: p.title,
-      content: p.content,
-      order: p.order,
-      overview: p.overview,
-      faqs: p.faqs,
-      createdAt: new Date(p.createdAt),
-      updatedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
+    const { id, createdAt, updatedAt, ...rest } = p; 
+    
+    const props: LessonProps & { createdAt: Date; updatedAt?: Date; totalDuration: number; materialCount: number } = {
+      ...rest, 
+      createdAt: new Date(createdAt),
+      updatedAt: updatedAt ? new Date(updatedAt) : undefined,
+      totalDuration: rest.totalDuration ?? 0, 
+      materialCount: rest.materialCount ?? 0, 
     };
-    return new Lesson(new UniqueEntityID(p.id), props);
+    return new Lesson(new UniqueEntityID(id), props);
   }
 }

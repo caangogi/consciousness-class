@@ -1,24 +1,58 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import CourseForm from './CourseForm'; // Asumiendo que está en la misma carpeta o subcarpeta
+import CourseForm from './CourseForm';
 import ModuleManager from './ModuleManager';
 import LessonManager from './LessonManager';
 import MaterialManager from './MaterialManager';
 import ReviewStep from './ReviewStep';
+// Importamos el CreateCourseDTO actualizado que ahora incluye membershipDetails
 import type { CreateCourseDTO, Course } from '@/lib/courseApi';
 import type { Module } from '@/lib/moduleApi';
 import type { LessonRecord as Lesson } from '@/lib/lessonApi';
 import type { MaterialPersistence as Material } from '@/lib/materialApi';
 
-import styles from '../styles/CourseWizard.module.scss'; // Importar el módulo SCSS
+import styles from '../styles/CourseWizard.module.scss';
 
-const steps = ['Curso', 'Módulos', 'Lecciones', 'Materiales', 'Revisión'];
+const STEPS = ['Curso', 'Módulos', 'Lecciones', 'Materiales', 'Revisión'];
+
+// Importamos los tipos de MembershipDetails del dominio para usarlos en DEFAULT_COURSE_STATE
+import { MembershipDetails, MembershipPlanType, CustomDurationDetails } from '../../back/course/domain/Course'; // Ajusta la ruta si es necesario
+
+// AHORA DEFAULT_COURSE_STATE DEBE INCLUIR membershipDetails SI CORRESPONDE
+// Y asegurar que los tipos sean consistentes con CreateCourseDTO actualizado.
+// Es importante que sea un tipo que se pueda extender o que ya incluya todas las propiedades posibles del Course.
+const DEFAULT_COURSE_STATE: CreateCourseDTO & {
+  id?: string;
+  moduleIds: string[];
+  createdAt?: string; // Hacemos opcional para la inicialización y se llena al guardar
+  updatedAt?: string; // Hacemos opcional para la inicialización y se llena al guardar
+  isPublished?: boolean; // Hacemos opcional para la inicialización y se llena al guardar
+} = {
+  title: '',
+  description: '',
+  coverImageUrl: '',
+  price: 0,
+  language: '',
+  level: '',
+  tags: [],
+  whatYouWillLearn: [],
+  whyChooseThisCourse: [],
+  idealFor: [],
+  moduleIds: [],
+  type: 'course', // Default a 'course'
+  membershipDetails: undefined, // Default a undefined
+  // createdAt y updatedAt serán manejados por el backend o al guardar por primera vez.
+  // isPublished también se manejará en el backend.
+  // No los incluimos aquí para no tener que definirlos con valores dummy
+  // si el backend los gestiona. Si la API exige que estén siempre presentes,
+  // entonces sí los añadirías con valores por defecto.
+};
 
 interface WizardState {
-  course: CreateCourseDTO & { id?: string; moduleIds: string[] } & Pick<Course, 'createdAt' | 'updatedAt' | 'isPublished'>;
+  course: typeof DEFAULT_COURSE_STATE; // El tipo de course ahora incluye membershipDetails
   modules: Module[];
   lessons: Lesson[];
   materials: Material[];
@@ -28,80 +62,73 @@ export default function CourseWizard() {
   const { token } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [isClient, setIsClient] = useState(false); // Para evitar hydration mismatch con localStorage
-  const [state, setState] = useState<WizardState>({
-    course: {
-      id: undefined,
-      title: '',
-      description: '',
-      coverImageUrl: '',
-      price: 0,
-      language: '',
-      level: '',
-      tags: [],
-      whatYouWillLearn: [],
-      whyChooseThisCourse: [],
-      idealFor: [],
-      moduleIds: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      isPublished: false,
-      type: 'course'
-    },
-    modules: [],
-    lessons: [],
-    materials: [],
+  const [isClient, setIsClient] = useState(false);
+
+  const [state, setState] = useState<WizardState>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('wizard');
+      if (saved) {
+        try {
+          const parsed: Partial<WizardState> = JSON.parse(saved);
+          return {
+            // Aseguramos que los valores por defecto se fusionen correctamente,
+            // incluyendo membershipDetails si existen en parsed.course
+            course: { ...DEFAULT_COURSE_STATE, ...(parsed.course || {}) },
+            modules: parsed.modules || [],
+            lessons: parsed.lessons || [],
+            materials: parsed.materials || [],
+          };
+        } catch (error) {
+          console.error('Error parsing wizard state from localStorage:', error);
+          localStorage.removeItem('wizard');
+        }
+      }
+    }
+    return {
+      course: DEFAULT_COURSE_STATE,
+      modules: [],
+      lessons: [],
+      materials: [],
+    };
   });
 
   useEffect(() => {
-    setIsClient(true); // Marcar que estamos en el cliente para leer localStorage
+    setIsClient(true);
   }, []);
-  
+
   // Persistencia en localStorage con debounce
   useEffect(() => {
-    if (!isClient) return; // No operar en el servidor
+    if (!isClient) return;
     const timer = setTimeout(() => {
-      localStorage.setItem('wizard', JSON.stringify(state));
+      // Limpiar datos temporales antes de guardar si no hay un ID de curso
+      // Y si estamos en el paso 0 con todo lo demás vacío
+      if (!state.course.id && step === 0 && state.modules.length === 0 && state.lessons.length === 0 && state.materials.length === 0) {
+        localStorage.removeItem('wizard');
+      } else {
+        localStorage.setItem('wizard', JSON.stringify(state));
+      }
     }, 500);
     return () => clearTimeout(timer);
-  }, [state, isClient]);
+  }, [state, isClient, step]);
 
-  // Hidratación inicial
-  useEffect(() => {
-    if (!isClient) return; // No operar en el servidor
-    const saved = localStorage.getItem('wizard');
-    if (saved) {
-      try {
-        const parsed: Partial<WizardState> = JSON.parse(saved);
-        setState(prev => ({
-          ...prev,
-          ...parsed,
-          course: { ...prev.course, ...(parsed.course || {}) },
-          modules: parsed.modules ?? prev.modules,
-          lessons: parsed.lessons ?? prev.lessons,
-          materials: parsed.materials ?? prev.materials,
-        }));
-      } catch {
-        localStorage.removeItem('wizard');
-      }
-    }
-  }, [isClient]);
-
-  const saveCourse = (dto: CreateCourseDTO, id: string) => {
+  const saveCourse = useCallback((dto: CreateCourseDTO, id: string) => {
     setState(prev => ({
       ...prev,
       course: {
-        ...dto,
+        ...dto, // Aquí 'dto' ya incluye membershipDetails
         id,
-        moduleIds: prev.course.moduleIds || [], // Mantener moduleIds si ya existen
-        createdAt: prev.course.createdAt,
-        updatedAt: new Date().toISOString(), // Actualizar updatedAt
-        isPublished: prev.course.isPublished,
+        // Mantenemos createdAt, updatedAt, isPublished si ya existen o los inicializamos si no
+        createdAt: prev.course.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isPublished: prev.course.isPublished || false,
+        // moduleIds se deben mantener si el DTO no los incluye o si queremos fusionar
+        // dado que CreateCourseDTO del frontend ya incluye moduleIds, esto debería estar bien
+        moduleIds: dto.moduleIds || prev.course.moduleIds || [],
       },
     }));
-  };
+  }, []);
 
-  const addModule = (module: Module) => {
+  const addModule = useCallback((module: Module) => {
     setState(prev => ({
       ...prev,
       modules: [...prev.modules, module],
@@ -110,50 +137,135 @@ export default function CourseWizard() {
         moduleIds: [...prev.course.moduleIds, module.id],
       },
     }));
-  };
+  }, []);
 
-  const addLesson = (lesson: Lesson) => {
+  const addLesson = useCallback((lesson: Lesson) => {
     setState(prev => ({
       ...prev,
       lessons: [...prev.lessons, lesson],
     }));
-  };
+  }, []);
 
-  const addMaterial = (material: Material) => {
+  const addMaterial = useCallback((material: Material) => {
     setState(prev => ({
       ...prev,
       materials: [...prev.materials, material],
     }));
-  };
+  }, []);
 
-  const canNavigateToStep = (targetStep: number): boolean => {
-    if (targetStep < step) return true; // Siempre se puede ir a pasos anteriores
+  const canNavigateToStep = useCallback((targetStep: number): boolean => {
+    if (targetStep < step) return true;
+
     if (targetStep === step) return true;
-    // Para ir al paso siguiente, el curso (paso 0) debe estar guardado (tener ID)
-    if (targetStep > 0 && !state.course.id) return false;
-    // Lógica adicional si se requiere que pasos intermedios estén "completos"
-    // Por ahora, permitimos avanzar si el curso base está creado.
-    return true;
-  };
 
-  if (!token && isClient) { // Asegurarse que se renderiza solo en cliente si no hay token
-    return (
-        <div className={styles.wizardContainer}>
-            <div className={styles.accessDeniedContainer}>
-                {/* <span className={styles.icon}>⚠️</span>  Puedes usar un SVG o un icono de librería aquí */}
-                <h3 className={styles.title}>Acceso Denegado</h3>
-                <p className={styles.message}>Por favor, inicia sesión para crear o editar un curso.</p>
-                <button onClick={() => router.push('/login')} className={styles.actionButton}>
-                    Iniciar Sesión
-                </button>
-            </div>
+    switch (step) {
+      case 0:
+        // Solo puede avanzar si el curso tiene un ID (ya fue guardado)
+        return targetStep === 1 && !!state.course.id;
+      case 1:
+        // Puede avanzar del paso de módulos al de lecciones (sin validación estricta de módulos creados aquí,
+        // la validación real la haría ModuleManager)
+        return targetStep === 2;
+      case 2:
+        return targetStep === 3;
+      case 3:
+        return targetStep === 4;
+      case 4:
+        return false;
+      default:
+        return false;
+    }
+  }, [step, state.course.id]);
+
+  const renderStepContent = useMemo(() => {
+    // Si no hay ID de curso y no estamos en el primer paso, obligamos a volver al primer paso.
+    // Esto asegura que CourseForm se use para crear/guardar el curso inicialmente.
+    if (!state.course.id && step !== 0) {
+      return (
+        <div className={styles.missingCourseInfo}>
+          <p>Para continuar, primero debes guardar la información del curso.</p>
+          <button onClick={() => setStep(0)} className={styles.actionButton}>
+            Volver a Información del Curso
+          </button>
         </div>
+      );
+    }
+
+    switch (step) {
+      case 0:
+        return (
+          <CourseForm
+            initialData={state.course} // state.course ahora incluye membershipDetails
+            onNext={() => { if (state.course.id) setStep(1); }} // Solo avanza si hay ID
+            saveCourse={saveCourse}
+          />
+        );
+      case 1:
+        return (
+          <ModuleManager
+            courseId={state.course.id!}
+            modules={state.modules}
+            onAddModule={addModule}
+            onBack={() => setStep(0)}
+            onNext={() => setStep(2)}
+          />
+        );
+      case 2:
+        return (
+          <LessonManager
+            courseId={state.course.id!}
+            modules={state.modules}
+            lessons={state.lessons}
+            onAddLesson={addLesson}
+            onBack={() => setStep(1)}
+            onNext={() => setStep(3)}
+          />
+        );
+      case 3:
+        return (
+          <MaterialManager
+            courseId={state.course.id!}
+            modules={state.modules}
+            lessons={state.lessons}
+            onAddMaterial={addMaterial}
+            onBack={() => setStep(2)}
+            onNext={() => setStep(4)}
+          />
+        );
+      case 4:
+        return (
+          <ReviewStep
+            course={state.course as Course}
+            modules={state.modules}
+            lessons={state.lessons}
+            materials={state.materials}
+            onBack={() => setStep(3)}
+            onPublish={() => router.push(`/course/${state.course.id}`)}
+          />
+        );
+      default:
+        return null;
+    }
+  }, [step, state, saveCourse, addModule, addLesson, addMaterial, router]);
+
+
+  if (!isClient) {
+    return <div className={styles.wizardContainer}><p>Cargando asistente...</p></div>;
+  }
+
+  if (!token) {
+    return (
+      <div className={styles.wizardContainer}>
+        <div className={styles.accessDeniedContainer}>
+          <h3 className={styles.title}>Acceso Denegado</h3>
+          <p className={styles.message}>Por favor, inicia sesión para crear o editar un curso.</p>
+          <button onClick={() => router.push('/login')} className={styles.actionButton}>
+            Iniciar Sesión
+          </button>
+        </div>
+      </div>
     );
   }
-  if (!isClient) { // Evitar renderizar el wizard en SSR si depende de localStorage o token
-      return <div className={styles.wizardContainer}><p>Cargando asistente...</p></div>; // O un spinner
-  }
-
 
   return (
     <div className={styles.wizardContainer}>
@@ -163,8 +275,9 @@ export default function CourseWizard() {
           <div className={styles.progressBarContainer}>
             <div
               className={styles.progressBar}
-              style={{ width: `${(step / (steps.length - 1)) * 100}%` }}
-              aria-valuenow={(step / (steps.length - 1)) * 100}
+              style={{ width: `${(step / (STEPS.length - 1)) * 100}%` }}
+              role="progressbar"
+              aria-valuenow={(step / (STEPS.length - 1)) * 100}
               aria-valuemin={0}
               aria-valuemax={100}
             />
@@ -172,10 +285,10 @@ export default function CourseWizard() {
         </div>
 
         <ul className={styles.stepTabs}>
-          {steps.map((label, index) => {
-            const isCompleted = index < step && (index === 0 ? !!state.course.id : true); // El paso 0 se considera completado si hay course.id
+          {STEPS.map((label, index) => {
             const isActive = index === step;
-            const isDisabled = !canNavigateToStep(index) || (index > step && !isCompleted && index !== step+1 && !state.course.id) ; // Más restrictivo para saltar pasos
+            const isDisabled = !canNavigateToStep(index);
+            const isCompleted = index < step && (index === 0 ? !!state.course.id : true);
 
             return (
               <li className={styles.stepTabItem} key={label}>
@@ -202,52 +315,7 @@ export default function CourseWizard() {
         </ul>
 
         <div className={styles.stepContent}>
-          {step === 0 && (
-            <CourseForm
-              initialData={state.course}
-              onNext={() => { if (state.course.id) setStep(1);}}
-              saveCourse={saveCourse}
-            />
-          )}
-          {step === 1 && state.course.id && (
-            <ModuleManager
-              courseId={state.course.id!}
-              modules={state.modules}
-              onAddModule={addModule}
-              onBack={() => setStep(0)}
-              onNext={() => setStep(2)}
-            />
-          )}
-          {step === 2 && state.course.id && (
-            <LessonManager
-              courseId={state.course.id!}
-              modules={state.modules}
-              lessons={state.lessons}
-              onAddLesson={addLesson}
-              onBack={() => setStep(1)}
-              onNext={() => setStep(3)}
-            />
-          )}
-          {step === 3 && state.course.id && (
-            <MaterialManager
-              courseId={state.course.id!}
-              modules={state.modules}
-              lessons={state.lessons}
-              onAddMaterial={addMaterial}
-              onBack={() => setStep(2)}
-              onNext={() => setStep(4)}
-            />
-          )}
-          {step === 4 && state.course.id && (
-            <ReviewStep
-              course={state.course as Course}
-              modules={state.modules}
-              lessons={state.lessons}
-              materials={state.materials}
-              onBack={() => setStep(3)}
-              onPublish={() => router.push(`/course/${state.course.id}`)}
-            />
-          )}
+          {renderStepContent}
         </div>
       </div>
     </div>

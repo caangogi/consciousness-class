@@ -62,6 +62,7 @@ const lessonSchema = z.object({
   lessonContentType: z.enum(['video', 'documento_pdf', 'texto_rico', 'quiz', 'audio'], { required_error: "Debes seleccionar un tipo de contenido."}),
   lessonDuration: z.string().min(1, "La duración estimada es requerida."),
   lessonIsPreview: z.boolean().default(false),
+  lessonContentText: z.string().optional(), // For texto_rico or quiz
 });
 type LessonFormValues = z.infer<typeof lessonSchema>;
 
@@ -71,6 +72,7 @@ const editLessonSchema = z.object({
   lessonContentType: z.enum(['video', 'documento_pdf', 'texto_rico', 'quiz', 'audio'], { required_error: "Debes seleccionar un tipo de contenido."}),
   lessonDuration: z.string().min(1, "La duración estimada es requerida."),
   lessonIsPreview: z.boolean().default(false),
+  lessonContentText: z.string().optional(), // For texto_rico or quiz
 });
 type EditLessonFormValues = z.infer<typeof editLessonSchema>;
 
@@ -111,6 +113,10 @@ export default function NewCoursePage() {
   const [showDeleteLessonDialog, setShowDeleteLessonDialog] = useState(false);
   const [isDeletingLesson, setIsDeletingLesson] = useState(false);
 
+  const [lessonContentFile, setLessonContentFile] = useState<File | null>(null);
+  const [isUploadingContent, setIsUploadingContent] = useState(false);
+  const [selectedLessonContentType, setSelectedLessonContentType] = useState<LessonContentType | undefined>(undefined);
+
 
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreviewUrl, setCoverImagePreviewUrl] = useState<string | null>(null);
@@ -149,6 +155,7 @@ export default function NewCoursePage() {
       lessonContentType: undefined,
       lessonDuration: '',
       lessonIsPreview: false,
+      lessonContentText: '',
     }
   });
 
@@ -159,6 +166,7 @@ export default function NewCoursePage() {
       lessonContentType: undefined,
       lessonDuration: '',
       lessonIsPreview: false,
+      lessonContentText: '',
     }
   });
 
@@ -195,7 +203,12 @@ export default function NewCoursePage() {
         lessonContentType: currentEditingLesson.contenidoPrincipal.tipo,
         lessonDuration: currentEditingLesson.duracionEstimada,
         lessonIsPreview: currentEditingLesson.esVistaPrevia,
+        lessonContentText: currentEditingLesson.contenidoPrincipal.tipo === 'texto_rico' || currentEditingLesson.contenidoPrincipal.tipo === 'quiz' 
+                           ? currentEditingLesson.contenidoPrincipal.texto || '' 
+                           : '',
       });
+      setSelectedLessonContentType(currentEditingLesson.contenidoPrincipal.tipo);
+      setLessonContentFile(null); // Reset file on dialog open
     }
   }, [currentEditingLesson, showEditLessonDialog, editLessonForm]);
 
@@ -250,7 +263,10 @@ export default function NewCoursePage() {
         lessonContentType: undefined,
         lessonDuration: '',
         lessonIsPreview: false,
+        lessonContentText: '',
       }); 
+      setLessonContentFile(null);
+      setSelectedLessonContentType(undefined);
       if (createdCourseId && (!lessonsByModule[moduleId] || lessonsByModule[moduleId]?.length === 0)) { 
         fetchLessonsForModule(createdCourseId, moduleId);
       }
@@ -369,12 +385,25 @@ export default function NewCoursePage() {
         return;
     }
 
+    const isFileType = ['video', 'audio', 'documento_pdf'].includes(values.lessonContentType);
+    if (isFileType && lessonContentFile) {
+        toast({
+            title: "Subida de Archivo Pendiente",
+            description: "La lección se creará. Por favor, edita la lección después para subir el archivo de contenido.",
+            duration: 6000,
+        });
+    }
+
     setIsLessonLoading(prev => ({ ...prev, [moduleId]: true }));
     try {
       const idToken = await auth.currentUser.getIdToken(true);
       const dto: CreateLessonDto = {
         nombre: values.lessonName,
-        contenidoPrincipal: { tipo: values.lessonContentType as LessonContentType }, 
+        contenidoPrincipal: { 
+            tipo: values.lessonContentType as LessonContentType,
+            url: null, // URL will be set on edit for file types
+            texto: (values.lessonContentType === 'texto_rico' || values.lessonContentType === 'quiz') ? values.lessonContentText || null : null,
+        }, 
         duracionEstimada: values.lessonDuration,
         esVistaPrevia: values.lessonIsPreview,
       };
@@ -393,7 +422,10 @@ export default function NewCoursePage() {
         lessonContentType: undefined,
         lessonDuration: '',
         lessonIsPreview: false,
+        lessonContentText: '',
       }); 
+      setLessonContentFile(null);
+      setSelectedLessonContentType(undefined);
       await fetchLessonsForModule(createdCourseId, moduleId);
     } catch (error: any) {
       toast({title: "Error al Añadir Lección", description: error.message, variant: "destructive"});
@@ -408,19 +440,52 @@ export default function NewCoursePage() {
       return;
     }
     setIsEditingLesson(true);
+    setIsUploadingContent(false);
+
+    let downloadURL: string | null = currentEditingLesson.contenidoPrincipal.url || null;
+    let contentText: string | null = currentEditingLesson.contenidoPrincipal.texto || null;
+
     try {
       const idToken = await auth.currentUser.getIdToken(true);
+      const isFileType = ['video', 'audio', 'documento_pdf'].includes(values.lessonContentType);
+
+      if (isFileType && lessonContentFile) {
+        setIsUploadingContent(true);
+        const storagePath = `cursos/${createdCourseId}/modulos/${currentEditingLesson.moduleId}/lecciones/${currentEditingLesson.id}/contenido/${lessonContentFile.name}`;
+        const fileRef = ref(storage, storagePath);
+        await uploadBytes(fileRef, lessonContentFile);
+        downloadURL = await getDownloadURL(fileRef);
+        contentText = null; // Clear text if file is uploaded
+        toast({ title: "Archivo Subido", description: "El contenido de la lección se ha actualizado."});
+        setIsUploadingContent(false);
+      } else if (values.lessonContentType === 'texto_rico' || values.lessonContentType === 'quiz') {
+        contentText = values.lessonContentText || null;
+        downloadURL = null; // Clear URL if text content is provided
+      } else if (isFileType && !lessonContentFile) {
+        // File type selected, but no new file uploaded. Keep existing URL or clear if type changed from text.
+        if (currentEditingLesson.contenidoPrincipal.tipo !== values.lessonContentType) {
+            downloadURL = null; // If type changed from text to file, but no new file, clear URL.
+        }
+      }
+
+
       const dto: UpdateLessonDto = {
         nombre: values.lessonName,
-        contenidoPrincipal: { tipo: values.lessonContentType as LessonContentType }, // Keep it simple for now
+        contenidoPrincipal: { 
+            tipo: values.lessonContentType as LessonContentType,
+            url: downloadURL,
+            texto: contentText,
+        },
         duracionEstimada: values.lessonDuration,
         esVistaPrevia: values.lessonIsPreview,
       };
+      
       const response = await fetch(`/api/courses/${createdCourseId}/modules/${currentEditingLesson.moduleId}/lessons/${currentEditingLesson.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify(dto),
       });
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || "Error al actualizar la lección.");
@@ -428,11 +493,13 @@ export default function NewCoursePage() {
       toast({ title: "Lección Actualizada" });
       setShowEditLessonDialog(false);
       setCurrentEditingLesson(null);
+      setLessonContentFile(null);
       await fetchLessonsForModule(createdCourseId, currentEditingLesson.moduleId);
     } catch (error: any) {
       toast({ title: "Error al Actualizar Lección", description: error.message, variant: "destructive" });
     } finally {
       setIsEditingLesson(false);
+      setIsUploadingContent(false);
     }
   };
 
@@ -442,7 +509,7 @@ export default function NewCoursePage() {
       setShowDeleteModuleDialog(false);
       return;
     }
-    setIsModuleLoading(true); // Reuse module loading state for general module operations
+    setIsModuleLoading(true); 
     try {
       const idToken = await auth.currentUser.getIdToken(true);
       const response = await fetch(`/api/courses/${createdCourseId}/modules/${moduleToDelete.id}`, {
@@ -495,6 +562,20 @@ export default function NewCoursePage() {
     }
   };
 
+  const handleLessonFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 100 * 1024 * 1024) { // Example limit: 100MB
+        toast({ title: "Archivo Demasiado Grande", description: "El archivo no debe exceder los 100MB.", variant: "destructive"});
+        event.target.value = ''; // Clear the input
+        setLessonContentFile(null);
+        return;
+      }
+      setLessonContentFile(file);
+    } else {
+      setLessonContentFile(null);
+    }
+  };
 
   const handleCoverImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -600,6 +681,49 @@ export default function NewCoursePage() {
     else if (currentStep === "structure") setCurrentStep("info");
   };
 
+  const renderLessonContentField = (formInstance: typeof lessonForm | typeof editLessonForm, currentContentType: LessonContentType | undefined, disabled: boolean) => {
+    const isFileType = currentContentType && ['video', 'audio', 'documento_pdf'].includes(currentContentType);
+    const isTextType = currentContentType && ['texto_rico', 'quiz'].includes(currentContentType);
+
+    return (
+      <>
+        {isFileType && (
+          <FormItem>
+            <FormLabel className="text-xs">Archivo de Contenido</FormLabel>
+            <FormControl>
+              <Input 
+                type="file" 
+                onChange={handleLessonFileChange} 
+                disabled={disabled || isUploadingContent}
+                className="text-xs file:text-xs file:font-medium file:text-primary file:bg-primary/10 hover:file:bg-primary/20"
+              />
+            </FormControl>
+            {lessonContentFile && <FormDescription className="text-xs">Archivo seleccionado: {lessonContentFile.name}</FormDescription>}
+             {(formInstance === lessonForm && lessonContentFile) && 
+                <FormDescription className="text-xs text-accent">El archivo se subirá cuando edites esta lección después de crearla.</FormDescription>
+             }
+            <FormMessage />
+          </FormItem>
+        )}
+        {isTextType && (
+          <FormField
+            control={formInstance.control}
+            name="lessonContentText"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Contenido Textual</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Escribe el contenido aquí..." {...field} rows={5} disabled={disabled || isUploadingContent} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </>
+    );
+  };
+
 
   return (
     <div className="container mx-auto py-8 px-4 md:px:6">
@@ -682,42 +806,48 @@ export default function NewCoursePage() {
                       {modules.length > 0 && (
                         <div className="space-y-4 mt-6">
                           <h4 className="text-lg font-semibold mb-2">Módulos del Curso:</h4>
-                          <Accordion type="single" collapsible className="w-full" value={expandedModuleId || undefined} onValueChange={handleToggleModuleLessons}>
+                          <Accordion type="single" collapsible className="w-full" value={expandedModuleId || undefined} onValueChange={(value) => {
+                              handleToggleModuleLessons(value);
+                              // Reset form and content type when accordion item is changed
+                              lessonForm.reset({ lessonName: '', lessonContentType: undefined, lessonDuration: '', lessonIsPreview: false, lessonContentText: '' });
+                              setLessonContentFile(null);
+                              setSelectedLessonContentType(undefined);
+                          }}>
                             {modules.sort((a,b) => a.orden - b.orden).map(module => (
                               <AccordionItem value={module.id} key={module.id} className="border-b">
-                                <div className="flex items-center justify-between w-full bg-secondary/50 hover:bg-secondary/60 rounded-t-md data-[state=open]:rounded-b-none transition-colors pr-2">
-                                  <AccordionTrigger className="flex-grow text-left hover:no-underline px-4 py-3 group">
-                                    <div className="flex justify-between items-center w-full">
-                                      <div>
-                                        <span className="font-medium">{module.nombre}</span>
-                                        {module.descripcion && <p className="text-xs text-muted-foreground font-normal mt-0.5">{module.descripcion}</p>}
+                                 <div className="flex items-center justify-between w-full bg-secondary/50 hover:bg-secondary/60 rounded-t-md data-[state=open]:rounded-b-none transition-colors pr-2">
+                                    <AccordionTrigger className="flex-grow text-left hover:no-underline px-4 py-3 group">
+                                      <div className="flex justify-between items-center w-full">
+                                        <div>
+                                          <span className="font-medium">{module.nombre}</span>
+                                          {module.descripcion && <p className="text-xs text-muted-foreground font-normal mt-0.5">{module.descripcion}</p>}
+                                        </div>
+                                        <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                                          {lessonsByModule[module.id]?.length || 0} lecciones
+                                        </span>
                                       </div>
-                                      <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
-                                        {lessonsByModule[module.id]?.length || 0} lecciones
-                                      </span>
-                                    </div>
-                                  </AccordionTrigger>
-                                  <div className="flex items-center gap-1 pl-2">
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-60 hover:opacity-100 hover:bg-primary/10 focus-visible:ring-offset-secondary/60" 
-                                        onClick={(e) => { 
-                                          e.stopPropagation();
-                                          setCurrentEditingModule(module);
-                                          setShowEditModuleDialog(true);
-                                        }}>
-                                          <Edit className="h-3.5 w-3.5"/>
-                                          <span className="sr-only">Editar módulo</span>
-                                      </Button>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10 opacity-60 hover:opacity-100 focus-visible:ring-offset-secondary/60" 
+                                    </AccordionTrigger>
+                                    <div className="flex items-center gap-1 pl-2">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-60 hover:opacity-100 hover:bg-primary/10 focus-visible:ring-offset-secondary/60" 
                                           onClick={(e) => { 
-                                              e.stopPropagation(); 
-                                              setModuleToDelete(module); 
-                                              setShowDeleteModuleDialog(true); 
+                                            e.stopPropagation();
+                                            setCurrentEditingModule(module);
+                                            setShowEditModuleDialog(true);
                                           }}>
-                                          <Trash2 className="h-3.5 w-3.5"/>
-                                          <span className="sr-only">Eliminar módulo</span>
-                                      </Button>
+                                            <Edit className="h-3.5 w-3.5"/>
+                                            <span className="sr-only">Editar módulo</span>
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10 opacity-60 hover:opacity-100 focus-visible:ring-offset-secondary/60" 
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                setModuleToDelete(module); 
+                                                setShowDeleteModuleDialog(true); 
+                                            }}>
+                                            <Trash2 className="h-3.5 w-3.5"/>
+                                            <span className="sr-only">Eliminar módulo</span>
+                                        </Button>
+                                    </div>
                                   </div>
-                                </div>
                                 <AccordionContent className="pt-0 pb-2 px-2 border-x border-b rounded-b-md border-primary/20 ml-0">
                                   <Card className="shadow-none border-0 rounded-none">
                                     <CardHeader className="px-2 pt-3 pb-2">
@@ -729,11 +859,34 @@ export default function NewCoursePage() {
                                           <h5 className="font-medium text-sm">Añadir Nueva Lección</h5>
                                           <FormField control={lessonForm.control} name="lessonName" render={({ field }) => (<FormItem><FormLabel className="text-xs">Nombre Lección</FormLabel><FormControl><Input placeholder="Título de la lección" {...field} disabled={isLessonLoading[module.id]} /></FormControl><FormMessage /></FormItem>)} />
                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <FormField control={lessonForm.control} name="lessonContentType" render={({ field }) => (<FormItem><FormLabel className="text-xs">Tipo Contenido</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLessonLoading[module.id]}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger></FormControl><SelectContent>{lessonContentTypes.map(type => <SelectItem key={type} value={type}>{type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                                            <FormField 
+                                                control={lessonForm.control} 
+                                                name="lessonContentType" 
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs">Tipo Contenido</FormLabel>
+                                                        <Select 
+                                                            onValueChange={(value) => {
+                                                                field.onChange(value);
+                                                                setSelectedLessonContentType(value as LessonContentType);
+                                                                setLessonContentFile(null); // Reset file on type change
+                                                                lessonForm.setValue('lessonContentText', ''); // Reset text on type change
+                                                            }} 
+                                                            value={field.value} 
+                                                            disabled={isLessonLoading[module.id]}
+                                                        >
+                                                            <FormControl><SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger></FormControl>
+                                                            <SelectContent>{lessonContentTypes.map(type => <SelectItem key={type} value={type}>{type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>)}</SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )} 
+                                            />
                                             <FormField control={lessonForm.control} name="lessonDuration" render={({ field }) => (<FormItem><FormLabel className="text-xs">Duración Estimada</FormLabel><FormControl><Input placeholder="Ej: 10 min, 3 págs" {...field} disabled={isLessonLoading[module.id]} /></FormControl><FormMessage /></FormItem>)} />
                                           </div>
+                                          {renderLessonContentField(lessonForm, lessonForm.watch('lessonContentType'), isLessonLoading[module.id] || isUploadingContent)}
                                           <FormField control={lessonForm.control} name="lessonIsPreview" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-background"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isLessonLoading[module.id]} /></FormControl><div className="space-y-1 leading-none"><FormLabel className="text-xs">¿Es vista previa gratuita?</FormLabel></div></FormItem>)} />
-                                          <Button type="submit" size="sm" disabled={isLessonLoading[module.id] || !createdCourseId}>{isLessonLoading[module.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}Añadir Lección</Button>
+                                          <Button type="submit" size="sm" disabled={isLessonLoading[module.id] || !createdCourseId || isUploadingContent}>{isLessonLoading[module.id] || isUploadingContent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}Añadir Lección</Button>
                                         </form>
                                       </Form>
                                       
@@ -788,8 +941,8 @@ export default function NewCoursePage() {
                     <p className="text-center text-muted-foreground py-8">Completa el paso de Información Básica primero para poder añadir módulos y lecciones.</p>
                   )}
                   <div className="flex justify-between pt-6 mt-4 border-t">
-                      <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule || isEditingLesson || isDeletingLesson}>Anterior</Button>
-                      <Button type="button" onClick={handleNextStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule || isEditingLesson || isDeletingLesson || !createdCourseId}>Siguiente <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                      <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule || isEditingLesson || isDeletingLesson || isUploadingContent}>Anterior</Button>
+                      <Button type="button" onClick={handleNextStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule || isEditingLesson || isDeletingLesson || isUploadingContent || !createdCourseId}>Siguiente <ArrowRight className="ml-2 h-4 w-4" /></Button>
                   </div>
                 </CardContent>
               </Card>
@@ -880,7 +1033,7 @@ export default function NewCoursePage() {
                     <p className="text-center text-muted-foreground py-8">Completa los pasos anteriores para acceder a la configuración de publicación.</p>
                   )}
                    <div className="flex justify-between pt-6 mt-4 border-t">
-                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isSavingSettings || isModuleLoading || isEditingModule || isEditingLesson || isDeletingLesson}>Anterior</Button>
+                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isSavingSettings || isModuleLoading || isEditingModule || isEditingLesson || isDeletingLesson || isUploadingContent}>Anterior</Button>
                        <Button 
                          type="button" 
                          onClick={() => {
@@ -890,7 +1043,7 @@ export default function NewCoursePage() {
                              router.push('/dashboard/creator/courses');
                            }
                          }} 
-                         disabled={isLoading || isSavingSettings || isModuleLoading || isEditingModule || isEditingLesson || isDeletingLesson || !createdCourseId}
+                         disabled={isLoading || isSavingSettings || isModuleLoading || isEditingModule || isEditingLesson || isDeletingLesson || isUploadingContent || !createdCourseId}
                        >
                          {createdCourseId ? "Finalizar e Ir al Listado" : "Ir al Listado (Guarda primero)"}
                        </Button>
@@ -980,6 +1133,8 @@ export default function NewCoursePage() {
         if (!isOpen) {
             setCurrentEditingLesson(null);
             editLessonForm.reset();
+            setLessonContentFile(null);
+            setSelectedLessonContentType(undefined);
         }
     }}>
         <DialogContent className="sm:max-w-[520px]">
@@ -989,17 +1144,40 @@ export default function NewCoursePage() {
             </DialogHeader>
             <Form {...editLessonForm}>
                 <form onSubmit={editLessonForm.handleSubmit(onEditLessonSubmit)} className="space-y-6 py-4">
-                    <FormField control={editLessonForm.control} name="lessonName" render={({ field }) => (<FormItem><FormLabel>Nombre Lección</FormLabel><FormControl><Input placeholder="Título de la lección" {...field} disabled={isEditingLesson} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={editLessonForm.control} name="lessonName" render={({ field }) => (<FormItem><FormLabel>Nombre Lección</FormLabel><FormControl><Input placeholder="Título de la lección" {...field} disabled={isEditingLesson || isUploadingContent} /></FormControl><FormMessage /></FormItem>)} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormField control={editLessonForm.control} name="lessonContentType" render={({ field }) => (<FormItem><FormLabel>Tipo Contenido</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isEditingLesson}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger></FormControl><SelectContent>{lessonContentTypes.map(type => <SelectItem key={type} value={type}>{type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-                        <FormField control={editLessonForm.control} name="lessonDuration" render={({ field }) => (<FormItem><FormLabel>Duración Estimada</FormLabel><FormControl><Input placeholder="Ej: 10 min, 3 págs" {...field} disabled={isEditingLesson} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField 
+                            control={editLessonForm.control} 
+                            name="lessonContentType" 
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Tipo Contenido</FormLabel>
+                                    <Select 
+                                        onValueChange={(value) => {
+                                            field.onChange(value);
+                                            setSelectedLessonContentType(value as LessonContentType);
+                                            setLessonContentFile(null); // Reset file on type change
+                                            editLessonForm.setValue('lessonContentText', ''); // Reset text on type change
+                                        }} 
+                                        value={field.value} 
+                                        disabled={isEditingLesson || isUploadingContent}
+                                    >
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger></FormControl>
+                                        <SelectContent>{lessonContentTypes.map(type => <SelectItem key={type} value={type}>{type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )} 
+                        />
+                        <FormField control={editLessonForm.control} name="lessonDuration" render={({ field }) => (<FormItem><FormLabel>Duración Estimada</FormLabel><FormControl><Input placeholder="Ej: 10 min, 3 págs" {...field} disabled={isEditingLesson || isUploadingContent} /></FormControl><FormMessage /></FormItem>)} />
                     </div>
-                    <FormField control={editLessonForm.control} name="lessonIsPreview" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isEditingLesson} /></FormControl><div className="space-y-1 leading-none"><FormLabel>¿Es vista previa gratuita?</FormLabel></div></FormItem>)} />
+                    {renderLessonContentField(editLessonForm, editLessonForm.watch('lessonContentType'), isEditingLesson || isUploadingContent)}
+                    <FormField control={editLessonForm.control} name="lessonIsPreview" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isEditingLesson || isUploadingContent} /></FormControl><div className="space-y-1 leading-none"><FormLabel>¿Es vista previa gratuita?</FormLabel></div></FormItem>)} />
                     <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="outline" disabled={isEditingLesson}>Cancelar</Button></DialogClose>
-                        <Button type="submit" disabled={isEditingLesson}>
-                            {isEditingLesson ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Guardar Cambios
+                        <DialogClose asChild><Button type="button" variant="outline" disabled={isEditingLesson || isUploadingContent}>Cancelar</Button></DialogClose>
+                        <Button type="submit" disabled={isEditingLesson || isUploadingContent}>
+                            {isEditingLesson || isUploadingContent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            {isUploadingContent ? 'Subiendo...' : (isEditingLesson ? 'Guardando...' : 'Guardar Cambios')}
                         </Button>
                     </DialogFooter>
                 </form>

@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { BookOpen, LayoutDashboard, LogOut, UserCircle, Search, Menu as MenuIcon } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'; // SheetTitle importado
 import { Input } from '../ui/input';
 
 const navLinks = [
@@ -99,6 +99,7 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
+              <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
               <nav className="grid gap-6 text-lg font-medium mt-8">
                 <Logo />
                 {navLinks.map((link) => (

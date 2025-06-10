@@ -7,8 +7,8 @@ export async function POST(request: NextRequest) {
   try {
     // Verificar si el Admin SDK se inicializó correctamente
     if (!adminAuth || !adminDb) {
-      console.error('CRITICAL: Firebase Admin SDK not initialized. Check server logs for admin.ts errors.');
-      return NextResponse.json({ error: 'Server configuration error', details: 'Firebase Admin SDK not available. Please check server logs.' }, { status: 503 }); // 503 Service Unavailable
+      console.error('API /users/create-profile: CRITICAL: Firebase Admin SDK (adminAuth or adminDb) is not available. This usually means initialization failed in admin.ts. Check server logs for details regarding FIREBASE_ADMIN_CREDENTIALS_JSON.');
+      return NextResponse.json({ error: 'Server configuration error', details: 'Firebase Admin SDK not available. Please check server startup logs for errors related to FIREBASE_ADMIN_CREDENTIALS_JSON.' }, { status: 503 }); // 503 Service Unavailable
     }
 
     const authorization = request.headers.get('Authorization');
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     try {
         decodedToken = await adminAuth.verifyIdToken(idToken);
     } catch (error: any) {
-        console.error('Error verifying ID token:', error);
+        console.error('Error verifying ID token in /api/users/create-profile:', error);
         return NextResponse.json({ error: 'Unauthorized: Invalid ID token', details: error.message }, { status: 401 });
     }
     
@@ -65,17 +65,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'User profile created successfully', userId: uid, profile: userProfileData }, { status: 201 });
 
   } catch (error: any) {
-    console.error('Error creating user profile in /api/users/create-profile:', error);
+    console.error('Error in POST /api/users/create-profile. Full error object:', error);
     // Asegurarse de que siempre se devuelva JSON en caso de error
     let errorMessage = 'Internal Server Error';
-    let errorDetails = error.message || 'An unexpected error occurred.';
+    let errorDetails = 'An unexpected error occurred while creating the user profile.';
     
-    if (error.code === 'auth/id-token-expired') {
-        errorMessage = 'Unauthorized: Token expired.';
-        errorDetails = 'The provided ID token has expired. Please re-authenticate.';
+    if (error instanceof Error) { // Check if error is an instance of Error
+        errorDetails = error.message;
+        if ((error as any).code === 'auth/id-token-expired') { // Check for specific Firebase error codes if applicable
+            errorMessage = 'Unauthorized: Token expired.';
+            errorDetails = 'The provided ID token has expired. Please re-authenticate.';
+        }
     }
-    // Puedes añadir más manejadores de errores específicos aquí
+    
+    // Consider logging the stack trace in development for more detailed debugging
+    const stack = process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined;
 
-    return NextResponse.json({ error: errorMessage, details: errorDetails, stack: process.env.NODE_ENV === 'development' ? error.stack : undefined }, { status: 500 });
+    return NextResponse.json({ error: errorMessage, details: errorDetails, stack }, { status: 500 });
   }
 }

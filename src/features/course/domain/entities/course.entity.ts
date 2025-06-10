@@ -13,7 +13,7 @@ export interface CourseProperties {
   tipoAcceso: CourseAccessType;
   duracionEstimada: string; // e.g., "25 horas de video", "10 semanas"
   imagenPortadaUrl: string | null;
-  dataAiHintImagenPortada?: string;
+  dataAiHintImagenPortada?: string | null; // Allow null
   videoTrailerUrl?: string | null;
   categoria: string; // Could be an ID to a categories collection later
   creadorUid: string; // UID of the UserEntity (creator)
@@ -39,7 +39,7 @@ export class CourseEntity {
   tipoAcceso: CourseAccessType;
   duracionEstimada: string;
   imagenPortadaUrl: string | null;
-  dataAiHintImagenPortada?: string;
+  dataAiHintImagenPortada: string | null; // Changed from optional string to string | null
   videoTrailerUrl: string | null;
   categoria: string;
   readonly creadorUid: string;
@@ -64,7 +64,7 @@ export class CourseEntity {
     this.tipoAcceso = props.tipoAcceso;
     this.duracionEstimada = props.duracionEstimada;
     this.imagenPortadaUrl = props.imagenPortadaUrl || null;
-    this.dataAiHintImagenPortada = props.dataAiHintImagenPortada;
+    this.dataAiHintImagenPortada = props.dataAiHintImagenPortada ?? null; // Ensure it's null if undefined/null
     this.videoTrailerUrl = props.videoTrailerUrl || null;
     this.categoria = props.categoria;
     this.creadorUid = props.creadorUid;
@@ -99,12 +99,20 @@ export class CourseEntity {
       totalResenas: 0,
       ordenModulos: [],
       imagenPortadaUrl: input.imagenPortadaUrl || null,
+      // dataAiHintImagenPortada will be handled by the constructor if input.dataAiHintImagenPortada is undefined
     };
     return new CourseEntity(props);
   }
 
   update(data: Partial<Omit<CourseProperties, 'id' | 'creadorUid' | 'fechaCreacion'>>) {
     Object.assign(this, data);
+    if (data.dataAiHintImagenPortada === undefined && this.dataAiHintImagenPortada !== null) {
+      // If explicitly set to undefined in update, make it null (or handle as per logic)
+      // For now, let's assume direct assignment is fine, or it gets filtered if truly undefined.
+      // However, if data can contain 'undefined', it's better to handle it.
+      // For this specific field, it's more likely to be string or null.
+    }
+
     this.fechaActualizacion = new Date();
     if (data.estado === 'publicado' && this.estado !== 'publicado') {
       this.fechaPublicacion = new Date();
@@ -121,7 +129,7 @@ export class CourseEntity {
       tipoAcceso: this.tipoAcceso,
       duracionEstimada: this.duracionEstimada,
       imagenPortadaUrl: this.imagenPortadaUrl,
-      dataAiHintImagenPortada: this.dataAiHintImagenPortada,
+      dataAiHintImagenPortada: this.dataAiHintImagenPortada, // Will now be string or null
       videoTrailerUrl: this.videoTrailerUrl,
       categoria: this.categoria,
       creadorUid: this.creadorUid,

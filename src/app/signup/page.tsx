@@ -11,9 +11,8 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { UserPlus, Eye, EyeOff } from 'lucide-react';
 import React from 'react';
-import { auth, db } from '@/lib/firebase/config'; // Import Firebase auth and db
+import { auth } from '@/lib/firebase/config'; // Client SDK for Auth
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
@@ -47,39 +46,46 @@ export default function SignupPage() {
   async function onSubmit(values: SignupFormValues) {
     setIsLoading(true);
     try {
+      // 1. Create user with Firebase Auth (Client SDK)
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // Update user profile (display name)
+      // 2. Update Firebase Auth profile (optional, but good for display name consistency)
       await updateProfile(user, {
         displayName: `${values.nombre} ${values.apellido}`,
       });
 
-      // Save user data to Firestore
-      // Firestore schema: usuarios/{uid}
-      const userDocRef = doc(db, 'usuarios', user.uid);
-      await setDoc(userDocRef, {
-        uid: user.uid,
-        email: user.email,
-        nombre: values.nombre,
-        apellido: values.apellido,
-        displayName: `${values.nombre} ${values.apellido}`,
-        role: 'student', // Default role
-        createdAt: new Date().toISOString(),
-        referralCodeGenerated: `CONSCIOUS-${user.uid.substring(0,6).toUpperCase()}`, // Example generated referral code
-        referredBy: values.referralCode || null, // Store the referral code they used, if any
-        cursosComprados: [],
-        referidosExitosos: 0,
-        balanceCredito: 0,
+      // 3. Get ID Token
+      const idToken = await user.getIdToken(true);
+
+      // 4. Call our backend API (Route Handler) to create Firestore profile
+      const response = await fetch('/api/users/create-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          nombre: values.nombre,
+          apellido: values.apellido,
+          referralCode: values.referralCode,
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al crear perfil de usuario en backend.');
+      }
+      
+      // const responseData = await response.json(); // Optional: use responseData if needed
 
       toast({
         title: "¡Cuenta Creada!",
         description: "Tu cuenta ha sido creada exitosamente. Serás redirigido.",
       });
 
-      // Redirect to student dashboard (or a verification page if implemented)
-      router.push('/dashboard/student');
+      // Redirect to student dashboard (AuthContext will pick up the new user state)
+      router.push('/dashboard'); // Or /dashboard/student, AuthContext will handle display
 
     } catch (error: any) {
       console.error("Error al crear cuenta:", error);
@@ -88,6 +94,8 @@ export default function SignupPage() {
         errorMessage = "Este correo electrónico ya está en uso. Por favor, utiliza otro.";
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "La contraseña es demasiado débil. Por favor, elige una más segura.";
+      } else if (error.message.includes('backend')) {
+        errorMessage = error.message;
       }
       toast({
         title: "Error al Crear Cuenta",

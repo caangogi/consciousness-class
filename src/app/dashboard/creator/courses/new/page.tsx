@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,12 +14,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-// import { useAuth } from '@/contexts/AuthContext'; // currentUser from AuthContext is our UserProfile
 import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
 import type { UpdateCourseDto } from '@/features/course/infrastructure/dto/update-course.dto';
 import type { CourseAccessType } from '@/features/course/domain/entities/course.entity';
-import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText } from 'lucide-react';
-import { auth } from '@/lib/firebase/config'; // Import auth from firebase config
+import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
+import type { CreateModuleDto } from '@/features/course/infrastructure/dto/create-module.dto';
+import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle } from 'lucide-react';
+import { auth } from '@/lib/firebase/config';
 
 // Step 1 Schema: Basic Course Information
 const step1Schema = z.object({
@@ -33,7 +34,14 @@ const step1Schema = z.object({
 });
 type Step1FormValues = z.infer<typeof step1Schema>;
 
-// Placeholder categories - in a real app, these might come from a database
+// Step 2 Schema (for adding a module)
+const moduleSchema = z.object({
+  moduleName: z.string().min(3, { message: "El nombre del módulo debe tener al menos 3 caracteres."})
+});
+type ModuleFormValues = z.infer<typeof moduleSchema>;
+
+
+// Placeholder categories
 const courseCategories = [
   "Desarrollo Web", "Desarrollo Móvil", "Data Science", "Marketing Digital", 
   "Diseño Gráfico", "Fotografía", "Negocios", "Finanzas Personales", 
@@ -43,10 +51,11 @@ const courseCategories = [
 export default function NewCoursePage() {
   const { toast } = useToast();
   const router = useRouter();
-  // const { currentUser } = useAuth(); 
   const [currentStep, setCurrentStep] = useState<string>("info"); 
   const [isLoading, setIsLoading] = useState(false);
+  const [isModuleLoading, setIsModuleLoading] = useState(false);
   const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
+  const [modules, setModules] = useState<ModuleProperties[]>([]);
 
   const formStep1 = useForm<Step1FormValues>({
     resolver: zodResolver(step1Schema),
@@ -60,6 +69,38 @@ export default function NewCoursePage() {
       duracionEstimada: '',
     },
   });
+
+  const moduleForm = useForm<ModuleFormValues>({
+    resolver: zodResolver(moduleSchema),
+    defaultValues: {
+      moduleName: '',
+    }
+  });
+
+  const fetchModules = useCallback(async (courseId: string) => {
+    if (!courseId) return;
+    setIsModuleLoading(true);
+    try {
+      const response = await fetch(`/api/courses/${courseId}/modules`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || "Error al cargar módulos.");
+      }
+      const data = await response.json();
+      setModules(data.modules || []);
+    } catch (error: any) {
+      toast({ title: "Error al Cargar Módulos", description: error.message, variant: "destructive" });
+      setModules([]);
+    } finally {
+      setIsModuleLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (createdCourseId) {
+      fetchModules(createdCourseId);
+    }
+  }, [createdCourseId, fetchModules]);
 
   const handleNextStep = () => {
     if (currentStep === "info" && createdCourseId) setCurrentStep("structure");
@@ -82,34 +123,28 @@ export default function NewCoursePage() {
       
       let response;
       let successMessage = "";
+      let endpoint = "";
+      let method = "POST";
 
       if (createdCourseId) {
-        // Update existing course
+        endpoint = `/api/courses/update/${createdCourseId}`;
         const dto: UpdateCourseDto = { ...values, tipoAcceso: values.tipoAcceso as CourseAccessType };
-        response = await fetch(`/api/courses/update/${createdCourseId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`,
-          },
+        response = await fetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
           body: JSON.stringify(dto),
         });
         successMessage = "Información básica del curso actualizada.";
-
       } else {
-        // Create new course
+        endpoint = '/api/courses/create';
         const dto: CreateCourseDto = { ...values, tipoAcceso: values.tipoAcceso as CourseAccessType };
-        response = await fetch('/api/courses/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`,
-          },
+        response = await fetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
           body: JSON.stringify(dto),
         });
         successMessage = "Información básica del curso guardada.";
       }
-
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -131,15 +166,50 @@ export default function NewCoursePage() {
       setIsLoading(false);
     }
   };
+
+  const onAddModule = async (values: ModuleFormValues) => {
+    if (!createdCourseId || !auth.currentUser) {
+      toast({ title: "Error", description: "Se requiere un curso creado e iniciar sesión.", variant: "destructive"});
+      return;
+    }
+    setIsModuleLoading(true);
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+      const dto: CreateModuleDto = { nombre: values.moduleName };
+      const response = await fetch(`/api/courses/${createdCourseId}/modules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
+        body: JSON.stringify(dto),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || "Error al crear el módulo.");
+      }
+      
+      // const newModuleData = await response.json();
+      toast({title: "Módulo Creado", description: `El módulo "${values.moduleName}" ha sido añadido.`});
+      moduleForm.reset();
+      await fetchModules(createdCourseId); // Refresh module list
+
+    } catch (error: any) {
+      console.error("Error añadiendo módulo:", error);
+      toast({title: "Error al Añadir Módulo", description: error.message, variant: "destructive"});
+    } finally {
+      setIsModuleLoading(false);
+    }
+  };
   
   const getTabClass = (tabValue: string) => {
     let baseClass = "flex items-center gap-2";
     if (tabValue === currentStep) {
       return `${baseClass} data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary`;
     }
+    // Allow clicking on previous completed steps
     if (tabValue === "info" && (currentStep === "structure" || currentStep === "settings") && createdCourseId) return baseClass;
     if (tabValue === "structure" && currentStep === "settings" && createdCourseId) return baseClass;
 
+    // Disable future steps if course not created
     if ((tabValue === "structure" || tabValue === "settings") && !createdCourseId) return `${baseClass} text-muted-foreground cursor-not-allowed`;
     
     return baseClass;
@@ -155,11 +225,9 @@ export default function NewCoursePage() {
         </CardHeader>
         <CardContent>
           <Tabs value={currentStep} onValueChange={(newStep) => {
-            // Allow navigation to previous completed steps or current step
             if (newStep === "info" || (newStep === "structure" && createdCourseId) || (newStep === "settings" && createdCourseId)) {
               setCurrentStep(newStep);
             } else {
-              // Prevent navigation to future uncompleted steps
               toast({title: "Paso Bloqueado", description: "Completa los pasos anteriores primero.", variant: "default"});
             }
           }} 
@@ -176,7 +244,6 @@ export default function NewCoursePage() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Step 1: Basic Information */}
             <TabsContent value="info">
               <Card>
                 <CardHeader>
@@ -296,7 +363,6 @@ export default function NewCoursePage() {
               </Card>
             </TabsContent>
 
-            {/* Step 2: Course Structure (Modules & Lessons) */}
             <TabsContent value="structure">
               <Card>
                 <CardHeader>
@@ -307,20 +373,52 @@ export default function NewCoursePage() {
                   {createdCourseId ? (
                     <>
                       <p className="mb-4 text-muted-foreground">Editando estructura para el curso ID: {createdCourseId}</p>
-                      <div className="p-8 border-dashed border-2 border-muted-foreground/50 rounded-lg text-center">
-                        <ListChecks className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-lg font-semibold mb-2">Próximamente: Constructor de Módulos y Lecciones</p>
-                        <p className="text-muted-foreground">Aquí podrás añadir, editar y reordenar los módulos y lecciones de tu curso.</p>
-                      </div>
+                      
+                      <Form {...moduleForm}>
+                        <form onSubmit={moduleForm.handleSubmit(onAddModule)} className="flex items-start gap-4 mb-6">
+                          <FormField
+                            control={moduleForm.control}
+                            name="moduleName"
+                            render={({ field }) => (
+                              <FormItem className="flex-grow">
+                                <FormLabel className="sr-only">Nombre del Módulo</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Nombre del nuevo módulo" {...field} disabled={isModuleLoading} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button type="submit" disabled={isModuleLoading}>
+                            {isModuleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4"/>}
+                            Añadir Módulo
+                          </Button>
+                        </form>
+                      </Form>
+
+                      {isModuleLoading && modules.length === 0 && <p>Cargando módulos...</p>}
+                      {!isModuleLoading && modules.length === 0 && (
+                        <p className="text-muted-foreground text-center py-4">Aún no has añadido módulos a este curso.</p>
+                      )}
+                      {modules.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="text-lg font-semibold">Módulos del Curso:</h4>
+                          <ul className="list-disc list-inside pl-4 space-y-1 bg-secondary/30 p-4 rounded-md">
+                            {modules.sort((a,b) => a.orden - b.orden).map(module => (
+                              <li key={module.id} className="text-foreground/90">{module.nombre}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <p className="text-center text-muted-foreground py-8">Completa el paso de Información Básica primero.</p>
                   )}
-                   <div className="flex justify-between pt-6">
-                      <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading}>
+                   <div className="flex justify-between pt-6 mt-4 border-t">
+                      <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isModuleLoading}>
                         Anterior
                       </Button>
-                      <Button type="button" onClick={handleNextStep} disabled={isLoading || !createdCourseId}>
+                      <Button type="button" onClick={handleNextStep} disabled={isLoading || isModuleLoading || !createdCourseId}>
                          Siguiente <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </div>
@@ -328,7 +426,6 @@ export default function NewCoursePage() {
               </Card>
             </TabsContent>
 
-            {/* Step 3: Settings & Publish */}
             <TabsContent value="settings">
               <Card>
                 <CardHeader>
@@ -366,7 +463,7 @@ export default function NewCoursePage() {
                   ) : (
                     <p className="text-center text-muted-foreground py-8">Completa los pasos anteriores primero.</p>
                   )}
-                   <div className="flex justify-between pt-6">
+                   <div className="flex justify-between pt-6 mt-4 border-t">
                        <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading}>
                         Anterior
                       </Button>

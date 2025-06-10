@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from '@/components/ui/badge'; // Added import
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
@@ -232,7 +233,7 @@ export default function NewCoursePage() {
       }
       toast({ 
         title: "Paso 1 Completado", 
-        description: createdCourseId ? "Información del curso actualizada." : "Curso creado. Ahora define la estructura."
+        description: createdCourseId && method === "POST" && endpoint.includes("/update/") ? "Información del curso actualizada." : "Curso creado. Ahora define la estructura."
       });
       setCurrentStep("structure"); 
     } catch (error: any) {
@@ -674,7 +675,9 @@ export default function NewCoursePage() {
                          type="button" 
                          onClick={() => {
                            if (createdCourseId) {
-                             router.push(`/dashboard/creator/courses`); // Or specific edit page: /dashboard/creator/courses/edit/${createdCourseId}
+                             // TODO: Decide if this should go to an edit page or a general courses list
+                             // For now, general list:
+                             router.push(`/dashboard/creator/courses`); 
                            } else {
                              router.push('/dashboard/creator/courses');
                            }
@@ -693,3 +696,4 @@ export default function NewCoursePage() {
     </div>
   );
 }
+

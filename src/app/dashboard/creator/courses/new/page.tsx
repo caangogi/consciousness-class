@@ -23,6 +23,7 @@ import type { UpdateCourseDto } from '@/features/course/infrastructure/dto/updat
 import { type CourseAccessType, type CourseStatus, type CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
 import type { CreateModuleDto } from '@/features/course/infrastructure/dto/create-module.dto';
+import type { UpdateModuleDto } from '@/features/course/infrastructure/dto/update-module.dto';
 import type { CreateLessonDto } from '@/features/course/infrastructure/dto/create-lesson.dto';
 import { type LessonProperties, type LessonContentType } from '@/features/course/domain/entities/lesson.entity';
 import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud, ChevronDown, Trash2, Edit } from 'lucide-react';
@@ -101,7 +102,7 @@ export default function NewCoursePage() {
       descripcionCorta: '',
       descripcionLarga: '',
       categoria: '',
-      tipoAcceso: undefined,
+      tipoAcceso: undefined, // O un valor válido del enum si quieres uno por defecto
       precio: 0,
       duracionEstimada: '',
     },
@@ -286,7 +287,7 @@ export default function NewCoursePage() {
       const idToken = await auth.currentUser.getIdToken(true);
       const dto: CreateLessonDto = {
         nombre: values.lessonName,
-        contenidoPrincipal: { tipo: values.lessonContentType as LessonContentType },
+        contenidoPrincipal: { tipo: values.lessonContentType as LessonContentType }, // Placeholder for content
         duracionEstimada: values.lessonDuration,
         esVistaPrevia: values.lessonIsPreview,
       };
@@ -334,7 +335,7 @@ export default function NewCoursePage() {
       toast({ title: "Módulo Eliminado", description: `El módulo "${moduleToDelete.nombre}" ha sido eliminado.` });
       setModuleToDelete(null);
       await fetchModules(createdCourseId); 
-      if (expandedModuleId === moduleToDelete.id) { // Collapse if the deleted module was open
+      if (expandedModuleId === moduleToDelete.id) { 
         setExpandedModuleId(null);
       }
     } catch (error: any) {
@@ -534,27 +535,35 @@ export default function NewCoursePage() {
                           <Accordion type="single" collapsible className="w-full" value={expandedModuleId || undefined} onValueChange={handleToggleModuleLessons}>
                             {modules.sort((a,b) => a.orden - b.orden).map(module => (
                               <AccordionItem value={module.id} key={module.id} className="border-b">
-                                <AccordionTrigger className="hover:no-underline bg-secondary/50 px-4 py-3 rounded-md hover:bg-secondary/70 data-[state=open]:rounded-b-none">
-                                  <div className="flex justify-between items-center w-full">
-                                    <span className="font-medium text-left">{module.nombre}</span>
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-xs text-muted-foreground">{lessonsByModule[module.id]?.length || 0} lecciones</span>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); /* TODO: Implement Edit Module */ toast({title: "Próximamente", description: "Edición de módulo aún no implementada."}) }}>
-                                            <Edit className="h-3.5 w-3.5"/>
-                                            <span className="sr-only">Editar módulo</span>
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10 opacity-60 hover:opacity-100" 
-                                            onClick={(e) => { 
-                                                e.stopPropagation(); 
-                                                setModuleToDelete(module); 
-                                                setShowDeleteModuleDialog(true); 
-                                            }}>
-                                            <Trash2 className="h-3.5 w-3.5"/>
-                                            <span className="sr-only">Eliminar módulo</span>
-                                        </Button>
+                                <div className="flex items-center justify-between w-full bg-secondary/50 hover:bg-secondary/60 rounded-t-md data-[state=open]:rounded-b-none transition-colors">
+                                  <AccordionTrigger className="flex-grow text-left hover:no-underline px-4 py-3 group">
+                                    <div className="flex justify-between items-center w-full">
+                                      <span className="font-medium">{module.nombre}</span>
+                                      <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                                        {lessonsByModule[module.id]?.length || 0} lecciones
+                                      </span>
                                     </div>
+                                  </AccordionTrigger>
+                                  <div className="flex items-center gap-1 pr-4">
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-60 hover:opacity-100 hover:bg-primary/10 focus-visible:ring-offset-secondary/60" 
+                                        onClick={(e) => { 
+                                          e.stopPropagation(); 
+                                          toast({title: "Próximamente", description: "Edición de módulo aún no implementada."});
+                                        }}>
+                                          <Edit className="h-3.5 w-3.5"/>
+                                          <span className="sr-only">Editar módulo</span>
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10 opacity-60 hover:opacity-100 focus-visible:ring-offset-secondary/60" 
+                                          onClick={(e) => { 
+                                              e.stopPropagation(); 
+                                              setModuleToDelete(module); 
+                                              setShowDeleteModuleDialog(true); 
+                                          }}>
+                                          <Trash2 className="h-3.5 w-3.5"/>
+                                          <span className="sr-only">Eliminar módulo</span>
+                                      </Button>
                                   </div>
-                                </AccordionTrigger>
+                                </div>
                                 <AccordionContent className="pt-0 pb-2 px-2 border-x border-b rounded-b-md border-primary/20 ml-0">
                                   <Card className="shadow-none border-0 rounded-none">
                                     <CardHeader className="px-2 pt-3 pb-2">
@@ -587,12 +596,12 @@ export default function NewCoursePage() {
                                                     <span className="font-medium">{lesson.nombre}</span> <span className="text-xs text-muted-foreground">({lesson.contenidoPrincipal.tipo.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())})</span>
                                                     {lesson.esVistaPrevia && <Badge variant="outline" className="ml-2 text-xs">Vista Previa</Badge>}
                                                 </div>
-                                                <div className="flex items-center gap-0.5">
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100" onClick={() => toast({title: "Próximamente", description: "Edición de lección aún no implementada."})}>
+                                                 <div className="flex items-center gap-0.5">
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20" onClick={() => toast({title: "Próximamente", description: "Edición de lección aún no implementada."})}>
                                                         <Edit className="h-3 w-3"/>
                                                         <span className="sr-only">Editar lección</span>
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 opacity-50 hover:opacity-100" onClick={() => toast({title: "Próximamente", description: "Eliminación de lección aún no implementada."})}>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20" onClick={() => toast({title: "Próximamente", description: "Eliminación de lección aún no implementada."})}>
                                                         <Trash2 className="h-3 w-3"/>
                                                         <span className="sr-only">Eliminar lección</span>
                                                     </Button>

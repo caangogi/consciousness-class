@@ -38,30 +38,30 @@ export class UserService {
       });
 
       await this.userRepository.save(userEntity);
-      console.log(`[UserService] User profile created successfully for UID: ${userEntity.uid}`);
+      console.log('[UserService] User profile created successfully for UID: ' + userEntity.uid);
       return userEntity;
 
     } catch (error: any) {
-      console.error(`[UserService] Error creating user profile for UID ${dto.uid}:`, error);
+      console.error('[UserService] Error creating user profile for UID ' + dto.uid + ':', error);
       // Re-throw the error to be handled by the API layer or a global error handler
       // Potentially wrap it in a custom application-specific error
-      throw new Error(`Failed to create user profile: ${error.message}`);
+      throw new Error('Failed to create user profile: ' + error.message);
     }
   }
 
   async getUserProfile(uid: string): Promise<UserEntity | null> {
     try {
-      console.log(`[UserService] Attempting to fetch profile for UID: ${uid}`);
+      console.log('[UserService] Attempting to fetch profile for UID: ' + uid);
       const user = await this.userRepository.findByUid(uid);
       if (user) {
-        console.log(`[UserService] Profile found for UID: ${uid}`);
+        console.log('[UserService] Profile found for UID: ' + uid);
       } else {
-        console.log(`[UserService] Profile not found for UID: ${uid}`);
+        console.log('[UserService] Profile not found for UID: ' + uid);
       }
       return user;
     } catch (error: any) {
-      console.error(`[UserService] Error fetching user profile for UID ${uid}:`, error);
-      throw new Error(`Failed to fetch user profile: ${error.message}`);
+      console.error('[UserService] Error fetching user profile for UID ' + uid + ':', error);
+      throw new Error('Failed to fetch user profile: ' + error.message);
     }
   }
 
@@ -78,32 +78,32 @@ export class UserService {
           return this.userRepository.findByUid(uid); 
       }
       
-      console.log(`[UserService] Attempting to update profile for UID: ${uid} with data:`, dataToUpdate);
+      console.log('[UserService] Attempting to update profile for UID: ' + uid + ' with data:', dataToUpdate);
       const updatedUser = await this.userRepository.update(uid, dataToUpdate);
       if (updatedUser) {
-        console.log(`[UserService] User profile updated successfully for UID: ${uid}`);
+        console.log('[UserService] User profile updated successfully for UID: ' + uid);
       } else {
-        console.warn(`[UserService] User profile update failed or user not found for UID: ${uid}`);
+        console.warn('[UserService] User profile update failed or user not found for UID: ' + uid);
       }
       return updatedUser;
 
     } catch (error: any) {
-      console.error(`[UserService] Error updating user profile for UID ${uid}:`, error);
-      throw new Error(`Failed to update user profile: ${error.message}`);
+      console.error('[UserService] Error updating user profile for UID ' + uid + ':', error);
+      throw new Error('Failed to update user profile: ' + error.message);
     }
   }
 
   async deleteUserProfile(uid: string): Promise<void> {
     try {
-      console.log(`[UserService] Attempting to delete profile for UID: ${uid}`);
+      console.log('[UserService] Attempting to delete profile for UID: ' + uid);
       // Consider adding checks here, e.g., ensuring the user exists before attempting deletion
       // or if the requesting user has permission (if called by an admin).
       await this.userRepository.delete(uid);
-      console.log(`[UserService] User profile deleted successfully for UID: ${uid}`);
+      console.log('[UserService] User profile deleted successfully for UID: ' + uid);
       // Reminder: Firebase Auth user deletion is separate and typically handled by admin SDK in a secure context.
     } catch (error: any) {
-      console.error(`[UserService] Error deleting user profile for UID ${uid}:`, error);
-      throw new Error(`Failed to delete user profile: ${error.message}`);
+      console.error('[UserService] Error deleting user profile for UID ' + uid + ':', error);
+      throw new Error('Failed to delete user profile: ' + error.message);
     }
   }
 }

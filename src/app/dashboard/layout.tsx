@@ -137,7 +137,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </SheetContent>
           </Sheet>
            <div className="md:hidden">
-             <Link href="/"><Logo /></Link>
+             <Logo />
            </div>
            {/* Mobile User Menu or other elements can go here if needed */}
         </header>
@@ -168,3 +168,4 @@ function AwardIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+

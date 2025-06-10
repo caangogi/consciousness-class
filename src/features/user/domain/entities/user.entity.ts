@@ -13,10 +13,10 @@ export interface UserProperties {
   createdAt: string; // ISO Date string
   updatedAt?: string; // ISO Date string
   referralCodeGenerated: string;
-  referredBy?: string | null;
+  referredBy?: string | null; // UID of the referrer
   cursosComprados: string[]; // Array of course IDs
   referidosExitosos: number;
-  balanceCredito: number;
+  balanceCredito: number; // Could be points, currency amount, etc.
 }
 
 export class UserEntity {
@@ -42,20 +42,19 @@ export class UserEntity {
     this.apellido = props.apellido;
     this.displayName = props.displayName;
     this.role = props.role;
-    this.photoURL = props.photoURL;
+    this.photoURL = props.photoURL || null;
     this.createdAt = new Date(props.createdAt);
     this.updatedAt = props.updatedAt ? new Date(props.updatedAt) : undefined;
     this.referralCodeGenerated = props.referralCodeGenerated;
-    this.referredBy = props.referredBy;
+    this.referredBy = props.referredBy || null;
     this.cursosComprados = props.cursosComprados || [];
     this.referidosExitosos = props.referidosExitosos || 0;
     this.balanceCredito = props.balanceCredito || 0;
   }
 
-  static create(props: Omit<UserProperties, 'createdAt' | 'displayName' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito'> & Partial<Pick<UserProperties, 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito'>>): UserEntity {
+  static create(props: Omit<UserProperties, 'createdAt' | 'displayName' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'updatedAt'> & Partial<Pick<UserProperties, 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'photoURL' >>): UserEntity {
     const now = new Date();
     const displayName = `${props.nombre} ${props.apellido}`;
-    // Generate a unique referral code for the new user
     const generatedReferralCode = props.referralCodeGenerated || `CONSCIOUS-${props.uid.substring(0, 6).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     
     return new UserEntity({
@@ -67,6 +66,7 @@ export class UserEntity {
       cursosComprados: props.cursosComprados || [],
       referidosExitosos: props.referidosExitosos || 0,
       balanceCredito: props.balanceCredito || 0,
+      photoURL: props.photoURL || null,
     });
   }
 
@@ -80,6 +80,23 @@ export class UserEntity {
     this.updatedAt = new Date();
   }
 
-  // Add other domain-specific methods here
-  // e.g., grantCourseAccess(courseId: string), applyReferralCredit(amount: number)
+  // Method to convert entity to a plain object for Firestore or API responses
+  toPlainObject(): UserProperties {
+    return {
+      uid: this.uid,
+      email: this.email,
+      nombre: this.nombre,
+      apellido: this.apellido,
+      displayName: this.displayName,
+      role: this.role,
+      photoURL: this.photoURL,
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt?.toISOString(),
+      referralCodeGenerated: this.referralCodeGenerated,
+      referredBy: this.referredBy,
+      cursosComprados: this.cursosComprados,
+      referidosExitosos: this.referidosExitosos,
+      balanceCredito: this.balanceCredito,
+    };
+  }
 }

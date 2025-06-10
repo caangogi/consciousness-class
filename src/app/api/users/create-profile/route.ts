@@ -1,16 +1,16 @@
 
 // src/app/api/users/create-profile/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FirebaseUserRepository } from '@/features/user/infrastructure/repositories/firebase-user.repository';
 import { UserService } from '@/features/user/application/user.service';
 import type { CreateUserDto } from '@/features/user/infrastructure/dto/create-user.dto';
 
 export async function POST(request: NextRequest) {
   try {
-    if (!adminAuth) {
-      console.error('API /users/create-profile: CRITICAL: Firebase Admin SDK (adminAuth) is not available. Check server logs for errors related to FIREBASE_ADMIN_CREDENTIALS.');
-      return NextResponse.json({ error: 'Server configuration error', details: 'Firebase Admin SDK (auth) not available. Please check server startup logs.' }, { status: 503 });
+    if (!adminAuth || !adminDb) {
+      console.error('API /users/create-profile: CRITICAL: Firebase Admin SDK (adminAuth or adminDb) is not available. Check server logs for errors related to FIREBASE_ADMIN_PROJECT_ID, etc.');
+      return NextResponse.json({ error: 'Server configuration error', details: 'Firebase Admin SDK (auth or db) not available. Please check server startup logs.' }, { status: 503 });
     }
 
     const authorization = request.headers.get('Authorization');
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     const userProfile = await userService.createUserProfile(createUserDto);
 
-    return NextResponse.json({ message: 'User profile created successfully', userId: userProfile.uid, profile: userProfile }, { status: 201 });
+    return NextResponse.json({ message: 'User profile created successfully', userId: userProfile.uid, profile: userProfile.toPlainObject() }, { status: 201 });
 
   } catch (error: any) {
     console.error('Error in POST /api/users/create-profile. Full error object:', error);
@@ -69,9 +69,10 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof Error) {
       errorDetails = error.message;
-      // Check for specific Firebase error codes if applicable (though verifyIdToken handles most auth errors)
+      errorMessage = error.name === 'Error' ? 'User Profile Creation Error' : error.name; // More specific error name if available
     }
     
+    // Attempt to preserve stack in development for easier debugging.
     const stack = process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined;
 
     return NextResponse.json({ error: errorMessage, details: errorDetails, stack }, { status: 500 });

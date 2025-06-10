@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
 import type { CourseAccessType } from '@/features/course/domain/entities/course.entity';
 import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText } from 'lucide-react';
+import { auth } from '@/lib/firebase/config'; // Import auth from firebase config
 
 // Step 1 Schema: Basic Course Information
 const step1Schema = z.object({
@@ -41,7 +42,7 @@ const courseCategories = [
 export default function NewCoursePage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { currentUser } = useAuth(); // currentUser from AuthContext is our UserProfile
   const [currentStep, setCurrentStep] = useState<string>("info"); // "info", "structure", "settings"
   const [isLoading, setIsLoading] = useState(false);
   const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
@@ -71,13 +72,13 @@ export default function NewCoursePage() {
   }
 
   const onSubmitStep1 = async (values: Step1FormValues) => {
-    if (!currentUser) {
+    if (!auth.currentUser) { // Check auth.currentUser for Firebase User object
       toast({ title: "Error de autenticación", description: "Debes iniciar sesión para crear un curso.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
     try {
-      const idToken = await currentUser.getIdToken(true);
+      const idToken = await auth.currentUser.getIdToken(true); // Use auth.currentUser
       const dto: CreateCourseDto = {
         nombre: values.nombre,
         descripcionCorta: values.descripcionCorta,

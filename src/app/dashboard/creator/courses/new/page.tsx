@@ -132,7 +132,7 @@ export default function NewCoursePage() {
       descripcionCorta: '',
       descripcionLarga: '',
       categoria: '',
-      tipoAcceso: undefined,
+      tipoAcceso: undefined, // Will be handled by Select's placeholder
       precio: 0,
       duracionEstimada: '',
     },
@@ -388,8 +388,8 @@ export default function NewCoursePage() {
     const isFileType = ['video', 'audio', 'documento_pdf'].includes(values.lessonContentType);
     if (isFileType && lessonContentFile) {
         toast({
-            title: "Subida de Archivo Pendiente",
-            description: "La lección se creará. Por favor, edita la lección después para subir el archivo de contenido.",
+            title: "Subida Pendiente",
+            description: `El archivo "${lessonContentFile.name}" se subirá cuando edites esta lección después de crearla.`,
             duration: 6000,
         });
     }
@@ -808,7 +808,6 @@ export default function NewCoursePage() {
                           <h4 className="text-lg font-semibold mb-2">Módulos del Curso:</h4>
                           <Accordion type="single" collapsible className="w-full" value={expandedModuleId || undefined} onValueChange={(value) => {
                               handleToggleModuleLessons(value);
-                              // Reset form and content type when accordion item is changed
                               lessonForm.reset({ lessonName: '', lessonContentType: undefined, lessonDuration: '', lessonIsPreview: false, lessonContentText: '' });
                               setLessonContentFile(null);
                               setSelectedLessonContentType(undefined);
@@ -837,15 +836,17 @@ export default function NewCoursePage() {
                                             <Edit className="h-3.5 w-3.5"/>
                                             <span className="sr-only">Editar módulo</span>
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10 opacity-60 hover:opacity-100 focus-visible:ring-offset-secondary/60" 
-                                            onClick={(e) => { 
-                                                e.stopPropagation(); 
-                                                setModuleToDelete(module); 
-                                                setShowDeleteModuleDialog(true); 
-                                            }}>
-                                            <Trash2 className="h-3.5 w-3.5"/>
-                                            <span className="sr-only">Eliminar módulo</span>
-                                        </Button>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10 opacity-60 hover:opacity-100 focus-visible:ring-offset-secondary/60" 
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    setModuleToDelete(module); 
+                                                    // setShowDeleteModuleDialog(true); // AlertDialog handles its own open state via Trigger
+                                                }}>
+                                                <Trash2 className="h-3.5 w-3.5"/>
+                                                <span className="sr-only">Eliminar módulo</span>
+                                            </Button>
+                                        </AlertDialogTrigger>
                                     </div>
                                   </div>
                                 <AccordionContent className="pt-0 pb-2 px-2 border-x border-b rounded-b-md border-primary/20 ml-0">
@@ -869,8 +870,8 @@ export default function NewCoursePage() {
                                                             onValueChange={(value) => {
                                                                 field.onChange(value);
                                                                 setSelectedLessonContentType(value as LessonContentType);
-                                                                setLessonContentFile(null); // Reset file on type change
-                                                                lessonForm.setValue('lessonContentText', ''); // Reset text on type change
+                                                                setLessonContentFile(null); 
+                                                                lessonForm.setValue('lessonContentText', ''); 
                                                             }} 
                                                             value={field.value} 
                                                             disabled={isLessonLoading[module.id]}
@@ -913,15 +914,16 @@ export default function NewCoursePage() {
                                                         <Edit className="h-3 w-3"/>
                                                         <span className="sr-only">Editar lección</span>
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20" 
-                                                      onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        setLessonToDelete(lesson); 
-                                                        setShowDeleteLessonDialog(true); 
-                                                      }}>
-                                                        <Trash2 className="h-3 w-3"/>
-                                                        <span className="sr-only">Eliminar lección</span>
-                                                    </Button>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20" 
+                                                          onClick={(e) => { 
+                                                            e.stopPropagation(); 
+                                                            setLessonToDelete(lesson); 
+                                                          }}>
+                                                            <Trash2 className="h-3 w-3"/>
+                                                            <span className="sr-only">Eliminar lección</span>
+                                                        </Button>
+                                                    </AlertDialogTrigger>
                                                 </div>
                                               </li>
                                             ))}
@@ -1156,8 +1158,8 @@ export default function NewCoursePage() {
                                         onValueChange={(value) => {
                                             field.onChange(value);
                                             setSelectedLessonContentType(value as LessonContentType);
-                                            setLessonContentFile(null); // Reset file on type change
-                                            editLessonForm.setValue('lessonContentText', ''); // Reset text on type change
+                                            setLessonContentFile(null); 
+                                            editLessonForm.setValue('lessonContentText', ''); 
                                         }} 
                                         value={field.value} 
                                         disabled={isEditingLesson || isUploadingContent}

@@ -12,10 +12,12 @@ export class UserService {
     try {
       const existingUser = await this.userRepository.findByUid(dto.uid);
       if (existingUser) {
+        // This scenario implies an issue if Firebase Auth succeeded but profile already exists.
+        // Could merge or update if needed, or log a warning. For now, return existing.
         console.warn('[UserService] Profile for UID ' + dto.uid + ' already exists. Returning existing profile.');
         return existingUser;
-      }
-
+    }
+    
       const userEntity = UserEntity.create({
         uid: dto.uid,
         email: dto.email,
@@ -23,7 +25,6 @@ export class UserService {
         apellido: dto.apellido,
         role: dto.role || 'student',
         referredBy: dto.referralCode || null, 
-        // photoURL will default to null in UserEntity.create if not provided
       });
 
       await this.userRepository.save(userEntity);
@@ -32,7 +33,11 @@ export class UserService {
 
     } catch (error: any) {
       console.error('[UserService] Error creating user profile for UID ' + dto.uid + ':', error.message, error.stack);
-      throw new Error('Failed to create user profile: ' + error.message);
+      // Ensure a generic error is thrown or re-throw a more specific application error
+      if (error instanceof Error) {
+        throw new Error('Failed to create user profile: ' + error.message);
+      }
+      throw new Error('An unexpected error occurred while creating user profile.');
     }
   }
 
@@ -48,20 +53,27 @@ export class UserService {
       return user;
     } catch (error: any) {
       console.error('[UserService] Error fetching user profile for UID ' + uid + ':', error.message, error.stack);
-      throw new Error('Failed to fetch user profile: ' + error.message);
+      if (error instanceof Error) {
+        throw new Error('Failed to fetch user profile: ' + error.message);
+      }
+      throw new Error('An unexpected error occurred while fetching user profile.');
     }
   }
 
   async updateUserProfile(uid: string, dto: UpdateUserProfileDto): Promise<UserEntity | null> {
     try {
+      // Construct the data to update, ensuring only fields present in the DTO are sent
       const dataToUpdate: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'role' | 'referredBy' | 'displayName' >> = {};
       
       if (dto.nombre !== undefined) dataToUpdate.nombre = dto.nombre;
       if (dto.apellido !== undefined) dataToUpdate.apellido = dto.apellido;
       if (dto.photoURL !== undefined) dataToUpdate.photoURL = dto.photoURL;
 
+      // If no fields are actually being updated, we could return the current profile or throw an error.
+      // For now, we'll proceed, and the repository layer can decide or Firestore itself will handle no-op updates.
       if (Object.keys(dataToUpdate).length === 0) {
-          console.warn("[UserService] No data provided for user profile update for UID: " + uid);
+          console.warn("[UserService] No data provided for user profile update for UID: " + uid + ". Returning current profile.");
+          // Optionally, fetch and return the current user profile if no updates are needed
           return this.userRepository.findByUid(uid); 
       }
       
@@ -69,26 +81,34 @@ export class UserService {
       const updatedUser = await this.userRepository.update(uid, dataToUpdate);
       
       if (updatedUser) {
-        console.log('[UserService] User profile updated successfully for UID: ' + uid);
+        console.log('[UserService] User profile updated successfully in Firestore for UID: ' + uid);
       } else {
-        console.warn('[UserService] User profile update failed or user not found for UID: ' + uid);
+        // This case could mean the user was not found by the repository
+        console.warn('[UserService] User profile update in Firestore failed or user not found for UID: ' + uid);
       }
-      return updatedUser;
+      return updatedUser; // updatedUser from Firestore
 
     } catch (error: any) {
       console.error('[UserService] Error updating user profile for UID ' + uid + ':', error.message, error.stack);
-      throw new Error('Failed to update user profile: ' + error.message);
+      if (error instanceof Error) {
+        throw new Error('Failed to update user profile: ' + error.message);
+      }
+      throw new Error('An unexpected error occurred while updating user profile.');
     }
   }
 
   async deleteUserProfile(uid: string): Promise<void> {
     try {
       console.log('[UserService] Attempting to delete profile for UID: ' + uid);
+      // Note: This only deletes from Firestore. Auth user deletion needs separate handling.
       await this.userRepository.delete(uid);
-      console.log('[UserService] User profile deleted successfully for UID: ' + uid);
+      console.log('[UserService] User profile deleted successfully from Firestore for UID: ' + uid);
     } catch (error: any) {
       console.error('[UserService] Error deleting user profile for UID ' + uid + ':', error.message, error.stack);
-      throw new Error('Failed to delete user profile: ' + error.message);
+      if (error instanceof Error) {
+        throw new Error('Failed to delete user profile: ' + error.message);
+      }
+      throw new Error('An unexpected error occurred while deleting user profile.');
     }
   }
 }

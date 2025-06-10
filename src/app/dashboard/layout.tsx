@@ -1,28 +1,17 @@
+
+'use client';
 import type { ReactNode } from 'react';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
-import { Header } from '@/components/layout/Header'; // Re-using main header for mobile nav, or create specific dashboard header
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu as MenuIcon } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { Menu as MenuIcon, LogOut, LayoutDashboard, UserCircle, BookOpen, Gift, Palette, Edit3, BarChart2, Settings, DollarSign, MessageSquare, Users, Ticket, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
-import {
-  LayoutDashboard,
-  BookOpen,
-  Users,
-  Settings,
-  Gift,
-  BarChart2,
-  DollarSign,
-  Edit3,
-  UserCircle,
-  LogOut,
-  Ticket,
-  ShieldCheck,
-  Palette,
-  MessageSquare
-} from 'lucide-react';
-
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface NavItem {
   href: string;
@@ -39,6 +28,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/student/referrals', label: 'Mis Referidos', icon: Gift, roles: ['student'] },
   { href: '/dashboard/student/certificates', label: 'Certificados', icon: AwardIcon, roles: ['student'] },
   // Creator specific
+  { href: '/dashboard/creator', label: 'Resumen Creator', icon: LayoutDashboard, roles: ['creator'] },
   { href: '/dashboard/creator/courses', label: 'Gestionar Cursos', icon: Edit3, roles: ['creator'] },
   { href: '/dashboard/creator/lessons', label: 'Gestionar Lecciones', icon: Palette, roles: ['creator'] },
   { href: '/dashboard/creator/stats', label: 'Estadísticas', icon: BarChart2, roles: ['creator'] },
@@ -46,6 +36,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/creator/earnings', label: 'Ingresos', icon: DollarSign, roles: ['creator'] },
   { href: '/dashboard/creator/comments', label: 'Comentarios', icon: MessageSquare, roles: ['creator'] },
   // Superadmin specific
+  { href: '/dashboard/superadmin', label: 'Resumen Admin', icon: LayoutDashboard, roles: ['superadmin'] },
   { href: '/dashboard/superadmin/user-management', label: 'Gestión Usuarios', icon: Users, roles: ['superadmin'] },
   { href: '/dashboard/superadmin/course-management', label: 'Gestión Cursos', icon: BookOpen, roles: ['superadmin'] },
   { href: '/dashboard/superadmin/platform-stats', label: 'Métricas Plataforma', icon: BarChart2, roles: ['superadmin'] },
@@ -53,15 +44,60 @@ const navItems: NavItem[] = [
   { href: '/dashboard/superadmin/coupons', label: 'Cupones', icon: Ticket, roles: ['superadmin'] },
   { href: '/dashboard/superadmin/security', label: 'Seguridad', icon: ShieldCheck, roles: ['superadmin'] },
 ];
-const currentUserRole: 'student' | 'creator' | 'superadmin' = 'student'; // Change this to test
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const filteredNavItems = navItems.filter(item => item.roles.includes(currentUserRole));
+  const { currentUser, userRole, loading, logout } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({ title: "Sesión Cerrada", description: "Has cerrado sesión exitosamente." });
+      router.push('/');
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+      toast({ title: "Error", description: "No se pudo cerrar la sesión.", variant: "destructive" });
+    }
+  };
+  
+  const filteredNavItems = userRole ? navItems.filter(item => item.roles.includes(userRole)) : [];
+
+  const getInitials = (name?: string | null) => {
+    if (!name) return 'CC';
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  useEffect(() => {
+    if (!loading && !currentUser) {
+      router.push('/login?redirect=/dashboard'); // Or a more specific redirect URL
+    }
+  }, [currentUser, loading, router]);
+
+  if (loading || !currentUser) {
+    return (
+       <div className="flex h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Logo/>
+          <p className="text-muted-foreground">Cargando dashboard...</p>
+          <div className="mt-4 w-64">
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[256px_1fr] lg:grid-cols-[256px_1fr]">
       <DashboardSidebar />
       <div className="flex flex-col">
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 md:hidden">
+        <header className="flex h-14 items-center justify-between gap-4 border-b bg-muted/40 px-4 md:hidden">
           <Sheet>
             <SheetTrigger asChild>
               <Button size="icon" variant="outline" className="sm:hidden">
@@ -69,37 +105,42 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <span className="sr-only">Abrir menú</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="sm:max-w-xs">
-              <nav className="grid gap-4 text-lg font-medium mt-5">
-                <Link
-                  href="/"
-                  className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base mb-4"
-                >
-                  <Logo/>
-                </Link>
+            <SheetContent side="left" className="sm:max-w-xs flex flex-col">
+             <SheetTitle className="sr-only">Navegación del Dashboard</SheetTitle>
+              <div className="flex items-center gap-2 border-b pb-4 mb-4">
+                <Avatar className="h-9 w-9">
+                    <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} />
+                    <AvatarFallback>{getInitials(currentUser.displayName)}</AvatarFallback>
+                </Avatar>
+                 <div>
+                    <p className="font-medium text-sm truncate">{currentUser.displayName || currentUser.email}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
+                </div>
+              </div>
+              <nav className="grid gap-3 text-base font-medium flex-grow overflow-y-auto">
                 {filteredNavItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <item.icon className="h-5 w-5" />
                     {item.label}
                   </Link>
                 ))}
-                 <Button variant="ghost" className="w-full justify-start mt-auto">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Cerrar Sesión
-                  </Button>
               </nav>
+              <Button variant="ghost" onClick={handleLogout} className="w-full justify-start mt-auto border-t pt-4">
+                <LogOut className="mr-2 h-4 w-4" />
+                Cerrar Sesión
+              </Button>
             </SheetContent>
           </Sheet>
            <div className="md:hidden">
-             <Logo />
+             <Link href="/"><Logo /></Link>
            </div>
-          {/* Potentially add breadcrumbs or user menu for mobile header here */}
+           {/* Mobile User Menu or other elements can go here if needed */}
         </header>
-        <main className="flex-1 p-4 md:p-8 lg:p-10 bg-background overflow-auto">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 bg-background overflow-auto">
           {children}
         </main>
       </div>

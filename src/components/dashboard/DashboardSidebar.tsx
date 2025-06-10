@@ -1,7 +1,8 @@
+
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/shared/Logo';
 import { Button } from '@/components/ui/button';
@@ -20,8 +21,14 @@ import {
   Ticket,
   ShieldCheck,
   Palette,
-  MessageSquare
+  MessageSquare,
+  Menu as MenuIcon,
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface NavItem {
   href: string;
@@ -39,6 +46,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/student/referrals', label: 'Mis Referidos', icon: Gift, roles: ['student'] },
   { href: '/dashboard/student/certificates', label: 'Certificados', icon: AwardIcon, roles: ['student'] },
   // Creator specific
+  { href: '/dashboard/creator', label: 'Resumen Creator', icon: LayoutDashboard, roles: ['creator'] },
   { href: '/dashboard/creator/courses', label: 'Gestionar Cursos', icon: Edit3, roles: ['creator'] },
   { href: '/dashboard/creator/lessons', label: 'Gestionar Lecciones', icon: Palette, roles: ['creator'] },
   { href: '/dashboard/creator/stats', label: 'Estadísticas', icon: BarChart2, roles: ['creator'] },
@@ -46,6 +54,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/creator/earnings', label: 'Ingresos', icon: DollarSign, roles: ['creator'] },
   { href: '/dashboard/creator/comments', label: 'Comentarios', icon: MessageSquare, roles: ['creator'] },
   // Superadmin specific
+  { href: '/dashboard/superadmin', label: 'Resumen Admin', icon: LayoutDashboard, roles: ['superadmin'] },
   { href: '/dashboard/superadmin/user-management', label: 'Gestión Usuarios', icon: Users, roles: ['superadmin'] },
   { href: '/dashboard/superadmin/course-management', label: 'Gestión Cursos', icon: BookOpen, roles: ['superadmin'] },
   { href: '/dashboard/superadmin/platform-stats', label: 'Métricas Plataforma', icon: BarChart2, roles: ['superadmin'] },
@@ -54,18 +63,69 @@ const navItems: NavItem[] = [
   { href: '/dashboard/superadmin/security', label: 'Seguridad', icon: ShieldCheck, roles: ['superadmin'] },
 ];
 
-// Placeholder for current user role
-const currentUserRole: 'student' | 'creator' | 'superadmin' = 'student'; // Change this to test different roles
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const { currentUser, userRole, loading, logout } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
 
-  const filteredNavItems = navItems.filter(item => item.roles.includes(currentUserRole));
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({ title: "Sesión Cerrada", description: "Has cerrado sesión exitosamente." });
+      router.push('/');
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+      toast({ title: "Error", description: "No se pudo cerrar la sesión.", variant: "destructive" });
+    }
+  };
+
+  const filteredNavItems = userRole ? navItems.filter(item => item.roles.includes(userRole)) : [];
+
+  const getInitials = (name?: string | null) => {
+    if (!name) return 'CC';
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  if (loading) {
+    return (
+      <aside className="hidden md:flex md:flex-col md:w-64 border-r bg-card text-card-foreground">
+        <div className="flex h-16 items-center border-b px-6">
+          <Logo />
+        </div>
+        <ScrollArea className="flex-1 py-4 px-4 space-y-2">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+        </ScrollArea>
+        <div className="mt-auto p-4 border-t">
+          <Skeleton className="h-9 w-full" />
+        </div>
+      </aside>
+    );
+  }
+  
+  if (!currentUser) {
+    // Or redirect, or show a message. For now, null to not render sidebar if not logged in.
+    // This case should ideally be handled by route protection in DashboardLayout.
+    return null; 
+  }
+
 
   return (
     <aside className="hidden md:flex md:flex-col md:w-64 border-r bg-card text-card-foreground">
-      <div className="flex h-16 items-center border-b px-6">
-        <Logo />
+      <div className="flex h-16 items-center border-b px-4 gap-2">
+        <Avatar className="h-9 w-9">
+          <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} />
+          <AvatarFallback>{getInitials(currentUser.displayName)}</AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col">
+         <span className="text-sm font-semibold truncate">{currentUser.displayName || currentUser.email}</span>
+         <span className="text-xs text-muted-foreground capitalize">{userRole}</span>
+        </div>
       </div>
       <ScrollArea className="flex-1 py-4">
         <nav className="grid items-start px-4 text-sm font-medium">
@@ -85,7 +145,7 @@ export function DashboardSidebar() {
         </nav>
       </ScrollArea>
       <div className="mt-auto p-4 border-t">
-         <Button variant="ghost" className="w-full justify-start">
+         <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             Cerrar Sesión
           </Button>

@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Activity, ArrowRight, BookOpen, BarChartBig, Users, Settings, Gift } from "lucide-react"; // Added Gift import
+import { Activity, ArrowRight, BookOpen, BarChartBig, Users, Settings, Gift } from "lucide-react"; 
 
 // Placeholder: In a real app, this would be determined by user's role
 const userRole = 'student'; // 'student', 'creator', 'superadmin'
@@ -81,7 +81,7 @@ export default function DashboardPage() {
         <h2 className="text-2xl font-headline font-semibold mb-4">Accesos Rápidos</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {links.map(link => (
-            <Card key={link.href} className="shadow-md hover:shadow-lg transition-shadow">
+            <Card key={link.title} className="shadow-md hover:shadow-lg transition-shadow">
               <CardHeader>
                 <link.icon className="h-8 w-8 text-primary mb-2" />
                 <CardTitle className="font-headline">{link.title}</CardTitle>

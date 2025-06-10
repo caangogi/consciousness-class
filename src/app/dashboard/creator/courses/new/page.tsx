@@ -25,7 +25,7 @@ import type { CreateLessonDto } from '@/features/course/infrastructure/dto/creat
 import { type LessonProperties, type LessonContentType } from '@/features/course/domain/entities/lesson.entity';
 import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud, ChevronDown, Trash2, Edit } from 'lucide-react';
 import { auth, storage } from '@/lib/firebase/config';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import Image from 'next/image';
 
 // Step 1 Schema: Basic Course Information
@@ -52,7 +52,7 @@ const lessonSchema = z.object({
   lessonContentType: z.enum(['video', 'documento_pdf', 'texto_rico', 'quiz', 'audio'], { required_error: "Debes seleccionar un tipo de contenido."}),
   lessonDuration: z.string().min(1, "La duración estimada es requerida."),
   lessonIsPreview: z.boolean().default(false),
-  // Add lessonContentUrl and lessonContentText later if needed for direct input here
+  // TODO: Add lessonContentUrl and lessonContentText later if needed for direct input here
 });
 type LessonFormValues = z.infer<typeof lessonSchema>;
 
@@ -93,7 +93,15 @@ export default function NewCoursePage() {
 
   const formStep1 = useForm<Step1FormValues>({
     resolver: zodResolver(step1Schema),
-    defaultValues: { /* ... */ },
+    defaultValues: {
+      nombre: '',
+      descripcionCorta: '',
+      descripcionLarga: '',
+      categoria: '',
+      tipoAcceso: undefined, // For Select, undefined will show placeholder
+      precio: 0,
+      duracionEstimada: '',
+    },
   });
 
   const moduleForm = useForm<ModuleFormValues>({
@@ -121,7 +129,7 @@ export default function NewCoursePage() {
         descripcionLarga: courseDetails.descripcionLarga || '',
         categoria: courseDetails.categoria || '',
         tipoAcceso: courseDetails.tipoAcceso,
-        precio: courseDetails.precio || 0,
+        precio: courseDetails.precio ?? 0, // Use ?? to handle null or undefined from DB
         duracionEstimada: courseDetails.duracionEstimada || '',
       });
       setCoverImagePreviewUrl(courseDetails.imagenPortadaUrl || null);
@@ -165,7 +173,7 @@ export default function NewCoursePage() {
       setLessonsByModule(prev => ({ ...prev, [moduleId]: data.lessons || [] }));
     } catch (error: any) {
       toast({ title: `Error al Cargar Lecciones (Módulo ${moduleId})`, description: error.message, variant: "destructive" });
-      setLessonsByModule(prev => ({ ...prev, [moduleId]: [] }));
+      setLessonsByModule(prev => ({ ...prev, [moduleId]: [] })); // Reset on error
     } finally {
       setIsLessonLoading(prev => ({ ...prev, [moduleId]: false }));
     }
@@ -176,8 +184,13 @@ export default function NewCoursePage() {
       setExpandedModuleId(null);
     } else {
       setExpandedModuleId(moduleId);
-      lessonForm.reset(); // Reset lesson form when switching modules
-      if (createdCourseId && !lessonsByModule[moduleId]) { // Fetch if not already fetched
+      lessonForm.reset({ // Reset lesson form with defaults when opening a new module
+        lessonName: '',
+        lessonContentType: undefined,
+        lessonDuration: '',
+        lessonIsPreview: false,
+      }); 
+      if (createdCourseId && (!lessonsByModule[moduleId] || lessonsByModule[moduleId]?.length === 0)) { 
         fetchLessonsForModule(createdCourseId, moduleId);
       }
     }
@@ -185,12 +198,18 @@ export default function NewCoursePage() {
 
 
   const onSubmitStep1 = async (values: Step1FormValues) => {
-    if (!auth.currentUser) { /* ... */ return; }
+    if (!auth.currentUser) {
+      toast({ title: "Error de autenticación", description: "Debes iniciar sesión.", variant: "destructive" });
+      return;
+    }
     setIsLoading(true);
     try {
       const idToken = await auth.currentUser.getIdToken(true);
       const endpoint = createdCourseId ? `/api/courses/update/${createdCourseId}` : '/api/courses/create';
-      const method = "POST";
+      const method = "POST"; // Both create and update use POST for simplicity here, differentiated by endpoint
+      
+      // Ensure tipoAcceso has a value, as it's required by the DTO and schema.
+      // The form's zod schema already makes tipoAcceso required.
       const dto: CreateCourseDto | UpdateCourseDto = { ...values, tipoAcceso: values.tipoAcceso as CourseAccessType };
       
       const response = await fetch(endpoint, {
@@ -203,10 +222,18 @@ export default function NewCoursePage() {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || 'Error al procesar la información del curso.');
       }
+
       const responseData = await response.json();
-      setCourseDetails(responseData.course);
-      if (!createdCourseId) setCreatedCourseId(responseData.courseId);
-      toast({ title: "Paso 1 Completado", description: createdCourseId ? "Información actualizada." : "Curso creado, define la estructura."});
+      if (responseData.course) {
+        setCourseDetails(responseData.course);
+      }
+      if (responseData.courseId && !createdCourseId) {
+         setCreatedCourseId(responseData.courseId);
+      }
+      toast({ 
+        title: "Paso 1 Completado", 
+        description: createdCourseId ? "Información del curso actualizada." : "Curso creado. Ahora define la estructura."
+      });
       setCurrentStep("structure"); 
     } catch (error: any) {
       toast({ title: "Error Paso 1", description: error.message, variant: "destructive" });
@@ -216,7 +243,10 @@ export default function NewCoursePage() {
   };
 
   const onAddModule = async (values: ModuleFormValues) => {
-    if (!createdCourseId || !auth.currentUser) { /* ... */ return; }
+    if (!createdCourseId || !auth.currentUser) { 
+      toast({ title: "Error", description: "Curso no creado o usuario no autenticado.", variant: "destructive" });
+      return; 
+    }
     setIsModuleLoading(true);
     try {
       const idToken = await auth.currentUser.getIdToken(true);
@@ -226,7 +256,10 @@ export default function NewCoursePage() {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
         body: JSON.stringify(dto),
       });
-      if (!response.ok) throw new Error("Error al crear el módulo.");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || "Error al crear el módulo.");
+      }
       toast({title: "Módulo Creado"});
       moduleForm.reset();
       await fetchModules(createdCourseId); 
@@ -238,7 +271,17 @@ export default function NewCoursePage() {
   };
   
   const onAddLesson = async (moduleId: string, values: LessonFormValues) => {
-    if (!createdCourseId || !auth.currentUser) { /* ... */ return; }
+    if (!createdCourseId || !auth.currentUser) { 
+      toast({ title: "Error", description: "Curso no creado o usuario no autenticado.", variant: "destructive" });
+      return;
+    }
+    // Ensure lessonContentType is selected
+    if (!values.lessonContentType) {
+        toast({ title: "Campo Requerido", description: "Por favor, selecciona un tipo de contenido para la lección.", variant: "destructive" });
+        lessonForm.setError("lessonContentType", { type: "manual", message: "Debes seleccionar un tipo de contenido." });
+        return;
+    }
+
     setIsLessonLoading(prev => ({ ...prev, [moduleId]: true }));
     try {
       const idToken = await auth.currentUser.getIdToken(true);
@@ -258,7 +301,12 @@ export default function NewCoursePage() {
         throw new Error(errorData.details || errorData.error || "Error al crear la lección.");
       }
       toast({title: "Lección Creada", description: `Lección "${values.lessonName}" añadida al módulo.`});
-      lessonForm.reset(); 
+      lessonForm.reset({ // Reset lesson form with defaults after successful submission
+        lessonName: '',
+        lessonContentType: undefined,
+        lessonDuration: '',
+        lessonIsPreview: false,
+      }); 
       await fetchLessonsForModule(createdCourseId, moduleId);
     } catch (error: any) {
       toast({title: "Error al Añadir Lección", description: error.message, variant: "destructive"});
@@ -268,9 +316,111 @@ export default function NewCoursePage() {
   };
 
 
-  const handleCoverImageChange = (event: React.ChangeEvent<HTMLInputElement>) => { /* ... */ };
-  const onSaveSettings = async () => { /* ... */ };
-  const getTabClass = (tabValue: string) => { /* ... */ };
+  const handleCoverImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file size (e.g., max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: "Archivo Demasiado Grande", description: "La imagen de portada no debe exceder los 5MB.", variant: "destructive"});
+        return;
+      }
+      // Validate file type (optional, browser already does with `accept` but good for UX)
+      if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+          toast({ title: "Tipo de Archivo Inválido", description: "Por favor, sube un archivo de imagen (PNG, JPG, WEBP, GIF).", variant: "destructive"});
+          return;
+      }
+      setCoverImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImagePreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setCoverImageFile(null);
+      // If no file is selected, revert to existing course image or null
+      setCoverImagePreviewUrl(courseDetails?.imagenPortadaUrl || null);
+    }
+  };
+
+  const onSaveSettings = async () => {
+    if (!createdCourseId || !auth.currentUser) {
+      toast({title: "Error", description: "No hay curso creado o usuario no autenticado.", variant: "destructive"});
+      return;
+    }
+    setIsSavingSettings(true);
+    setIsUploadingCover(!!coverImageFile); // Set uploading state if there's a new file
+
+    let finalImageUrl = courseDetails?.imagenPortadaUrl || null;
+
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+
+      if (coverImageFile) {
+        // Delete old image if it exists and is different (optional, good for storage management)
+        // This part requires knowing the old image path, which might need careful handling if URLs change format
+        // For now, we just upload the new one. A more robust solution would delete the old one.
+        // const oldImageStoragePath = courseDetails?.imagenPortadaUrl ? ... extract path ... : null;
+        // if (oldImageStoragePath && oldImageStoragePath !== newPath) await deleteObject(ref(storage, oldImageStoragePath));
+        
+        const fileExtension = coverImageFile.name.split('.').pop()?.toLowerCase() || 'png';
+        const storagePath = `cursos/${createdCourseId}/portada/cover.${fileExtension}`;
+        const imageRef = ref(storage, storagePath);
+        
+        await uploadBytes(imageRef, coverImageFile);
+        finalImageUrl = await getDownloadURL(imageRef);
+        setCoverImagePreviewUrl(finalImageUrl); // Update preview with the final URL from storage
+        setCoverImageFile(null); // Clear the file state after successful upload
+        toast({title: "Imagen Subida", description: "La imagen de portada se ha subido."});
+      }
+      setIsUploadingCover(false);
+
+      const dto: UpdateCourseDto = {
+        imagenPortadaUrl: finalImageUrl,
+        dataAiHintImagenPortada: finalImageUrl ? (courseDetails?.nombre.substring(0,20) || 'course cover') : null, // Basic AI hint
+        videoTrailerUrl: videoTrailerUrlInput || null,
+        estado: selectedStatus,
+      };
+
+      const response = await fetch(`/api/courses/update/${createdCourseId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
+        body: JSON.stringify(dto),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Error al guardar la configuración.');
+      }
+      const responseData = await response.json();
+      if(responseData.course) {
+        setCourseDetails(responseData.course); // Update local course details
+      }
+      toast({ title: "Configuración Guardada", description: "Los ajustes de publicación se han actualizado."});
+
+    } catch (error: any) {
+      console.error("Error al guardar configuración:", error);
+      toast({ title: "Error al Guardar", description: error.message, variant: "destructive" });
+      setIsUploadingCover(false);
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const getTabClass = (tabValue: string) => {
+    let baseClass = "flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-inner";
+    if (tabValue === currentStep) return baseClass;
+    
+    // Enable previous tabs if current step is valid for them
+    if (currentStep === "structure" && tabValue === "info") return baseClass;
+    if (currentStep === "settings" && (tabValue === "info" || tabValue === "structure")) return baseClass;
+
+    // Disable future tabs if current step doesn't allow them yet
+    if (tabValue === "structure" && !createdCourseId) return `${baseClass} opacity-50 cursor-not-allowed`;
+    if (tabValue === "settings" && !createdCourseId) return `${baseClass} opacity-50 cursor-not-allowed`;
+    
+    return baseClass;
+  };
+
 
   const handleNextStep = () => {
     if (currentStep === "info" && createdCourseId) setCurrentStep("structure");
@@ -286,15 +436,18 @@ export default function NewCoursePage() {
     <div className="container mx-auto py-8 px-4 md:px:6">
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className="text-3xl font-headline">{createdCourseId ? "Editar Curso" : "Crear Nuevo Curso"}</CardTitle>
+          <CardTitle className="text-3xl font-headline">{createdCourseId ? `Editando Curso: ${courseDetails?.nombre || ''}` : "Crear Nuevo Curso"}</CardTitle>
           <CardDescription>Completa los siguientes pasos para configurar tu curso.</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={currentStep} onValueChange={(newStep) => {
-            if (newStep === "info" || (newStep === "structure" && createdCourseId) || (newStep === "settings" && createdCourseId)) {
+            // Allow navigation to previous completed steps or the current step
+            if (newStep === "info" || 
+                (newStep === "structure" && createdCourseId) || 
+                (newStep === "settings" && createdCourseId)) {
               setCurrentStep(newStep);
             } else {
-              toast({title: "Paso Bloqueado", description: "Completa los pasos anteriores primero.", variant: "default"});
+              toast({title: "Paso Bloqueado", description: "Completa los pasos anteriores primero para habilitar esta sección.", variant: "default"});
             }
           }} className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-6">
@@ -318,13 +471,12 @@ export default function NewCoursePage() {
                 <CardContent>
                   <Form {...formStep1}>
                     <form onSubmit={formStep1.handleSubmit(onSubmitStep1)} className="space-y-6">
-                      {/* Step 1 FormFields as before */}
                       <FormField control={formStep1.control} name="nombre" render={({ field }) => (<FormItem><FormLabel>Nombre del Curso</FormLabel><FormControl><Input placeholder="Ej: Curso Completo de Next.js y Firebase" {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={formStep1.control} name="descripcionCorta" render={({ field }) => (<FormItem><FormLabel>Descripción Corta</FormLabel><FormControl><Input placeholder="Un resumen atractivo (máx. 200 caracteres)" {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={formStep1.control} name="descripcionLarga" render={({ field }) => (<FormItem><FormLabel>Descripción Larga</FormLabel><FormControl><Textarea rows={6} placeholder="Describe en detalle tu curso..." {...field} /></FormControl><FormDescription>Puedes usar Markdown.</FormDescription><FormMessage /></FormItem>)} />
                       <div className="grid md:grid-cols-2 gap-6">
-                        <FormField control={formStep1.control} name="categoria" render={({ field }) => (<FormItem><FormLabel>Categoría</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona categoría" /></SelectTrigger></FormControl><SelectContent>{courseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-                        <FormField control={formStep1.control} name="tipoAcceso" render={({ field }) => (<FormItem><FormLabel>Tipo de Acceso</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona tipo de acceso" /></SelectTrigger></FormControl><SelectContent><SelectItem value="unico">Pago Único</SelectItem><SelectItem value="suscripcion">Suscripción</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                        <FormField control={formStep1.control} name="categoria" render={({ field }) => (<FormItem><FormLabel>Categoría</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona categoría" /></SelectTrigger></FormControl><SelectContent>{courseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                        <FormField control={formStep1.control} name="tipoAcceso" render={({ field }) => (<FormItem><FormLabel>Tipo de Acceso</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona tipo de acceso" /></SelectTrigger></FormControl><SelectContent><SelectItem value="unico">Pago Único</SelectItem><SelectItem value="suscripcion">Suscripción</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                       </div>
                       <div className="grid md:grid-cols-2 gap-6">
                         <FormField control={formStep1.control} name="precio" render={({ field }) => (<FormItem><FormLabel>Precio (USD)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Ej: 49.99" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -346,7 +498,7 @@ export default function NewCoursePage() {
                 <CardContent>
                   {createdCourseId ? (
                     <>
-                      <p className="mb-4 text-sm text-muted-foreground">Curso: {courseDetails?.nombre || `ID: ${createdCourseId}`}</p>
+                      <p className="mb-4 text-sm text-muted-foreground">Editando estructura para: {courseDetails?.nombre || `ID: ${createdCourseId}`}</p>
                       
                       <Form {...moduleForm}>
                         <form onSubmit={moduleForm.handleSubmit(onAddModule)} className="flex items-start gap-4 mb-6 p-4 border rounded-md shadow-sm">
@@ -355,50 +507,58 @@ export default function NewCoursePage() {
                         </form>
                       </Form>
 
-                      {isModuleLoading && modules.length === 0 && <p className="text-center py-2">Cargando módulos...</p>}
-                      {!isModuleLoading && modules.length === 0 && (<p className="text-muted-foreground text-center py-4">Aún no has añadido módulos.</p>)}
+                      {isModuleLoading && modules.length === 0 && <div className="text-center py-2"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />Cargando módulos...</div>}
+                      {!isModuleLoading && modules.length === 0 && (<p className="text-muted-foreground text-center py-4">Aún no has añadido módulos. Comienza creando uno.</p>)}
                       
                       {modules.length > 0 && (
                         <div className="space-y-4 mt-6">
                           <h4 className="text-lg font-semibold mb-2">Módulos del Curso:</h4>
                           <Accordion type="single" collapsible className="w-full" value={expandedModuleId || undefined} onValueChange={handleToggleModuleLessons}>
                             {modules.sort((a,b) => a.orden - b.orden).map(module => (
-                              <AccordionItem value={module.id} key={module.id}>
-                                <AccordionTrigger className="hover:no-underline bg-secondary/50 px-4 py-3 rounded-md hover:bg-secondary/70">
+                              <AccordionItem value={module.id} key={module.id} className="border-b">
+                                <AccordionTrigger className="hover:no-underline bg-secondary/50 px-4 py-3 rounded-md hover:bg-secondary/70 data-[state=open]:rounded-b-none">
                                   <div className="flex justify-between items-center w-full">
-                                    <span className="font-medium">{module.nombre}</span>
-                                    <span className="text-xs text-muted-foreground">{lessonsByModule[module.id]?.length || 0} lecciones</span>
+                                    <span className="font-medium text-left">{module.nombre}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-muted-foreground">{lessonsByModule[module.id]?.length || 0} lecciones</span>
+                                        {/* TODO: Add Edit/Delete module buttons here. Maybe a DropdownMenu for actions */}
+                                    </div>
                                   </div>
                                 </AccordionTrigger>
-                                <AccordionContent className="pt-4 px-2 border-l-2 border-primary/20 ml-2">
-                                  <Card className="shadow-inner">
-                                    <CardHeader>
+                                <AccordionContent className="pt-0 pb-2 px-2 border-x border-b rounded-b-md border-primary/20 ml-0">
+                                  <Card className="shadow-none border-0 rounded-none">
+                                    <CardHeader className="px-2 pt-3 pb-2">
                                       <CardTitle className="text-base">Lecciones del Módulo: {module.nombre}</CardTitle>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="px-2 pb-2">
                                       <Form {...lessonForm}>
                                         <form onSubmit={lessonForm.handleSubmit((data) => onAddLesson(module.id, data))} className="space-y-4 mb-6 p-3 border rounded-md bg-background">
                                           <h5 className="font-medium text-sm">Añadir Nueva Lección</h5>
                                           <FormField control={lessonForm.control} name="lessonName" render={({ field }) => (<FormItem><FormLabel className="text-xs">Nombre Lección</FormLabel><FormControl><Input placeholder="Título de la lección" {...field} disabled={isLessonLoading[module.id]} /></FormControl><FormMessage /></FormItem>)} />
                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <FormField control={lessonForm.control} name="lessonContentType" render={({ field }) => (<FormItem><FormLabel className="text-xs">Tipo Contenido</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLessonLoading[module.id]}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger></FormControl><SelectContent>{lessonContentTypes.map(type => <SelectItem key={type} value={type}>{type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                                            <FormField control={lessonForm.control} name="lessonContentType" render={({ field }) => (<FormItem><FormLabel className="text-xs">Tipo Contenido</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLessonLoading[module.id]}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger></FormControl><SelectContent>{lessonContentTypes.map(type => <SelectItem key={type} value={type}>{type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                                             <FormField control={lessonForm.control} name="lessonDuration" render={({ field }) => (<FormItem><FormLabel className="text-xs">Duración Estimada</FormLabel><FormControl><Input placeholder="Ej: 10 min, 3 págs" {...field} disabled={isLessonLoading[module.id]} /></FormControl><FormMessage /></FormItem>)} />
                                           </div>
-                                          <FormField control={lessonForm.control} name="lessonIsPreview" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isLessonLoading[module.id]} /></FormControl><div className="space-y-1 leading-none"><FormLabel className="text-xs">¿Es vista previa gratuita?</FormLabel></div></FormItem>)} />
+                                          <FormField control={lessonForm.control} name="lessonIsPreview" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-background"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isLessonLoading[module.id]} /></FormControl><div className="space-y-1 leading-none"><FormLabel className="text-xs">¿Es vista previa gratuita?</FormLabel></div></FormItem>)} />
                                           <Button type="submit" size="sm" disabled={isLessonLoading[module.id] || !createdCourseId}>{isLessonLoading[module.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}Añadir Lección</Button>
                                         </form>
                                       </Form>
                                       
-                                      {isLessonLoading[module.id] && (!lessonsByModule[module.id] || lessonsByModule[module.id]?.length === 0) && <p className="text-xs text-muted-foreground text-center py-2">Cargando lecciones...</p>}
+                                      {isLessonLoading[module.id] && (!lessonsByModule[module.id] || lessonsByModule[module.id]?.length === 0) && <div className="text-xs text-muted-foreground text-center py-2"><Loader2 className="h-4 w-4 animate-spin inline-block mr-1" />Cargando lecciones...</div>}
                                       {!isLessonLoading[module.id] && (!lessonsByModule[module.id] || lessonsByModule[module.id]?.length === 0) && (<p className="text-xs text-muted-foreground text-center py-3">Aún no has añadido lecciones a este módulo.</p>)}
+                                      
                                       {lessonsByModule[module.id] && lessonsByModule[module.id]!.length > 0 && (
                                         <div className="space-y-2 mt-4">
                                           <h6 className="text-xs font-semibold text-muted-foreground">Lecciones Existentes:</h6>
-                                          <ul className="list-decimal list-inside pl-2 space-y-1 text-sm">
+                                          <ul className="divide-y divide-border">
                                             {lessonsByModule[module.id]!.sort((a,b)=> a.orden - b.orden).map(lesson => (
-                                              <li key={lesson.id} className="text-foreground/90 hover:bg-secondary/20 p-1 rounded-sm">
-                                                {lesson.nombre} <span className="text-xs text-muted-foreground">({lesson.contenidoPrincipal.tipo})</span>
+                                              <li key={lesson.id} className="text-foreground/90 hover:bg-secondary/20 p-2 rounded-sm flex justify-between items-center text-sm">
+                                                <div>
+                                                    <span className="font-medium">{lesson.nombre}</span> <span className="text-xs text-muted-foreground">({lesson.contenidoPrincipal.tipo.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())})</span>
+                                                    {lesson.esVistaPrevia && <Badge variant="outline" className="ml-2 text-xs">Vista Previa</Badge>}
+                                                </div>
                                                 {/* TODO: Edit/Delete lesson buttons */}
+                                                {/* <div> <Button variant="ghost" size="icon" className="h-7 w-7"><Edit className="h-3.5 w-3.5"/></Button> <Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="h-3.5 w-3.5"/></Button></div> */}
                                               </li>
                                             ))}
                                           </ul>
@@ -414,7 +574,7 @@ export default function NewCoursePage() {
                       )}
                     </>
                   ) : (
-                    <p className="text-center text-muted-foreground py-8">Completa el paso de Información Básica primero.</p>
+                    <p className="text-center text-muted-foreground py-8">Completa el paso de Información Básica primero para poder añadir módulos y lecciones.</p>
                   )}
                   <div className="flex justify-between pt-6 mt-4 border-t">
                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isModuleLoading || isSavingSettings}>Anterior</Button>
@@ -433,7 +593,7 @@ export default function NewCoursePage() {
                 <CardContent>
                    {createdCourseId ? (
                     <div className="space-y-8">
-                       <p className="mb-1 text-sm text-muted-foreground">Curso: {courseDetails?.nombre || `ID: ${createdCourseId}`}</p>
+                       <p className="mb-1 text-sm text-muted-foreground">Ajustes para: {courseDetails?.nombre || `ID: ${createdCourseId}`}</p>
                       <Card className="p-4 shadow-sm">
                           <div className="flex items-center gap-2 mb-3">
                               <ImageIcon className="h-5 w-5 text-primary"/>
@@ -459,7 +619,7 @@ export default function NewCoursePage() {
                                 {isUploadingCover ? 'Subiendo...' : (coverImageFile ? (coverImageFile.name.length > 30 ? coverImageFile.name.substring(0,27) + '...' : coverImageFile.name) : 'Seleccionar Imagen de Portada')}
                             </Button>
                            </div>
-                          <p className="mt-2 text-xs text-muted-foreground text-center">Sube una imagen atractiva (recomendado 1200x675px, máx. 5MB).</p>
+                           <p className="mt-1 text-xs text-muted-foreground text-center">Sube una imagen atractiva (recomendado 1200x675px, máx 5MB).</p>
                       </Card>
                        <Card className="p-4 shadow-sm">
                           <div className="flex items-center gap-2 mb-3">
@@ -472,7 +632,7 @@ export default function NewCoursePage() {
                             onChange={(e) => setVideoTrailerUrlInput(e.target.value)}
                             disabled={isSavingSettings}
                           />
-                           <p className="mt-2 text-xs text-muted-foreground">Un video corto para promocionar tu curso.</p>
+                           <p className="mt-1 text-xs text-muted-foreground">Un video corto para promocionar tu curso.</p>
                       </Card>
                        <Card className="p-4 shadow-sm">
                           <div className="flex items-center gap-2 mb-3">
@@ -481,7 +641,7 @@ export default function NewCoursePage() {
                           </div>
                             <Select 
                                 onValueChange={(value) => setSelectedStatus(value as CourseStatus)} 
-                                defaultValue={selectedStatus}
+                                value={selectedStatus} // Use value here for controlled component
                                 disabled={isSavingSettings}
                             >
                                 <SelectTrigger>
@@ -495,22 +655,34 @@ export default function NewCoursePage() {
                                 ))}
                                 </SelectContent>
                             </Select>
-                           <p className="mt-2 text-xs text-muted-foreground">Define si el curso es un borrador o está publicado.</p>
+                           <p className="mt-1 text-xs text-muted-foreground">Define si el curso es un borrador o está publicado.</p>
                       </Card>
 
                       <div className="flex justify-end pt-4">
                         <Button onClick={onSaveSettings} disabled={isSavingSettings || isUploadingCover}>
-                          {isSavingSettings ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                          {isSavingSettings || isUploadingCover ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                           {isSavingSettings ? (isUploadingCover ? 'Subiendo imagen...' : 'Guardando...') : 'Guardar Cambios de Publicación'}
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-center text-muted-foreground py-8">Completa los pasos anteriores primero.</p>
+                    <p className="text-center text-muted-foreground py-8">Completa los pasos anteriores para acceder a la configuración de publicación.</p>
                   )}
                    <div className="flex justify-between pt-6 mt-4 border-t">
-                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isSavingSettings}>Anterior</Button>
-                       <Button type="button" onClick={() => router.push(`/dashboard/creator/courses`)} disabled={isLoading || isSavingSettings || !createdCourseId}>Finalizar e Ir al Listado</Button>
+                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isSavingSettings || isModuleLoading}>Anterior</Button>
+                       <Button 
+                         type="button" 
+                         onClick={() => {
+                           if (createdCourseId) {
+                             router.push(`/dashboard/creator/courses`); // Or specific edit page: /dashboard/creator/courses/edit/${createdCourseId}
+                           } else {
+                             router.push('/dashboard/creator/courses');
+                           }
+                         }} 
+                         disabled={isLoading || isSavingSettings || isModuleLoading || !createdCourseId}
+                       >
+                         {createdCourseId ? "Finalizar e Ir al Listado" : "Ir al Listado (Guarda primero)"}
+                       </Button>
                     </div>
                 </CardContent>
               </Card>

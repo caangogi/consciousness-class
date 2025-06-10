@@ -84,11 +84,11 @@ export function Header() {
               <Link href="/dashboard"><LayoutDashboard className="mr-2 h-4 w-4" />Dashboard</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/student/profile"><UserCircle className="mr-2 h-4 w-4" />Mi Perfil</Link>
+              <Link href="/dashboard/student"><UserCircle className="mr-2 h-4 w-4" />Mi Perfil</Link>
             </DropdownMenuItem>
             {userRole === 'student' && (
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/student/my-courses"><BookOpen className="mr-2 h-4 w-4" />Mis Cursos</Link>
+                <Link href="/dashboard/student"><BookOpen className="mr-2 h-4 w-4" />Mis Cursos</Link>
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
@@ -121,7 +121,7 @@ export function Header() {
       return (
         <>
           <Link href="/dashboard" className="text-muted-foreground transition-colors hover:text-foreground">Dashboard</Link>
-          <Link href="/dashboard/student/profile" className="text-muted-foreground transition-colors hover:text-foreground">Mi Perfil</Link>
+          <Link href="/dashboard/student" className="text-muted-foreground transition-colors hover:text-foreground">Mi Perfil</Link>
           <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-muted-foreground hover:text-foreground p-0 h-auto">Cerrar Sesión</Button>
         </>
       );
@@ -190,3 +190,4 @@ export function Header() {
     </header>
   );
 }
+

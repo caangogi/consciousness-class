@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -8,8 +9,8 @@ const userRole = 'student'; // 'student', 'creator', 'superadmin'
 
 const roleSpecificLinks = {
   student: [
-    { title: "Mis Cursos", description: "Accede a tus cursos inscritos y continúa tu aprendizaje.", href: "/dashboard/student/my-courses", icon: BookOpen },
-    { title: "Mi Perfil", description: "Actualiza tu información personal y preferencias.", href: "/dashboard/student/profile", icon: Users },
+    { title: "Mis Cursos", description: "Accede a tus cursos inscritos y continúa tu aprendizaje.", href: "/dashboard/student", icon: BookOpen },
+    { title: "Mi Perfil", description: "Actualiza tu información personal y preferencias.", href: "/dashboard/student", icon: Users },
   ],
   creator: [
     { title: "Gestionar Cursos", description: "Crea, edita y publica tus cursos.", href: "/dashboard/creator/courses", icon: BookOpen },
@@ -66,7 +67,7 @@ export default function DashboardPage() {
           <Card className="shadow-md hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Recompensas de Referidos</CardTitle>
-              <Activity className="h-5 w-5 text-muted-foreground" />
+              <Gift className="h-5 w-5 text-muted-foreground" /> {/* Changed icon to Gift */}
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">$25.00</div> {/* Placeholder */}
@@ -98,3 +99,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

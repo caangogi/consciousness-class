@@ -41,10 +41,10 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, roles: ['student', 'creator', 'superadmin'] },
   // Student specific
-  { href: '/dashboard/student/my-courses', label: 'Mis Cursos', icon: BookOpen, roles: ['student'] },
-  { href: '/dashboard/student/profile', label: 'Mi Perfil', icon: UserCircle, roles: ['student'] },
-  { href: '/dashboard/student/referrals', label: 'Mis Referidos', icon: Gift, roles: ['student'] },
-  { href: '/dashboard/student/certificates', label: 'Certificados', icon: AwardIcon, roles: ['student'] },
+  { href: '/dashboard/student', label: 'Mis Cursos', icon: BookOpen, roles: ['student'] }, // Adjusted
+  { href: '/dashboard/student', label: 'Mi Perfil', icon: UserCircle, roles: ['student'] }, // Adjusted
+  { href: '/dashboard/student', label: 'Mis Referidos', icon: Gift, roles: ['student'] }, // Adjusted
+  { href: '/dashboard/student', label: 'Certificados', icon: AwardIcon, roles: ['student'] }, // Adjusted
   // Creator specific
   { href: '/dashboard/creator', label: 'Resumen Creator', icon: LayoutDashboard, roles: ['creator'] },
   { href: '/dashboard/creator/courses', label: 'Gestionar Cursos', icon: Edit3, roles: ['creator'] },
@@ -131,11 +131,12 @@ export function DashboardSidebar() {
         <nav className="grid items-start px-4 text-sm font-medium">
           {filteredNavItems.map((item) => (
             <Link
-              key={item.href}
+              key={item.href + item.label} // Ensure key is unique if hrefs are repeated
               href={item.href}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10',
-                pathname === item.href && 'bg-primary/10 text-primary font-semibold'
+                // For generic /dashboard/student, make sure it highlights correctly
+                (pathname === item.href || (item.href === '/dashboard/student' && pathname.startsWith('/dashboard/student'))) && 'bg-primary/10 text-primary font-semibold'
               )}
             >
               <item.icon className="h-4 w-4" />
@@ -174,3 +175,4 @@ function AwardIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+

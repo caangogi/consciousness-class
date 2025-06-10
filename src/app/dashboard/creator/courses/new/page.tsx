@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"; // Added Dialog
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
@@ -45,9 +46,18 @@ type Step1FormValues = z.infer<typeof step1Schema>;
 
 // Step 2 Schema (for adding a module)
 const moduleSchema = z.object({
-  moduleName: z.string().min(3, { message: "El nombre del módulo debe tener al menos 3 caracteres."})
+  moduleName: z.string().min(3, { message: "El nombre del módulo debe tener al menos 3 caracteres."}),
+  moduleDescription: z.string().optional(),
 });
 type ModuleFormValues = z.infer<typeof moduleSchema>;
+
+// Schema for editing a module
+const editModuleSchema = z.object({
+  moduleName: z.string().min(3, { message: "El nombre del módulo debe tener al menos 3 caracteres."}),
+  moduleDescription: z.string().optional(),
+});
+type EditModuleFormValues = z.infer<typeof editModuleSchema>;
+
 
 // Step 2.5 Schema (for adding a lesson)
 const lessonSchema = z.object({
@@ -82,6 +92,9 @@ export default function NewCoursePage() {
   const [expandedModuleId, setExpandedModuleId] = useState<string | null>(null);
   const [moduleToDelete, setModuleToDelete] = useState<ModuleProperties | null>(null);
   const [showDeleteModuleDialog, setShowDeleteModuleDialog] = useState(false);
+  const [currentEditingModule, setCurrentEditingModule] = useState<ModuleProperties | null>(null);
+  const [showEditModuleDialog, setShowEditModuleDialog] = useState(false);
+  const [isEditingModule, setIsEditingModule] = useState(false);
 
 
   // Lessons state
@@ -102,7 +115,7 @@ export default function NewCoursePage() {
       descripcionCorta: '',
       descripcionLarga: '',
       categoria: '',
-      tipoAcceso: undefined, // O un valor válido del enum si quieres uno por defecto
+      tipoAcceso: undefined,
       precio: 0,
       duracionEstimada: '',
     },
@@ -110,7 +123,12 @@ export default function NewCoursePage() {
 
   const moduleForm = useForm<ModuleFormValues>({
     resolver: zodResolver(moduleSchema),
-    defaultValues: { moduleName: '' }
+    defaultValues: { moduleName: '', moduleDescription: '' }
+  });
+
+  const editModuleForm = useForm<EditModuleFormValues>({
+    resolver: zodResolver(editModuleSchema),
+    defaultValues: { moduleName: '', moduleDescription: '' }
   });
   
   const lessonForm = useForm<LessonFormValues>({
@@ -140,6 +158,15 @@ export default function NewCoursePage() {
       setSelectedStatus(courseDetails.estado || 'borrador');
     }
   }, [courseDetails, formStep1]);
+
+  useEffect(() => {
+    if (currentEditingModule && showEditModuleDialog) {
+      editModuleForm.reset({
+        moduleName: currentEditingModule.nombre,
+        moduleDescription: currentEditingModule.descripcion || ''
+      });
+    }
+  }, [currentEditingModule, showEditModuleDialog, editModuleForm]);
 
 
   const fetchModules = useCallback(async (courseId: string) => {
@@ -251,7 +278,7 @@ export default function NewCoursePage() {
     setIsModuleLoading(true);
     try {
       const idToken = await auth.currentUser.getIdToken(true);
-      const dto: CreateModuleDto = { nombre: values.moduleName };
+      const dto: CreateModuleDto = { nombre: values.moduleName, descripcion: values.moduleDescription };
       const response = await fetch(`/api/courses/${createdCourseId}/modules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
@@ -268,6 +295,35 @@ export default function NewCoursePage() {
       toast({title: "Error al Añadir Módulo", description: error.message, variant: "destructive"});
     } finally {
       setIsModuleLoading(false);
+    }
+  };
+
+  const onEditModuleSubmit = async (values: EditModuleFormValues) => {
+    if (!createdCourseId || !currentEditingModule || !auth.currentUser) {
+      toast({ title: "Error", description: "No se pudo determinar el módulo a editar o falta información.", variant: "destructive" });
+      return;
+    }
+    setIsEditingModule(true);
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+      const dto: UpdateModuleDto = { nombre: values.moduleName, descripcion: values.moduleDescription };
+      const response = await fetch(`/api/courses/${createdCourseId}/modules/${currentEditingModule.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify(dto),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || "Error al actualizar el módulo.");
+      }
+      toast({ title: "Módulo Actualizado" });
+      setShowEditModuleDialog(false);
+      setCurrentEditingModule(null);
+      await fetchModules(createdCourseId);
+    } catch (error: any) {
+      toast({ title: "Error al Actualizar Módulo", description: error.message, variant: "destructive" });
+    } finally {
+      setIsEditingModule(false);
     }
   };
   
@@ -520,8 +576,9 @@ export default function NewCoursePage() {
                       <p className="mb-4 text-sm text-muted-foreground">Editando estructura para: {courseDetails?.nombre || `ID: ${createdCourseId}`}</p>
                       
                       <Form {...moduleForm}>
-                        <form onSubmit={moduleForm.handleSubmit(onAddModule)} className="flex items-start gap-4 mb-6 p-4 border rounded-md shadow-sm">
-                          <FormField control={moduleForm.control} name="moduleName" render={({ field }) => (<FormItem className="flex-grow"><FormLabel className="sr-only">Nombre del Módulo</FormLabel><FormControl><Input placeholder="Nombre del nuevo módulo" {...field} disabled={isModuleLoading} /></FormControl><FormMessage /></FormItem>)} />
+                        <form onSubmit={moduleForm.handleSubmit(onAddModule)} className="space-y-4 mb-6 p-4 border rounded-md shadow-sm">
+                          <FormField control={moduleForm.control} name="moduleName" render={({ field }) => (<FormItem className="flex-grow"><FormLabel>Nombre del Nuevo Módulo</FormLabel><FormControl><Input placeholder="Ej: Introducción a..." {...field} disabled={isModuleLoading} /></FormControl><FormMessage /></FormItem>)} />
+                          <FormField control={moduleForm.control} name="moduleDescription" render={({ field }) => (<FormItem className="flex-grow"><FormLabel>Descripción del Módulo (Opcional)</FormLabel><FormControl><Textarea placeholder="Una breve descripción del módulo" {...field} disabled={isModuleLoading} rows={2} /></FormControl><FormMessage /></FormItem>)} />
                           <Button type="submit" disabled={isModuleLoading}>{isModuleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4"/>}Añadir Módulo</Button>
                         </form>
                       </Form>
@@ -538,7 +595,10 @@ export default function NewCoursePage() {
                                 <div className="flex items-center justify-between w-full bg-secondary/50 hover:bg-secondary/60 rounded-t-md data-[state=open]:rounded-b-none transition-colors">
                                   <AccordionTrigger className="flex-grow text-left hover:no-underline px-4 py-3 group">
                                     <div className="flex justify-between items-center w-full">
-                                      <span className="font-medium">{module.nombre}</span>
+                                      <div>
+                                        <span className="font-medium">{module.nombre}</span>
+                                        {module.descripcion && <p className="text-xs text-muted-foreground font-normal mt-0.5">{module.descripcion}</p>}
+                                      </div>
                                       <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
                                         {lessonsByModule[module.id]?.length || 0} lecciones
                                       </span>
@@ -547,8 +607,9 @@ export default function NewCoursePage() {
                                   <div className="flex items-center gap-1 pr-4">
                                       <Button variant="ghost" size="icon" className="h-7 w-7 opacity-60 hover:opacity-100 hover:bg-primary/10 focus-visible:ring-offset-secondary/60" 
                                         onClick={(e) => { 
-                                          e.stopPropagation(); 
-                                          toast({title: "Próximamente", description: "Edición de módulo aún no implementada."});
+                                          e.stopPropagation();
+                                          setCurrentEditingModule(module);
+                                          setShowEditModuleDialog(true);
                                         }}>
                                           <Edit className="h-3.5 w-3.5"/>
                                           <span className="sr-only">Editar módulo</span>
@@ -624,8 +685,8 @@ export default function NewCoursePage() {
                     <p className="text-center text-muted-foreground py-8">Completa el paso de Información Básica primero para poder añadir módulos y lecciones.</p>
                   )}
                   <div className="flex justify-between pt-6 mt-4 border-t">
-                      <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isModuleLoading || isSavingSettings}>Anterior</Button>
-                      <Button type="button" onClick={handleNextStep} disabled={isLoading || isModuleLoading || isSavingSettings || !createdCourseId}>Siguiente <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                      <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule}>Anterior</Button>
+                      <Button type="button" onClick={handleNextStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule || !createdCourseId}>Siguiente <ArrowRight className="ml-2 h-4 w-4" /></Button>
                   </div>
                 </CardContent>
               </Card>
@@ -716,7 +777,7 @@ export default function NewCoursePage() {
                     <p className="text-center text-muted-foreground py-8">Completa los pasos anteriores para acceder a la configuración de publicación.</p>
                   )}
                    <div className="flex justify-between pt-6 mt-4 border-t">
-                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isSavingSettings || isModuleLoading}>Anterior</Button>
+                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isSavingSettings || isModuleLoading || isEditingModule}>Anterior</Button>
                        <Button 
                          type="button" 
                          onClick={() => {
@@ -726,7 +787,7 @@ export default function NewCoursePage() {
                              router.push('/dashboard/creator/courses');
                            }
                          }} 
-                         disabled={isLoading || isSavingSettings || isModuleLoading || !createdCourseId}
+                         disabled={isLoading || isSavingSettings || isModuleLoading || isEditingModule || !createdCourseId}
                        >
                          {createdCourseId ? "Finalizar e Ir al Listado" : "Ir al Listado (Guarda primero)"}
                        </Button>
@@ -737,6 +798,8 @@ export default function NewCoursePage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Delete Module Confirmation Dialog */}
       <AlertDialog open={showDeleteModuleDialog} onOpenChange={setShowDeleteModuleDialog}>
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -754,7 +817,61 @@ export default function NewCoursePage() {
             </AlertDialogFooter>
         </AlertDialogContent>
      </AlertDialog>
+
+    {/* Edit Module Dialog */}
+    <Dialog open={showEditModuleDialog} onOpenChange={(isOpen) => {
+        setShowEditModuleDialog(isOpen);
+        if (!isOpen) {
+            setCurrentEditingModule(null);
+            editModuleForm.reset();
+        }
+    }}>
+        <DialogContent className="sm:max-w-[480px]">
+            <DialogHeader>
+                <DialogTitle>Editar Módulo: {currentEditingModule?.nombre}</DialogTitle>
+                <DialogDescription>Realiza los cambios necesarios en el nombre y la descripción del módulo.</DialogDescription>
+            </DialogHeader>
+            <Form {...editModuleForm}>
+                <form onSubmit={editModuleForm.handleSubmit(onEditModuleSubmit)} className="space-y-6 py-4">
+                    <FormField
+                        control={editModuleForm.control}
+                        name="moduleName"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nombre del Módulo</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Nombre del módulo" {...field} disabled={isEditingModule} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={editModuleForm.control}
+                        name="moduleDescription"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Descripción del Módulo (Opcional)</FormLabel>
+                                <FormControl>
+                                    <Textarea rows={3} placeholder="Descripción breve del módulo" {...field} disabled={isEditingModule} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline" disabled={isEditingModule}>Cancelar</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={isEditingModule}>
+                            {isEditingModule ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Guardar Cambios
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
     </div>
   );
 }
-

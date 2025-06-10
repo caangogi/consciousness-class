@@ -1,6 +1,7 @@
 
 'use client';
 import type { ReactNode } from 'react';
+import { useEffect } from 'react'; // Added useEffect import
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';

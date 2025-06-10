@@ -10,10 +10,12 @@ export class UserService {
 
   async createUserProfile(dto: CreateUserDto): Promise<UserEntity> {
     try {
-      const existingUserByUid = await this.userRepository.findByUid(dto.uid);
-      if (existingUserByUid) {
-        console.warn(`[UserService] Profile for UID ${dto.uid} already exists. Returning existing profile.`);
-        return existingUserByUid;
+      const existingUser = await this.userRepository.findByUid(dto.uid);
+      if (existingUser) {
+        // This scenario implies an issue if Firebase Auth succeeded but profile already exists.
+        // Could merge or update if needed, or log a warning. For now, return existing.
+        console.warn('[UserService] Profile for UID ' + dto.uid + ' already exists. Returning existing profile.');
+        return existingUser;
       }
 
       // Optional: Check if email is already associated with another UID (should be rare with Firebase Auth)
@@ -29,6 +31,9 @@ export class UserService {
         nombre: dto.nombre,
         apellido: dto.apellido,
         role: dto.role || 'student',
+        // referredBy (from referralCode in DTO) needs to be handled.
+        // If dto.referralCode is present, it should be stored.
+        // The UserEntity.create method needs to be able to accept it.
         referredBy: dto.referralCode || null,
       });
 
@@ -46,7 +51,14 @@ export class UserService {
 
   async getUserProfile(uid: string): Promise<UserEntity | null> {
     try {
-      return await this.userRepository.findByUid(uid);
+      console.log(`[UserService] Attempting to fetch profile for UID: ${uid}`);
+      const user = await this.userRepository.findByUid(uid);
+      if (user) {
+        console.log(`[UserService] Profile found for UID: ${uid}`);
+      } else {
+        console.log(`[UserService] Profile not found for UID: ${uid}`);
+      }
+      return user;
     } catch (error: any) {
       console.error(`[UserService] Error fetching user profile for UID ${uid}:`, error);
       throw new Error(`Failed to fetch user profile: ${error.message}`);
@@ -62,12 +74,16 @@ export class UserService {
 
       if (Object.keys(dataToUpdate).length === 0) {
           console.warn("[UserService] No data provided for user profile update.");
+          // Fetch and return current user profile if no data to update
           return this.userRepository.findByUid(uid); 
       }
       
+      console.log(`[UserService] Attempting to update profile for UID: ${uid} with data:`, dataToUpdate);
       const updatedUser = await this.userRepository.update(uid, dataToUpdate);
       if (updatedUser) {
         console.log(`[UserService] User profile updated successfully for UID: ${uid}`);
+      } else {
+        console.warn(`[UserService] User profile update failed or user not found for UID: ${uid}`);
       }
       return updatedUser;
 
@@ -79,6 +95,7 @@ export class UserService {
 
   async deleteUserProfile(uid: string): Promise<void> {
     try {
+      console.log(`[UserService] Attempting to delete profile for UID: ${uid}`);
       // Consider adding checks here, e.g., ensuring the user exists before attempting deletion
       // or if the requesting user has permission (if called by an admin).
       await this.userRepository.delete(uid);

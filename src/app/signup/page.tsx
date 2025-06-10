@@ -68,13 +68,14 @@ export default function SignupPage() {
         body: JSON.stringify({
           nombre: values.nombre,
           apellido: values.apellido,
-          referralCode: values.referralCode,
+          referralCode: values.referralCode, // Ensure this is sent if present
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al crear perfil de usuario en backend.');
+        // Throw an error that includes details from the backend if available
+        throw new Error(errorData.details ? `${errorData.error}: ${errorData.details}` : errorData.error || 'Error al crear perfil de usuario en backend.');
       }
       
       // const responseData = await response.json(); // Optional: use responseData if needed
@@ -85,18 +86,20 @@ export default function SignupPage() {
       });
 
       // Redirect to student dashboard (AuthContext will pick up the new user state)
-      router.push('/dashboard'); // Or /dashboard/student, AuthContext will handle display
+      router.push('/dashboard');
 
     } catch (error: any) {
       console.error("Error al crear cuenta:", error);
       let errorMessage = "Ocurrió un error al crear tu cuenta. Por favor, inténtalo de nuevo.";
+      // Check for specific Firebase Auth error codes
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = "Este correo electrónico ya está en uso. Por favor, utiliza otro.";
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "La contraseña es demasiado débil. Por favor, elige una más segura.";
-      } else if (error.message.includes('backend')) {
+      } else if (error.message) { // Use the error message thrown from the fetch block or other errors
         errorMessage = error.message;
       }
+      
       toast({
         title: "Error al Crear Cuenta",
         description: errorMessage,

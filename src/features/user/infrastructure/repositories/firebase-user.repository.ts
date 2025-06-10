@@ -18,7 +18,7 @@ export class FirebaseUserRepository implements IUserRepository {
 
   async save(user: UserEntity): Promise<void> {
     try {
-      const userData = user.toPlainObject(); // Use toPlainObject for Firestore
+      const userData = user.toPlainObject(); 
       await this.usersCollection.doc(user.uid).set(userData, { merge: true });
       console.log(`[FirebaseUserRepository] User saved/updated successfully for UID: ${user.uid}`);
     } catch (error: any) {
@@ -67,19 +67,35 @@ export class FirebaseUserRepository implements IUserRepository {
         return null;
       }
 
+      // Ensure `updatedAt` is always set
       const updateData: any = { ...data, updatedAt: new Date().toISOString() };
-      // If nombre or apellido are part of 'data', recalculate displayName
-      if (data.nombre || data.apellido) {
-          const currentData = userSnap.data() as UserProperties;
-          const nombre = data.nombre || currentData.nombre;
-          const apellido = data.apellido || currentData.apellido;
-          updateData.displayName = `${nombre} ${apellido}`;
+      
+      // If nombre or apellido are part of 'data', or if they already exist and one is changing, recalculate displayName
+      const currentData = userSnap.data() as UserProperties;
+      const newNombre = data.nombre !== undefined ? data.nombre : currentData.nombre;
+      const newApellido = data.apellido !== undefined ? data.apellido : currentData.apellido;
+
+      if (data.nombre !== undefined || data.apellido !== undefined) {
+          updateData.displayName = `${newNombre} ${newApellido}`.trim();
+      }
+      
+      // Explicitly handle photoURL to allow setting it to null
+      if (data.photoURL !== undefined) {
+        updateData.photoURL = data.photoURL;
+      } else if (data.hasOwnProperty('photoURL') && data.photoURL === null) {
+         updateData.photoURL = null; // Ensure null is passed if explicitly provided
       }
 
+
       await userRef.update(updateData);
-      const updatedDoc = await userRef.get();
-      console.log(`[FirebaseUserRepository] User updated successfully for UID: ${uid}`);
-      return new UserEntity(updatedDoc.data() as UserProperties);
+      const updatedDocSnap = await userRef.get();
+      if (!updatedDocSnap.exists) {
+        // Should not happen if update was successful
+        console.error(`[FirebaseUserRepository] User document disappeared after update for UID: ${uid}`);
+        return null;
+      }
+      console.log(`[FirebaseUserRepository] User updated successfully in Firestore for UID: ${uid} with data:`, JSON.stringify(updateData));
+      return new UserEntity(updatedDocSnap.data() as UserProperties);
     } catch (error: any) {
       const firebaseError = error as FirebaseError;
       console.error(`[FirebaseUserRepository] Error updating user (UID: ${uid}):`, firebaseError.message, firebaseError.code, firebaseError.stack);
@@ -89,12 +105,6 @@ export class FirebaseUserRepository implements IUserRepository {
 
   async delete(uid: string): Promise<void> {
     try {
-      // Consider checking if doc exists before deleting to avoid unnecessary errors if already deleted.
-      // const docSnap = await this.usersCollection.doc(uid).get();
-      // if (!docSnap.exists) {
-      //   console.warn(`[FirebaseUserRepository] User profile for UID ${uid} not found for deletion (already deleted or never existed).`);
-      //   return;
-      // }
       await this.usersCollection.doc(uid).delete();
       console.log(`[FirebaseUserRepository] Firestore profile for UID ${uid} deleted.`);
     } catch (error: any) {
@@ -104,3 +114,4 @@ export class FirebaseUserRepository implements IUserRepository {
     }
   }
 }
+

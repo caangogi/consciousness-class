@@ -6,7 +6,7 @@ import type { UserRole } from '@/features/user/domain/entities/user.entity';
 export interface UpdateUserProfileDto {
   nombre?: string;
   apellido?: string;
-  photoURL?: string | null;
+  photoURL?: string | null; // Can be a URL string or null to remove the photo
 }
 
 // What an admin might update (more extensive)
@@ -15,3 +15,4 @@ export interface AdminUpdateUserDto extends UpdateUserProfileDto {
   balanceCredito?: number;
   // other admin-updatable fields
 }
+

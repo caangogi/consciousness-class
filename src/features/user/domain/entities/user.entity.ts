@@ -9,14 +9,14 @@ export interface UserProperties {
   apellido: string;
   displayName: string;
   role: UserRole;
-  photoURL?: string | null;
+  photoURL: string | null; // Made non-optional in props, defaults to null
   createdAt: string; // ISO Date string
-  updatedAt?: string; // ISO Date string
+  updatedAt: string | null; // ISO Date string, defaults to null
   referralCodeGenerated: string;
-  referredBy?: string | null; // UID of the referrer
+  referredBy: string | null; // UID of the referrer
   cursosComprados: string[]; // Array of course IDs
   referidosExitosos: number;
-  balanceCredito: number; // Could be points, currency amount, etc.
+  balanceCredito: number;
 }
 
 export class UserEntity {
@@ -26,11 +26,11 @@ export class UserEntity {
   apellido: string;
   displayName: string;
   role: UserRole;
-  photoURL?: string | null;
+  photoURL: string | null;
   readonly createdAt: Date;
-  updatedAt?: Date;
+  updatedAt: Date | null;
   referralCodeGenerated: string;
-  referredBy?: string | null;
+  referredBy: string | null;
   cursosComprados: string[];
   referidosExitosos: number;
   balanceCredito: number;
@@ -42,45 +42,73 @@ export class UserEntity {
     this.apellido = props.apellido;
     this.displayName = props.displayName;
     this.role = props.role;
-    this.photoURL = props.photoURL || null;
+    this.photoURL = props.photoURL === undefined ? null : props.photoURL;
     this.createdAt = new Date(props.createdAt);
-    this.updatedAt = props.updatedAt ? new Date(props.updatedAt) : undefined;
+    this.updatedAt = props.updatedAt ? new Date(props.updatedAt) : null;
     this.referralCodeGenerated = props.referralCodeGenerated;
-    this.referredBy = props.referredBy || null;
+    this.referredBy = props.referredBy === undefined ? null : props.referredBy;
     this.cursosComprados = props.cursosComprados || [];
     this.referidosExitosos = props.referidosExitosos || 0;
     this.balanceCredito = props.balanceCredito || 0;
   }
 
-  static create(props: Omit<UserProperties, 'createdAt' | 'displayName' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'updatedAt'> & Partial<Pick<UserProperties, 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'photoURL' >>): UserEntity {
-    const now = new Date();
-    const displayName = `${props.nombre} ${props.apellido}`;
-    const generatedReferralCode = props.referralCodeGenerated || `CONSCIOUS-${props.uid.substring(0, 6).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  static create(
+    // Input properties for creating a new user.
+    // Most are direct, some have defaults applied by this method.
+    inputProps: {
+      uid: string;
+      email: string;
+      nombre: string;
+      apellido: string;
+      role?: UserRole;
+      photoURL?: string | null;
+      referredBy?: string | null;
+      // Allow overriding generated code, or specific values for these if needed during creation
+      referralCodeGenerated?: string; 
+      cursosComprados?: string[];
+      referidosExitosos?: number;
+      balanceCredito?: number;
+    }
+  ): UserEntity {
+    const now = new Date().toISOString();
+    const displayName = inputProps.nombre + ' ' + inputProps.apellido;
     
-    return new UserEntity({
-      ...props,
-      displayName,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-      referralCodeGenerated,
-      cursosComprados: props.cursosComprados || [],
-      referidosExitosos: props.referidosExitosos || 0,
-      balanceCredito: props.balanceCredito || 0,
-      photoURL: props.photoURL || null,
-    });
+    const generatedReferralCode = 
+      inputProps.referralCodeGenerated || 
+      ('CONSCIOUS-' + 
+       inputProps.uid.substring(0, 6).toUpperCase() + 
+       Math.random().toString(36).substring(2, 6).toUpperCase());
+
+    const entityConstructorProps: UserProperties = {
+      uid: inputProps.uid,
+      email: inputProps.email,
+      nombre: inputProps.nombre,
+      apellido: inputProps.apellido,
+      displayName: displayName,
+      role: inputProps.role || 'student',
+      photoURL: inputProps.photoURL === undefined ? null : inputProps.photoURL,
+      createdAt: now,
+      updatedAt: now, // Set updatedAt to now on creation
+      referralCodeGenerated: generatedReferralCode,
+      referredBy: inputProps.referredBy === undefined ? null : inputProps.referredBy,
+      cursosComprados: inputProps.cursosComprados || [],
+      referidosExitosos: inputProps.referidosExitosos || 0,
+      balanceCredito: inputProps.balanceCredito || 0,
+    };
+    
+    return new UserEntity(entityConstructorProps);
   }
 
   updateProfile(data: Partial<Pick<UserProperties, 'nombre' | 'apellido' | 'photoURL'>>) {
     if (data.nombre) this.nombre = data.nombre;
     if (data.apellido) this.apellido = data.apellido;
     if (data.nombre || data.apellido) {
-      this.displayName = `${this.nombre} ${this.apellido}`;
+      this.displayName = this.nombre + ' ' + this.apellido;
     }
     if (data.photoURL !== undefined) this.photoURL = data.photoURL;
     this.updatedAt = new Date();
   }
 
-  // Method to convert entity to a plain object for Firestore or API responses
   toPlainObject(): UserProperties {
     return {
       uid: this.uid,
@@ -91,7 +119,7 @@ export class UserEntity {
       role: this.role,
       photoURL: this.photoURL,
       createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt?.toISOString(),
+      updatedAt: this.updatedAt ? this.updatedAt.toISOString() : null,
       referralCodeGenerated: this.referralCodeGenerated,
       referredBy: this.referredBy,
       cursosComprados: this.cursosComprados,

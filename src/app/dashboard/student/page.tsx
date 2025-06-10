@@ -13,13 +13,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+// Label removed as FormLabel is used from ui/form
+// import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { storage } from '@/lib/firebase/config'; // Import Firebase client storage
+import { auth, storage } from '@/lib/firebase/config'; // Import Firebase client storage & auth
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Placeholder data (will be replaced or augmented by real data)
@@ -93,34 +94,44 @@ export default function StudentDashboardPage() {
     try {
       if (imageFile) {
         setIsUploadingImage(true);
+        const originalFileName = imageFile.name;
+        const lastDot = originalFileName.lastIndexOf('.');
+        const fileExtension = lastDot > -1 ? originalFileName.substring(lastDot + 1).toLowerCase() : 'png'; // Default to png if no extension
+        
+        // Ensure filename starts with "profile." as per storage rules
+        const finalFileNameInStorage = `profile.${fileExtension}`; 
+        const storagePath = `users/${currentUser.uid}/${finalFileNameInStorage}`;
+        
+        console.log("--------------------------------------------------");
+        console.log("[StudentDashboard] PRE-UPLOAD DEBUG INFO FOR STORAGE:");
+        console.log(`  Attempting to upload to Storage path: "${storagePath}"`);
+        console.log(`  Original file name: "${originalFileName}"`);
+        console.log(`  Determined extension (lowercase): ".${fileExtension}"`);
+        console.log(`  Final name in storage: "${finalFileNameInStorage}"`);
+        console.log(`  File size: ${imageFile.size} bytes`);
+        console.log(`  File type (MIME): ${imageFile.type}`);
+        console.log(`  Current user UID (from context): ${currentUser.uid}`);
+        console.log(`  Current user UID (from auth object): ${auth.currentUser?.uid}`);
+        console.log("  Reminder: Check these values against your Firebase Storage rules.");
+        console.log("  Ensure rules are deployed and have propagated (can take a few minutes).");
+        console.log("--------------------------------------------------");
+
+        const storageRefInstance = ref(storage, storagePath);
+
         try {
-          const originalFileName = imageFile.name;
-          const lastDot = originalFileName.lastIndexOf('.');
-          const fileExtension = lastDot > -1 ? originalFileName.substring(lastDot + 1).toLowerCase() : 'png'; 
-          
-          const finalFileNameInStorage = `profile.${fileExtension}`; 
-          const storagePath = `users/${currentUser.uid}/${finalFileNameInStorage}`;
-          
-          console.log(`[StudentDashboard] Attempting to upload to Storage path: "${storagePath}"`);
-          console.log(`[StudentDashboard] Original file name: "${originalFileName}", Determined extension: "${fileExtension}", Final name in storage: "${finalFileNameInStorage}"`);
-          console.log(`[StudentDashboard] File size: ${imageFile.size} bytes, File type: ${imageFile.type}`);
-          console.log(`[StudentDashboard] Current user UID: ${currentUser.uid}`);
-
-          const storageRefInstance = ref(storage, storagePath);
-
-          await uploadBytes(storageRefInstance, imageFile);
-          uploadedPhotoURL = await getDownloadURL(storageRefInstance);
-          console.log(`[StudentDashboard] Upload successful. Photo URL: ${uploadedPhotoURL}`);
+            await uploadBytes(storageRefInstance, imageFile);
+            uploadedPhotoURL = await getDownloadURL(storageRefInstance);
+            console.log(`[StudentDashboard] Upload successful. New Photo URL: ${uploadedPhotoURL}`);
         } catch (uploadError: any) {
-          console.error("[StudentDashboard] Error during image upload to Firebase Storage:", uploadError);
-          toast({
-            title: "Error al Subir Imagen",
-            description: `No se pudo subir la imagen: ${uploadError.message || 'Error desconocido.'}. Revisa la consola para más detalles.`,
-            variant: "destructive",
-          });
-          setIsUploadingImage(false);
-          setIsSubmitting(false); 
-          return; 
+            console.error("[StudentDashboard] Firebase Storage Upload Error:", uploadError);
+            toast({
+                title: "Error al Subir Imagen",
+                description: `Storage: ${uploadError.message || 'Error desconocido.'}. Ver consola.`,
+                variant: "destructive",
+            });
+            setIsUploadingImage(false);
+            setIsSubmitting(false); 
+            return; 
         }
         setIsUploadingImage(false);
       }
@@ -129,7 +140,7 @@ export default function StudentDashboardPage() {
       const updateDto = {
         nombre: values.nombre,
         apellido: values.apellido,
-        photoURL: uploadedPhotoURL,
+        photoURL: uploadedPhotoURL, // This will be existing, new, or null
       };
 
       const response = await fetch('/api/users/update-profile', {
@@ -151,9 +162,10 @@ export default function StudentDashboardPage() {
       setIsEditDialogOpen(false);
 
     } catch (error: any) {
-      console.error("Error al actualizar perfil:", error);
-      toast({ title: "Error", description: error.message || "No se pudo actualizar el perfil.", variant: "destructive" });
-      setIsUploadingImage(false); // Ensure this is reset on any error
+      console.error("Error al actualizar perfil (onSubmit):", error);
+      toast({ title: "Error de Actualización", description: error.message || "No se pudo actualizar el perfil.", variant: "destructive" });
+      // Ensure loading states are reset on any error during the submission process
+      setIsUploadingImage(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -282,16 +294,17 @@ export default function StudentDashboardPage() {
                             <Input 
                                 id="picture" 
                                 type="file" 
-                                accept="image/png, image/jpeg, image/webp"
+                                accept="image/png, image/jpeg, image/webp, image/gif"
                                 onChange={handleImageChange} 
-                                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
                                 disabled={isUploadingImage || isSubmitting}
                             />
-                            <Button type="button" variant="outline" className="w-full pointer-events-none">
-                                <Camera className="mr-2 h-4 w-4" />
-                                {isUploadingImage ? 'Subiendo...' : (imageFile ? imageFile.name : 'Cambiar foto')}
+                            <Button type="button" variant="outline" className="w-full pointer-events-none relative">
+                                {isUploadingImage && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}
+                                {!isUploadingImage && <Camera className="mr-2 h-4 w-4" />}
+                                {isUploadingImage ? 'Subiendo...' : (imageFile ? (imageFile.name.length > 25 ? imageFile.name.substring(0,22) + '...' : imageFile.name) : 'Cambiar foto')}
                             </Button>
-                            {isUploadingImage && <Progress value={undefined} className="h-1 mt-1 w-full" />}
+                            {isUploadingImage && <Progress value={undefined} className="absolute bottom-0 left-0 right-0 h-1 w-full rounded-b-md" />}
                         </div>
                     </div>
                     <FormField
@@ -301,7 +314,7 @@ export default function StudentDashboardPage() {
                         <FormItem>
                           <FormLabel>Nombre</FormLabel>
                           <FormControl>
-                            <Input placeholder="Tu nombre" {...field} disabled={isSubmitting} />
+                            <Input placeholder="Tu nombre" {...field} disabled={isSubmitting || isUploadingImage} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -314,7 +327,7 @@ export default function StudentDashboardPage() {
                         <FormItem>
                           <FormLabel>Apellido</FormLabel>
                           <FormControl>
-                            <Input placeholder="Tu apellido" {...field} disabled={isSubmitting} />
+                            <Input placeholder="Tu apellido" {...field} disabled={isSubmitting || isUploadingImage} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -322,7 +335,7 @@ export default function StudentDashboardPage() {
                     />
                     <DialogFooter>
                       <DialogClose asChild>
-                        <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
+                        <Button type="button" variant="outline" disabled={isSubmitting || isUploadingImage}>Cancelar</Button>
                       </DialogClose>
                       <Button type="submit" disabled={isUploadingImage || isSubmitting}>
                         {isSubmitting ? (isUploadingImage ? 'Subiendo Imagen...' : 'Guardando...') : 'Guardar Cambios'}
@@ -391,3 +404,6 @@ export default function StudentDashboardPage() {
     </div>
   );
 }
+
+
+    

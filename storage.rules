@@ -3,26 +3,13 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Regla para las fotos de perfil
-    // Ruta: users/{userId}/profile.{fileExtension} (ej. users/user123/profile.jpg)
     match /users/{userId}/{imageName} {
-
-      // Permitir a cualquiera leer los archivos bajo users/{userId}/
-      // Esto hace que las fotos de perfil (y cualquier otro archivo en este patrón de ruta específico) sean públicamente legibles.
       allow read: if true;
-
-      // Permitir a los usuarios autenticados escribir (subir, actualizar, eliminar) su propia foto de perfil si:
-      // - El usuario está autenticado (request.auth != null).
-      // - El UID del usuario autenticado coincide con el {userId} en la ruta.
-      // - El nombre del archivo comienza con 'profile.' (ej. profile.jpg, profile.png).
-      // - El tamaño del archivo es menor a 5MB.
-      // - El tipo de contenido del archivo es una imagen (ej. image/jpeg, image/png).
       allow write: if request.auth != null &&
                        request.auth.uid == userId &&
                        imageName.startsWith('profile.') &&
-                       request.resource.size < 5 * 1024 * 1024 && // Límite de 5MB
+                       request.resource.size < (5 * 1024 * 1024) && // Explicitly grouped calculation
                        request.resource.contentType.matches('image/.*');
     }
-    // Cualquier otra ruta no cubierta por la regla anterior será implícitamente denegada.
   }
 }

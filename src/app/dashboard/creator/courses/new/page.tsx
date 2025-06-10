@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"; // Added Dialog
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
@@ -26,6 +26,7 @@ import type { ModuleProperties } from '@/features/course/domain/entities/module.
 import type { CreateModuleDto } from '@/features/course/infrastructure/dto/create-module.dto';
 import type { UpdateModuleDto } from '@/features/course/infrastructure/dto/update-module.dto';
 import type { CreateLessonDto } from '@/features/course/infrastructure/dto/create-lesson.dto';
+import type { UpdateLessonDto } from '@/features/course/infrastructure/dto/update-lesson.dto';
 import { type LessonProperties, type LessonContentType } from '@/features/course/domain/entities/lesson.entity';
 import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud, ChevronDown, Trash2, Edit } from 'lucide-react';
 import { auth, storage } from '@/lib/firebase/config';
@@ -44,22 +45,18 @@ const step1Schema = z.object({
 });
 type Step1FormValues = z.infer<typeof step1Schema>;
 
-// Step 2 Schema (for adding a module)
 const moduleSchema = z.object({
   moduleName: z.string().min(3, { message: "El nombre del módulo debe tener al menos 3 caracteres."}),
   moduleDescription: z.string().optional(),
 });
 type ModuleFormValues = z.infer<typeof moduleSchema>;
 
-// Schema for editing a module
 const editModuleSchema = z.object({
   moduleName: z.string().min(3, { message: "El nombre del módulo debe tener al menos 3 caracteres."}),
   moduleDescription: z.string().optional(),
 });
 type EditModuleFormValues = z.infer<typeof editModuleSchema>;
 
-
-// Step 2.5 Schema (for adding a lesson)
 const lessonSchema = z.object({
   lessonName: z.string().min(3, "El nombre de la lección es requerido (mín. 3 caracteres)."),
   lessonContentType: z.enum(['video', 'documento_pdf', 'texto_rico', 'quiz', 'audio'], { required_error: "Debes seleccionar un tipo de contenido."}),
@@ -67,6 +64,16 @@ const lessonSchema = z.object({
   lessonIsPreview: z.boolean().default(false),
 });
 type LessonFormValues = z.infer<typeof lessonSchema>;
+
+// Schema for editing a lesson
+const editLessonSchema = z.object({
+  lessonName: z.string().min(3, "El nombre de la lección es requerido (mín. 3 caracteres)."),
+  lessonContentType: z.enum(['video', 'documento_pdf', 'texto_rico', 'quiz', 'audio'], { required_error: "Debes seleccionar un tipo de contenido."}),
+  lessonDuration: z.string().min(1, "La duración estimada es requerida."),
+  lessonIsPreview: z.boolean().default(false),
+});
+type EditLessonFormValues = z.infer<typeof editLessonSchema>;
+
 
 const courseCategories = [
   "Desarrollo Web", "Desarrollo Móvil", "Data Science", "Marketing Digital", 
@@ -86,7 +93,6 @@ export default function NewCoursePage() {
   const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
   const [courseDetails, setCourseDetails] = useState<CourseProperties | null>(null);
   
-  // Modules state
   const [modules, setModules] = useState<ModuleProperties[]>([]);
   const [isModuleLoading, setIsModuleLoading] = useState(false);
   const [expandedModuleId, setExpandedModuleId] = useState<string | null>(null);
@@ -96,10 +102,15 @@ export default function NewCoursePage() {
   const [showEditModuleDialog, setShowEditModuleDialog] = useState(false);
   const [isEditingModule, setIsEditingModule] = useState(false);
 
-
-  // Lessons state
   const [lessonsByModule, setLessonsByModule] = useState<Record<string, LessonProperties[]>>({});
   const [isLessonLoading, setIsLessonLoading] = useState<Record<string, boolean>>({});
+  const [currentEditingLesson, setCurrentEditingLesson] = useState<LessonProperties | null>(null);
+  const [showEditLessonDialog, setShowEditLessonDialog] = useState(false);
+  const [isEditingLesson, setIsEditingLesson] = useState(false);
+  const [lessonToDelete, setLessonToDelete] = useState<LessonProperties | null>(null);
+  const [showDeleteLessonDialog, setShowDeleteLessonDialog] = useState(false);
+  const [isDeletingLesson, setIsDeletingLesson] = useState(false);
+
 
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreviewUrl, setCoverImagePreviewUrl] = useState<string | null>(null);
@@ -141,6 +152,15 @@ export default function NewCoursePage() {
     }
   });
 
+  const editLessonForm = useForm<EditLessonFormValues>({
+    resolver: zodResolver(editLessonSchema),
+    defaultValues: {
+      lessonName: '',
+      lessonContentType: undefined,
+      lessonDuration: '',
+      lessonIsPreview: false,
+    }
+  });
 
   useEffect(() => {
     if (courseDetails) {
@@ -167,6 +187,17 @@ export default function NewCoursePage() {
       });
     }
   }, [currentEditingModule, showEditModuleDialog, editModuleForm]);
+
+   useEffect(() => {
+    if (currentEditingLesson && showEditLessonDialog) {
+      editLessonForm.reset({
+        lessonName: currentEditingLesson.nombre,
+        lessonContentType: currentEditingLesson.contenidoPrincipal.tipo,
+        lessonDuration: currentEditingLesson.duracionEstimada,
+        lessonIsPreview: currentEditingLesson.esVistaPrevia,
+      });
+    }
+  }, [currentEditingLesson, showEditLessonDialog, editLessonForm]);
 
 
   const fetchModules = useCallback(async (courseId: string) => {
@@ -343,7 +374,7 @@ export default function NewCoursePage() {
       const idToken = await auth.currentUser.getIdToken(true);
       const dto: CreateLessonDto = {
         nombre: values.lessonName,
-        contenidoPrincipal: { tipo: values.lessonContentType as LessonContentType }, // Placeholder for content
+        contenidoPrincipal: { tipo: values.lessonContentType as LessonContentType }, 
         duracionEstimada: values.lessonDuration,
         esVistaPrevia: values.lessonIsPreview,
       };
@@ -371,13 +402,47 @@ export default function NewCoursePage() {
     }
   };
 
+  const onEditLessonSubmit = async (values: EditLessonFormValues) => {
+    if (!createdCourseId || !currentEditingLesson || !auth.currentUser) {
+      toast({ title: "Error", description: "No se pudo determinar la lección a editar o falta información.", variant: "destructive" });
+      return;
+    }
+    setIsEditingLesson(true);
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+      const dto: UpdateLessonDto = {
+        nombre: values.lessonName,
+        contenidoPrincipal: { tipo: values.lessonContentType as LessonContentType }, // Keep it simple for now
+        duracionEstimada: values.lessonDuration,
+        esVistaPrevia: values.lessonIsPreview,
+      };
+      const response = await fetch(`/api/courses/${createdCourseId}/modules/${currentEditingLesson.moduleId}/lessons/${currentEditingLesson.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify(dto),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || "Error al actualizar la lección.");
+      }
+      toast({ title: "Lección Actualizada" });
+      setShowEditLessonDialog(false);
+      setCurrentEditingLesson(null);
+      await fetchLessonsForModule(createdCourseId, currentEditingLesson.moduleId);
+    } catch (error: any) {
+      toast({ title: "Error al Actualizar Lección", description: error.message, variant: "destructive" });
+    } finally {
+      setIsEditingLesson(false);
+    }
+  };
+
   const handleDeleteModule = async () => {
     if (!moduleToDelete || !createdCourseId || !auth.currentUser) {
-      toast({ title: "Error", description: "No se pudo determinar el módulo a eliminar o falta información del curso/usuario.", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudo determinar el módulo a eliminar.", variant: "destructive" });
       setShowDeleteModuleDialog(false);
       return;
     }
-    setIsModuleLoading(true);
+    setIsModuleLoading(true); // Reuse module loading state for general module operations
     try {
       const idToken = await auth.currentUser.getIdToken(true);
       const response = await fetch(`/api/courses/${createdCourseId}/modules/${moduleToDelete.id}`, {
@@ -399,6 +464,34 @@ export default function NewCoursePage() {
     } finally {
       setIsModuleLoading(false);
       setShowDeleteModuleDialog(false);
+    }
+  };
+
+  const handleDeleteLesson = async () => {
+    if (!lessonToDelete || !createdCourseId || !auth.currentUser) {
+      toast({ title: "Error", description: "No se pudo determinar la lección a eliminar.", variant: "destructive" });
+      setShowDeleteLessonDialog(false);
+      return;
+    }
+    setIsDeletingLesson(true);
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+      const response = await fetch(`/api/courses/${createdCourseId}/modules/${lessonToDelete.moduleId}/lessons/${lessonToDelete.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${idToken}`},
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || "Error al eliminar la lección.");
+      }
+      toast({ title: "Lección Eliminada", description: `La lección "${lessonToDelete.nombre}" ha sido eliminada.` });
+      setLessonToDelete(null);
+      await fetchLessonsForModule(createdCourseId, lessonToDelete.moduleId); 
+    } catch (error: any) {
+      toast({ title: "Error al Eliminar Lección", description: error.message, variant: "destructive" });
+    } finally {
+      setIsDeletingLesson(false);
+      setShowDeleteLessonDialog(false);
     }
   };
 
@@ -592,7 +685,7 @@ export default function NewCoursePage() {
                           <Accordion type="single" collapsible className="w-full" value={expandedModuleId || undefined} onValueChange={handleToggleModuleLessons}>
                             {modules.sort((a,b) => a.orden - b.orden).map(module => (
                               <AccordionItem value={module.id} key={module.id} className="border-b">
-                                <div className="flex items-center justify-between w-full bg-secondary/50 hover:bg-secondary/60 rounded-t-md data-[state=open]:rounded-b-none transition-colors">
+                                <div className="flex items-center justify-between w-full bg-secondary/50 hover:bg-secondary/60 rounded-t-md data-[state=open]:rounded-b-none transition-colors pr-2">
                                   <AccordionTrigger className="flex-grow text-left hover:no-underline px-4 py-3 group">
                                     <div className="flex justify-between items-center w-full">
                                       <div>
@@ -604,7 +697,7 @@ export default function NewCoursePage() {
                                       </span>
                                     </div>
                                   </AccordionTrigger>
-                                  <div className="flex items-center gap-1 pr-4">
+                                  <div className="flex items-center gap-1 pl-2">
                                       <Button variant="ghost" size="icon" className="h-7 w-7 opacity-60 hover:opacity-100 hover:bg-primary/10 focus-visible:ring-offset-secondary/60" 
                                         onClick={(e) => { 
                                           e.stopPropagation();
@@ -658,11 +751,21 @@ export default function NewCoursePage() {
                                                     {lesson.esVistaPrevia && <Badge variant="outline" className="ml-2 text-xs">Vista Previa</Badge>}
                                                 </div>
                                                  <div className="flex items-center gap-0.5">
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20" onClick={() => toast({title: "Próximamente", description: "Edición de lección aún no implementada."})}>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20" 
+                                                      onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        setCurrentEditingLesson(lesson); 
+                                                        setShowEditLessonDialog(true); 
+                                                      }}>
                                                         <Edit className="h-3 w-3"/>
                                                         <span className="sr-only">Editar lección</span>
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20" onClick={() => toast({title: "Próximamente", description: "Eliminación de lección aún no implementada."})}>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20" 
+                                                      onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        setLessonToDelete(lesson); 
+                                                        setShowDeleteLessonDialog(true); 
+                                                      }}>
                                                         <Trash2 className="h-3 w-3"/>
                                                         <span className="sr-only">Eliminar lección</span>
                                                     </Button>
@@ -685,8 +788,8 @@ export default function NewCoursePage() {
                     <p className="text-center text-muted-foreground py-8">Completa el paso de Información Básica primero para poder añadir módulos y lecciones.</p>
                   )}
                   <div className="flex justify-between pt-6 mt-4 border-t">
-                      <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule}>Anterior</Button>
-                      <Button type="button" onClick={handleNextStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule || !createdCourseId}>Siguiente <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                      <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule || isEditingLesson || isDeletingLesson}>Anterior</Button>
+                      <Button type="button" onClick={handleNextStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule || isEditingLesson || isDeletingLesson || !createdCourseId}>Siguiente <ArrowRight className="ml-2 h-4 w-4" /></Button>
                   </div>
                 </CardContent>
               </Card>
@@ -777,7 +880,7 @@ export default function NewCoursePage() {
                     <p className="text-center text-muted-foreground py-8">Completa los pasos anteriores para acceder a la configuración de publicación.</p>
                   )}
                    <div className="flex justify-between pt-6 mt-4 border-t">
-                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isSavingSettings || isModuleLoading || isEditingModule}>Anterior</Button>
+                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isSavingSettings || isModuleLoading || isEditingModule || isEditingLesson || isDeletingLesson}>Anterior</Button>
                        <Button 
                          type="button" 
                          onClick={() => {
@@ -787,7 +890,7 @@ export default function NewCoursePage() {
                              router.push('/dashboard/creator/courses');
                            }
                          }} 
-                         disabled={isLoading || isSavingSettings || isModuleLoading || isEditingModule || !createdCourseId}
+                         disabled={isLoading || isSavingSettings || isModuleLoading || isEditingModule || isEditingLesson || isDeletingLesson || !createdCourseId}
                        >
                          {createdCourseId ? "Finalizar e Ir al Listado" : "Ir al Listado (Guarda primero)"}
                        </Button>
@@ -799,7 +902,6 @@ export default function NewCoursePage() {
         </CardContent>
       </Card>
 
-      {/* Delete Module Confirmation Dialog */}
       <AlertDialog open={showDeleteModuleDialog} onOpenChange={setShowDeleteModuleDialog}>
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -818,7 +920,6 @@ export default function NewCoursePage() {
         </AlertDialogContent>
      </AlertDialog>
 
-    {/* Edit Module Dialog */}
     <Dialog open={showEditModuleDialog} onOpenChange={(isOpen) => {
         setShowEditModuleDialog(isOpen);
         if (!isOpen) {
@@ -872,6 +973,60 @@ export default function NewCoursePage() {
             </Form>
         </DialogContent>
     </Dialog>
+
+    {/* Edit Lesson Dialog */}
+    <Dialog open={showEditLessonDialog} onOpenChange={(isOpen) => {
+        setShowEditLessonDialog(isOpen);
+        if (!isOpen) {
+            setCurrentEditingLesson(null);
+            editLessonForm.reset();
+        }
+    }}>
+        <DialogContent className="sm:max-w-[520px]">
+            <DialogHeader>
+                <DialogTitle>Editar Lección: {currentEditingLesson?.nombre}</DialogTitle>
+                <DialogDescription>Modifica los detalles de esta lección.</DialogDescription>
+            </DialogHeader>
+            <Form {...editLessonForm}>
+                <form onSubmit={editLessonForm.handleSubmit(onEditLessonSubmit)} className="space-y-6 py-4">
+                    <FormField control={editLessonForm.control} name="lessonName" render={({ field }) => (<FormItem><FormLabel>Nombre Lección</FormLabel><FormControl><Input placeholder="Título de la lección" {...field} disabled={isEditingLesson} /></FormControl><FormMessage /></FormItem>)} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField control={editLessonForm.control} name="lessonContentType" render={({ field }) => (<FormItem><FormLabel>Tipo Contenido</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isEditingLesson}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger></FormControl><SelectContent>{lessonContentTypes.map(type => <SelectItem key={type} value={type}>{type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                        <FormField control={editLessonForm.control} name="lessonDuration" render={({ field }) => (<FormItem><FormLabel>Duración Estimada</FormLabel><FormControl><Input placeholder="Ej: 10 min, 3 págs" {...field} disabled={isEditingLesson} /></FormControl><FormMessage /></FormItem>)} />
+                    </div>
+                    <FormField control={editLessonForm.control} name="lessonIsPreview" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isEditingLesson} /></FormControl><div className="space-y-1 leading-none"><FormLabel>¿Es vista previa gratuita?</FormLabel></div></FormItem>)} />
+                    <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="outline" disabled={isEditingLesson}>Cancelar</Button></DialogClose>
+                        <Button type="submit" disabled={isEditingLesson}>
+                            {isEditingLesson ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Guardar Cambios
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+
+    {/* Delete Lesson Confirmation Dialog */}
+    <AlertDialog open={showDeleteLessonDialog} onOpenChange={setShowDeleteLessonDialog}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro de que quieres eliminar esta lección?</AlertDialogTitle>
+            <AlertDialogDescription>
+                Esta acción no se puede deshacer. Se eliminará la lección <span className="font-semibold">"{lessonToDelete?.nombre}"</span>.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setLessonToDelete(null)} disabled={isDeletingLesson}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteLesson} disabled={isDeletingLesson} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                {isDeletingLesson ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Eliminar Lección
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
     </div>
   );
 }
+

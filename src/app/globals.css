@@ -2,79 +2,99 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --background: 210 33% 96%; /* #F0F4F8 Light Gray */
+    --foreground: 210 10% 23%; /* #343A40 Dark Gray */
+
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 210 10% 23%; /* Dark Gray */
+
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 210 10% 23%; /* Dark Gray */
+
+    --primary: 199 73% 52%; /* #29ABE2 Vibrant Blue */
+    --primary-foreground: 0 0% 100%; /* White */
+
+    --secondary: 210 25% 90%; /* #E5EAF0 Light complimentary gray */
+    --secondary-foreground: 199 73% 42%; /* Darker blue for text on secondary */
+
+    --muted: 210 30% 90%; /* #E1E8EE Lighter gray for muted elements */
+    --muted-foreground: 210 10% 45%; /* #6C757D Medium gray for muted text */
+
+    --accent: 33 100% 63%; /* #FFB347 Soft Orange */
+    --accent-foreground: 33 100% 15%; /* #4D2B00 Dark Brown for text on accent */
+
+    --destructive: 0 72% 51%; /* A standard red for destructive actions */
+    --destructive-foreground: 0 0% 98%; /* White/Light gray for text on destructive */
+
+    --border: 210 20% 88%; /* #DDE3EA Light gray for borders */
+    --input: 210 20% 92%; /* #E6ECF0 Very light gray for input backgrounds */
+    --ring: 199 73% 52%; /* Primary color for focus rings */
+
+    --radius: 0.5rem;
+
+    /* Sidebar specific colors, can be same as main or distinct */
+    --sidebar-background: 210 20% 98%; /* Slightly off-white for sidebar */
+    --sidebar-foreground: 210 10% 23%;
+    --sidebar-primary: 199 73% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 199 73% 52%; /* Using primary blue as accent in sidebar */
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 210 20% 88%;
+    --sidebar-ring: 199 73% 52%;
+
+     /* Chart colors from default, can be adjusted if needed */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 210 10% 15%; /* Dark slate */
+    --foreground: 210 30% 90%; /* Light gray for text */
+
+    --card: 210 10% 20%; /* Slightly lighter dark slate for cards */
+    --card-foreground: 210 30% 90%;
+
+    --popover: 210 10% 10%; /* Very dark for popovers */
+    --popover-foreground: 210 30% 90%;
+
+    --primary: 199 73% 52%; /* Vibrant Blue - remains same */
+    --primary-foreground: 0 0% 100%; /* White */
+
+    --secondary: 210 10% 25%; /* Darker secondary */
+    --secondary-foreground: 210 30% 80%; 
+
+    --muted: 210 10% 25%;
+    --muted-foreground: 210 20% 55%;
+
+    --accent: 33 100% 63%; /* Soft Orange - remains same */
+    --accent-foreground: 33 100% 15%; /* Dark Brown */
+
+    --destructive: 0 60% 45%; 
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+
+    --border: 210 10% 30%;
+    --input: 210 10% 25%;
+    --ring: 199 73% 52%;
+
+    --sidebar-background: 210 10% 12%; 
+    --sidebar-foreground: 210 30% 90%;
+    --sidebar-primary: 199 73% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 199 73% 52%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 210 10% 30%;
+    --sidebar-ring: 199 73% 52%;
+    
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -84,5 +104,6 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    /* Removed explicit font-family here, Tailwind will handle it via font-body class */
   }
 }

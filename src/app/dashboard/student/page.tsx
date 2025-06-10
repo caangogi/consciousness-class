@@ -62,8 +62,8 @@ export default function StudentDashboardPage() {
         nombre: currentUser.nombre || '',
         apellido: currentUser.apellido || '',
       });
-      setImagePreviewUrl(currentUser.photoURL || null); // Set initial preview or current photo
-      setImageFile(null); // Clear any previously selected file
+      setImagePreviewUrl(currentUser.photoURL || null); 
+      setImageFile(null); 
     }
   }, [currentUser, isEditDialogOpen, form]);
 
@@ -78,7 +78,6 @@ export default function StudentDashboardPage() {
       reader.readAsDataURL(file);
     } else {
       setImageFile(null);
-      // If no file is selected, revert to current user's photo or default
       setImagePreviewUrl(currentUser?.photoURL || null); 
     }
   };
@@ -89,15 +88,40 @@ export default function StudentDashboardPage() {
       return;
     }
     setIsSubmitting(true);
-    let uploadedPhotoURL: string | null = currentUser.photoURL || null; // Keep current if no new image
+    let uploadedPhotoURL: string | null = currentUser.photoURL || null;
 
     try {
       if (imageFile) {
         setIsUploadingImage(true);
-        const fileExtension = imageFile.name.split('.').pop();
-        const storageRef = ref(storage, `users/${currentUser.uid}/profile.${fileExtension}`);
-        await uploadBytes(storageRef, imageFile);
-        uploadedPhotoURL = await getDownloadURL(storageRef);
+        try {
+          const originalFileName = imageFile.name;
+          const lastDot = originalFileName.lastIndexOf('.');
+          const fileExtension = lastDot > -1 ? originalFileName.substring(lastDot + 1).toLowerCase() : 'png'; 
+          
+          const finalFileNameInStorage = `profile.${fileExtension}`; 
+          const storagePath = `users/${currentUser.uid}/${finalFileNameInStorage}`;
+          
+          console.log(`[StudentDashboard] Attempting to upload to Storage path: "${storagePath}"`);
+          console.log(`[StudentDashboard] Original file name: "${originalFileName}", Determined extension: "${fileExtension}", Final name in storage: "${finalFileNameInStorage}"`);
+          console.log(`[StudentDashboard] File size: ${imageFile.size} bytes, File type: ${imageFile.type}`);
+          console.log(`[StudentDashboard] Current user UID: ${currentUser.uid}`);
+
+          const storageRefInstance = ref(storage, storagePath);
+
+          await uploadBytes(storageRefInstance, imageFile);
+          uploadedPhotoURL = await getDownloadURL(storageRefInstance);
+          console.log(`[StudentDashboard] Upload successful. Photo URL: ${uploadedPhotoURL}`);
+        } catch (uploadError: any) {
+          console.error("[StudentDashboard] Error during image upload to Firebase Storage:", uploadError);
+          toast({
+            title: "Error al Subir Imagen",
+            description: `No se pudo subir la imagen: ${uploadError.message || 'Error desconocido.'}. Revisa la consola para más detalles.`,
+            variant: "destructive",
+          });
+          setIsUploadingImage(false);
+          setIsSubmitting(false); 
+          return; 
+        }
         setIsUploadingImage(false);
       }
       
@@ -105,7 +129,7 @@ export default function StudentDashboardPage() {
       const updateDto = {
         nombre: values.nombre,
         apellido: values.apellido,
-        photoURL: uploadedPhotoURL, // This will be the new URL, existing URL, or null if handled explicitly
+        photoURL: uploadedPhotoURL,
       };
 
       const response = await fetch('/api/users/update-profile', {
@@ -122,14 +146,14 @@ export default function StudentDashboardPage() {
         throw new Error(errorData.details || errorData.error || "Error al actualizar el perfil.");
       }
 
-      await refreshUserProfile(); // Refresh context
+      await refreshUserProfile(); 
       toast({ title: "Perfil Actualizado", description: "Tu información ha sido actualizada." });
       setIsEditDialogOpen(false);
 
     } catch (error: any) {
       console.error("Error al actualizar perfil:", error);
       toast({ title: "Error", description: error.message || "No se pudo actualizar el perfil.", variant: "destructive" });
-      setIsUploadingImage(false);
+      setIsUploadingImage(false); // Ensure this is reset on any error
     } finally {
       setIsSubmitting(false);
     }
@@ -265,9 +289,9 @@ export default function StudentDashboardPage() {
                             />
                             <Button type="button" variant="outline" className="w-full pointer-events-none">
                                 <Camera className="mr-2 h-4 w-4" />
-                                {imageFile ? imageFile.name : 'Cambiar foto'}
+                                {isUploadingImage ? 'Subiendo...' : (imageFile ? imageFile.name : 'Cambiar foto')}
                             </Button>
-                            {isUploadingImage && <p className="text-xs text-primary mt-1">Subiendo imagen...</p>}
+                            {isUploadingImage && <Progress value={undefined} className="h-1 mt-1 w-full" />}
                         </div>
                     </div>
                     <FormField
@@ -301,7 +325,7 @@ export default function StudentDashboardPage() {
                         <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
                       </DialogClose>
                       <Button type="submit" disabled={isUploadingImage || isSubmitting}>
-                        {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+                        {isSubmitting ? (isUploadingImage ? 'Subiendo Imagen...' : 'Guardando...') : 'Guardar Cambios'}
                       </Button>
                     </DialogFooter>
                   </form>

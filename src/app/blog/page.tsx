@@ -12,7 +12,7 @@ const blogPosts = [
     imageUrl: "https://placehold.co/600x400.png",
     dataAiHint: "online learning",
     date: "15 de Julio, 2024",
-    author: "Equipo MentorBloom",
+    author: "Equipo consciousness-class",
     category: "Productividad",
   },
   {
@@ -41,7 +41,7 @@ export default function BlogPage() {
   return (
     <div className="container mx-auto py-12 px-4 md:px-6">
       <header className="mb-12 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Blog de MentorBloom</h1>
+        <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Blog de consciousness-class</h1>
         <p className="text-lg text-foreground/70 max-w-2xl mx-auto">
           Artículos, consejos y novedades sobre aprendizaje online, desarrollo profesional y más.
         </p>

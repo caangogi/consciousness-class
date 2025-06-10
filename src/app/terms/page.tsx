@@ -12,14 +12,14 @@ export default function TermsPage() {
           
           <h2>1. Aceptación de los Términos</h2>
           <p>
-            Bienvenido a MentorBloom ("Plataforma", "nosotros", "nuestro"). Al acceder o utilizar nuestra Plataforma,
+            Bienvenido a consciousness-class ("Plataforma", "nosotros", "nuestro"). Al acceder o utilizar nuestra Plataforma,
             usted ("Usuario", "usted") acepta estar sujeto a estos Términos de Servicio ("Términos") y a nuestra
             Política de Privacidad. Si no está de acuerdo con alguna parte de los términos, no podrá acceder a la Plataforma.
           </p>
 
           <h2>2. Descripción del Servicio</h2>
           <p>
-            MentorBloom es una plataforma online que permite a los usuarios ("Creators") crear y vender cursos y membresías
+            consciousness-class es una plataforma online que permite a los usuarios ("Creators") crear y vender cursos y membresías
             ("Contenido") a otros usuarios ("Students"). También ofrecemos un sistema de referidos.
           </p>
 
@@ -33,7 +33,7 @@ export default function TermsPage() {
 
           <h2>4. Contenido del Creator</h2>
           <p>
-            Los Creators son propietarios de su Contenido. Al publicar Contenido en MentorBloom, otorgan a MentorBloom una licencia
+            Los Creators son propietarios de su Contenido. Al publicar Contenido en consciousness-class, otorgan a consciousness-class una licencia
             mundial, no exclusiva, libre de regalías para usar, reproducir, distribuir, preparar trabajos derivados, mostrar
             y ejecutar el Contenido en relación con la prestación de los servicios de la Plataforma.
           </p>
@@ -41,15 +41,15 @@ export default function TermsPage() {
 
           <h2>5. Pagos y Comisiones</h2>
           <p>
-            Los pagos por Contenido se procesan a través de Stripe. MentorBloom retendrá una comisión sobre cada venta, cuyo porcentaje
+            Los pagos por Contenido se procesan a través de Stripe. consciousness-class retendrá una comisión sobre cada venta, cuyo porcentaje
             será especificado en la configuración de la plataforma o en el acuerdo con el Creator.
           </p>
-          <p>Los detalles sobre suscripciones, pagos únicos y reembolsos se gestionarán según las políticas de Stripe y las establecidas por MentorBloom.</p>
+          <p>Los detalles sobre suscripciones, pagos únicos y reembolsos se gestionarán según las políticas de Stripe y las establecidas por consciousness-class.</p>
           
           <h2>6. Sistema de Referidos</h2>
           <p>
             Los usuarios pueden participar en nuestro sistema de referidos. Las recompensas y condiciones del sistema de referidos
-            serán especificadas en la plataforma y podrán ser modificadas por MentorBloom o por los Creators para sus cursos específicos.
+            serán especificadas en la plataforma y podrán ser modificadas por consciousness-class o por los Creators para sus cursos específicos.
           </p>
 
           <h2>7. Conducta del Usuario</h2>
@@ -70,7 +70,7 @@ export default function TermsPage() {
           
           <h2>9. Limitación de Responsabilidad</h2>
           <p>
-            En la máxima medida permitida por la ley aplicable, MentorBloom no será responsable de ningún daño indirecto, incidental,
+            En la máxima medida permitida por la ley aplicable, consciousness-class no será responsable de ningún daño indirecto, incidental,
             especial, consecuente o punitivo, ni de ninguna pérdida de beneficios o ingresos, ya sea incurrida directa o
             indirectamente, o cualquier pérdida de datos, uso, fondo de comercio u otras pérdidas intangibles, resultantes de (i) su
             acceso o uso o incapacidad para acceder o usar la plataforma; (ii) cualquier conducta o contenido de cualquier tercero en
@@ -85,7 +85,7 @@ export default function TermsPage() {
 
           <h2>11. Contacto</h2>
           <p>
-            Si tiene alguna pregunta sobre estos Términos, por favor contáctenos en <a href="mailto:legal@mentorbloom.com" className="text-primary hover:underline">legal@mentorbloom.com</a>.
+            Si tiene alguna pregunta sobre estos Términos, por favor contáctenos en <a href="mailto:legal@consciousness-class.com" className="text-primary hover:underline">legal@consciousness-class.com</a>.
           </p>
         </CardContent>
       </Card>

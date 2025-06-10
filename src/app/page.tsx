@@ -49,7 +49,7 @@ export default function Home() {
         <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "url('/hero-bg-pattern.svg')", backgroundRepeat: 'repeat' }}></div>
         <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
           <h1 className="font-headline text-4xl md:text-6xl font-bold tracking-tight mb-6">
-            Transforma tu Futuro con <span className="text-primary">MentorBloom</span>
+            Transforma tu Futuro con <span className="text-primary">consciousness-class</span>
           </h1>
           <p className="text-lg md:text-xl text-foreground/80 max-w-3xl mx-auto mb-10">
             Descubre cursos online de alta calidad impartidos por expertos y únete a una comunidad de aprendizaje vibrante.
@@ -68,7 +68,7 @@ export default function Home() {
       {/* Why Choose Us Section */}
       <section className="py-16 md:py-24 bg-secondary/30">
         <div className="container mx-auto px-4 md:px-6">
-          <h2 className="font-headline text-3xl md:text-4xl font-bold text-center mb-12">¿Por qué MentorBloom?</h2>
+          <h2 className="font-headline text-3xl md:text-4xl font-bold text-center mb-12">¿Por qué consciousness-class?</h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="flex flex-col items-center text-center p-6 bg-card rounded-lg shadow-md hover:shadow-lg transition-shadow">
               <div className="p-4 bg-primary/10 rounded-full mb-4">
@@ -153,7 +153,7 @@ export default function Home() {
         <div className="container mx-auto px-4 md:px-6 text-center">
           <h2 className="font-headline text-3xl md:text-4xl font-bold mb-6">Comparte tu Conocimiento</h2>
           <p className="text-lg md:text-xl max-w-2xl mx-auto mb-8 text-primary-foreground/90">
-            Conviértete en un creator en MentorBloom y alcanza a miles de estudiantes. Crea, publica y monetiza tus cursos fácilmente.
+            Conviértete en un creator en consciousness-class y alcanza a miles de estudiantes. Crea, publica y monetiza tus cursos fácilmente.
           </p>
           <Button size="lg" variant="secondary" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
             <Link href="/signup?role=creator">Empezar como Creator</Link>

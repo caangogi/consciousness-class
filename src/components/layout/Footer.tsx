@@ -8,7 +8,7 @@ export function Footer() {
       <div className="container py-12 px-4 md:px-6">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <h3 className="text-lg font-headline font-semibold mb-4">MentorBloom</h3>
+            <h3 className="text-lg font-headline font-semibold mb-4">consciousness-class</h3>
             <p className="text-sm text-muted-foreground">Potenciando tu aprendizaje y crecimiento.</p>
           </div>
           <div>
@@ -38,7 +38,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
-          &copy; {currentYear} MentorBloom. Todos los derechos reservados.
+          &copy; {currentYear} consciousness-class. Todos los derechos reservados.
         </div>
       </div>
     </footer>

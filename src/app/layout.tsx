@@ -4,7 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'MentorBloom',
+  title: 'consciousness-class',
   description: 'Plataforma de Membresías y Cursos Online',
 };
 

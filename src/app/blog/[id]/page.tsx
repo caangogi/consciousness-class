@@ -37,7 +37,7 @@ const blogPost = {
   dataAiHint: "online education",
   date: "15 de Julio, 2024",
   author: {
-    name: "Equipo MentorBloom",
+    name: "Equipo consciousness-class",
     avatarUrl: "https://placehold.co/80x80.png",
     dataAiHint: "team avatar"
   },

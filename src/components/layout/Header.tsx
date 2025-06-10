@@ -53,7 +53,7 @@ export function Header() {
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="https://placehold.co/40x40.png" alt="User Avatar" data-ai-hint="user avatar" />
-                    <AvatarFallback>MB</AvatarFallback>
+                    <AvatarFallback>CC</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>

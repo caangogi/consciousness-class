@@ -17,7 +17,7 @@ const roleSpecificLinks = {
   ],
   superadmin: [
     { title: "Gestión de Usuarios", description: "Administra todos los usuarios de la plataforma.", href: "/dashboard/superadmin/user-management", icon: Users },
-    { title: "Configuración Global", description: "Ajusta los parámetros generales de MentorBloom.", href: "/dashboard/superadmin/settings", icon: Settings },
+    { title: "Configuración Global", description: "Ajusta los parámetros generales de consciousness-class.", href: "/dashboard/superadmin/settings", icon: Settings },
   ],
 };
 
@@ -29,7 +29,7 @@ export default function DashboardPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-headline">Bienvenido a tu Dashboard</CardTitle>
-          <CardDescription>Aquí puedes gestionar tu actividad en MentorBloom.</CardDescription>
+          <CardDescription>Aquí puedes gestionar tu actividad en consciousness-class.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">

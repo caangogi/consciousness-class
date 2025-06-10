@@ -1,15 +1,26 @@
 
-'use client'; // Required for hooks like useAuth, useState, useEffect
+'use client'; 
 
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, UserCircle, Gift, Copy, Edit, Award } from "lucide-react";
+import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Skeleton } from "@/components/ui/skeleton"; // For loading state
-import { useToast } from "@/hooks/use-toast"; // For showing toast messages
+import { Skeleton } from "@/components/ui/skeleton"; 
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { storage } from '@/lib/firebase/config'; // Import Firebase client storage
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Placeholder data (will be replaced or augmented by real data)
 const enrolledCoursesPlaceholder = [
@@ -18,32 +29,111 @@ const enrolledCoursesPlaceholder = [
   { id: '3', title: 'Fotografía Profesional', progress: 100, imageUrl: 'https://placehold.co/300x180.png', dataAiHint: 'photo course' },
 ];
 
-const referralDataPlaceholder = {
-  code: 'MENTORSTUD123',
-  successfulReferrals: 5,
-  rewardsEarned: '$25.00 en créditos',
-};
-
 const certificatesPlaceholder = [
     { id: 'cert1', courseTitle: 'Fotografía Profesional', dateAwarded: '2023-10-15', url: '#' },
 ];
 
+const profileFormSchema = z.object({
+  nombre: z.string().min(1, { message: "El nombre es requerido." }),
+  apellido: z.string().min(1, { message: "El apellido es requerido." }),
+});
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function StudentDashboardPage() {
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser, loading: authLoading, refreshUserProfile } = useAuth();
   const { toast } = useToast();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // TODO: Fetch real enrolled courses, referral data, and certificates for the currentUser
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      nombre: '',
+      apellido: '',
+    },
+  });
 
-  const handleEditProfileClick = () => {
-    // For now, just a placeholder action.
-    // In a future step, this would open a modal or navigate to an edit page.
-    toast({
-      title: "Función en Desarrollo",
-      description: "La edición de perfil estará disponible pronto.",
-    });
-    console.log("Edit profile button clicked. Current user:", currentUser);
+  useEffect(() => {
+    if (currentUser && isEditDialogOpen) {
+      form.reset({
+        nombre: currentUser.nombre || '',
+        apellido: currentUser.apellido || '',
+      });
+      setImagePreviewUrl(currentUser.photoURL || null); // Set initial preview or current photo
+      setImageFile(null); // Clear any previously selected file
+    }
+  }, [currentUser, isEditDialogOpen, form]);
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setImageFile(null);
+      // If no file is selected, revert to current user's photo or default
+      setImagePreviewUrl(currentUser?.photoURL || null); 
+    }
   };
+
+  async function onSubmit(values: ProfileFormValues) {
+    if (!currentUser) {
+      toast({ title: "Error", description: "Usuario no autenticado.", variant: "destructive" });
+      return;
+    }
+    setIsSubmitting(true);
+    let uploadedPhotoURL: string | null = currentUser.photoURL || null; // Keep current if no new image
+
+    try {
+      if (imageFile) {
+        setIsUploadingImage(true);
+        const fileExtension = imageFile.name.split('.').pop();
+        const storageRef = ref(storage, `users/${currentUser.uid}/profile.${fileExtension}`);
+        await uploadBytes(storageRef, imageFile);
+        uploadedPhotoURL = await getDownloadURL(storageRef);
+        setIsUploadingImage(false);
+      }
+      
+      const idToken = await currentUser.getIdToken(true);
+      const updateDto = {
+        nombre: values.nombre,
+        apellido: values.apellido,
+        photoURL: uploadedPhotoURL, // This will be the new URL, existing URL, or null if handled explicitly
+      };
+
+      const response = await fetch('/api/users/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(updateDto),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || "Error al actualizar el perfil.");
+      }
+
+      await refreshUserProfile(); // Refresh context
+      toast({ title: "Perfil Actualizado", description: "Tu información ha sido actualizada." });
+      setIsEditDialogOpen(false);
+
+    } catch (error: any) {
+      console.error("Error al actualizar perfil:", error);
+      toast({ title: "Error", description: error.message || "No se pudo actualizar el perfil.", variant: "destructive" });
+      setIsUploadingImage(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
   
   const handleCopyReferralCode = () => {
     if (currentUser?.referralCodeGenerated) {
@@ -60,106 +150,42 @@ export default function StudentDashboardPage() {
     }
   }
 
+  const getInitials = (name?: string | null, surname?: string | null) => {
+    if (name && surname) return `${name[0]}${surname[0]}`.toUpperCase();
+    if (name) return name.substring(0, 2).toUpperCase();
+    return 'CC';
+  };
+
 
   if (authLoading) {
     return (
       <div className="space-y-8">
-        <Skeleton className="h-10 w-1/3" /> {/* Title skeleton */}
-        
-        {/* Courses Skeleton */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-6 w-6 text-primary" />
-              <Skeleton className="h-6 w-1/4" />
-            </div>
-            <Skeleton className="h-4 w-1/2" />
-          </CardHeader>
-          <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <Skeleton className="w-full aspect-[16/10]" />
-                <CardContent className="p-4 space-y-2">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-2 w-full" />
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-9 w-full" />
-                </CardContent>
-              </Card>
-            ))}
-          </CardContent>
-        </Card>
-
+        <Skeleton className="h-10 w-1/3" />
+        <Card className="shadow-lg"><CardHeader><Skeleton className="h-6 w-1/4" /></CardHeader><CardContent><Skeleton className="h-20 w-full" /></CardContent></Card>
         <div className="grid md:grid-cols-2 gap-8">
-            {/* Profile Skeleton */}
-            <Card className="shadow-lg">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <UserCircle className="h-6 w-6 text-primary" />
-                   <Skeleton className="h-6 w-1/4" />
-                </div>
-                <Skeleton className="h-4 w-1/2" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Skeleton className="h-5 w-3/5" />
-                <Skeleton className="h-5 w-4/5" />
-                <Skeleton className="h-9 w-1/3" />
-              </CardContent>
-            </Card>
-
-            {/* Referral Skeleton */}
-            <Card className="shadow-lg">
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Gift className="h-6 w-6 text-primary" />
-                        <Skeleton className="h-6 w-1/3" />
-                    </div>
-                     <Skeleton className="h-4 w-3/4" />
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-5 w-1/2" />
-                    <Skeleton className="h-5 w-2/3" />
-                    <Skeleton className="h-5 w-1/4" />
-                </CardContent>
-            </Card>
+            <Card className="shadow-lg"><CardHeader><Skeleton className="h-6 w-1/4" /></CardHeader><CardContent className="space-y-3"><Skeleton className="h-5 w-3/5" /><Skeleton className="h-5 w-4/5" /><Skeleton className="h-9 w-1/3" /></CardContent></Card>
+            <Card className="shadow-lg"><CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader><CardContent className="space-y-3"><Skeleton className="h-10 w-full" /><Skeleton className="h-5 w-1/2" /><Skeleton className="h-5 w-2/3" /></CardContent></Card>
         </div>
-         {/* Certificates Skeleton */}
-        <Card className="shadow-lg">
-            <CardHeader>
-                <div className="flex items-center gap-2">
-                    <Award className="h-6 w-6 text-primary" />
-                    <Skeleton className="h-6 w-1/3" />
-                </div>
-                <Skeleton className="h-4 w-3/4" />
-            </CardHeader>
-            <CardContent>
-                 <Skeleton className="h-10 w-full" />
-            </CardContent>
-        </Card>
+        <Card className="shadow-lg"><CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent></Card>
       </div>
     );
   }
   
   if (!currentUser) {
-    // This should ideally be handled by the DashboardLayout redirecting to login
-    return <p className="text-center text-lg">Por favor, inicia sesión para ver tu panel.</p>;
+    return <p className="text-center text-lg">Por favor, <Link href="/login" className="text-primary hover:underline">inicia sesión</Link> para ver tu panel.</p>;
   }
 
-  // Use placeholder data for now, will be replaced with actual user data where available
   const enrolledCourses = enrolledCoursesPlaceholder;
   const certificates = certificatesPlaceholder;
-  // Referral data will come from currentUser or fetched separately
-  const referralCode = currentUser.referralCodeGenerated || referralDataPlaceholder.code;
-  const successfulReferrals = currentUser.referidosExitosos || referralDataPlaceholder.successfulReferrals;
-  const rewardsEarned = `$${(currentUser.balanceCredito || 0).toFixed(2)} en créditos` || referralDataPlaceholder.rewardsEarned;
+  const referralCode = currentUser.referralCodeGenerated || 'GENERANDO...';
+  const successfulReferrals = currentUser.referidosExitosos || 0;
+  const rewardsEarned = `$${(currentUser.balanceCredito || 0).toFixed(2)} en créditos`;
 
 
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Panel de Estudiante</h1>
 
-      {/* My Courses Section */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -192,7 +218,6 @@ export default function StudentDashboardPage() {
       </Card>
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Profile Section */}
         <Card className="shadow-lg">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -202,15 +227,90 @@ export default function StudentDashboardPage() {
             <CardDescription>Gestiona tu información personal y configuración de cuenta.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p><span className="font-semibold">Nombre:</span> {currentUser.nombre && currentUser.apellido ? `${currentUser.nombre} ${currentUser.apellido}` : (currentUser.displayName || 'No especificado')}</p>
-            <p><span className="font-semibold">Email:</span> {currentUser.email || 'No especificado'}</p>
-            <Button variant="outline" size="sm" onClick={handleEditProfileClick}>
-              <Edit className="mr-2 h-4 w-4" /> Editar Perfil
-            </Button>
+            <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                    <AvatarImage src={currentUser.photoURL || `https://placehold.co/80x80.png?text=${getInitials(currentUser.nombre, currentUser.apellido)}`} alt="Foto de perfil" data-ai-hint="user avatar"/>
+                    <AvatarFallback>{getInitials(currentUser.nombre, currentUser.apellido)}</AvatarFallback>
+                </Avatar>
+                <div>
+                    <p className="text-lg font-semibold">{currentUser.nombre && currentUser.apellido ? `${currentUser.nombre} ${currentUser.apellido}` : (currentUser.displayName || 'Nombre no especificado')}</p>
+                    <p className="text-sm text-muted-foreground">{currentUser.email || 'Email no especificado'}</p>
+                </div>
+            </div>
+             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Edit className="mr-2 h-4 w-4" /> Editar Perfil
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[480px]">
+                <DialogHeader>
+                  <DialogTitle>Editar Perfil</DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
+                    <div className="space-y-4 text-center">
+                        <Avatar className="h-32 w-32 mx-auto ring-2 ring-primary ring-offset-2 ring-offset-background">
+                            <AvatarImage src={imagePreviewUrl || `https://placehold.co/128x128.png?text=${getInitials(form.getValues('nombre'), form.getValues('apellido'))}`} alt="Vista previa de perfil" data-ai-hint="profile preview"/>
+                            <AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback>
+                        </Avatar>
+                        <div className="relative w-full max-w-xs mx-auto">
+                            <Input 
+                                id="picture" 
+                                type="file" 
+                                accept="image/png, image/jpeg, image/webp"
+                                onChange={handleImageChange} 
+                                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                                disabled={isUploadingImage || isSubmitting}
+                            />
+                            <Button type="button" variant="outline" className="w-full pointer-events-none">
+                                <Camera className="mr-2 h-4 w-4" />
+                                {imageFile ? imageFile.name : 'Cambiar foto'}
+                            </Button>
+                            {isUploadingImage && <p className="text-xs text-primary mt-1">Subiendo imagen...</p>}
+                        </div>
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="nombre"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nombre</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Tu nombre" {...field} disabled={isSubmitting} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="apellido"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Apellido</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Tu apellido" {...field} disabled={isSubmitting} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
+                      </DialogClose>
+                      <Button type="submit" disabled={isUploadingImage || isSubmitting}>
+                        {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
 
-        {/* Referral Section */}
         <Card className="shadow-lg">
           <CardHeader>
              <div className="flex items-center gap-2">
@@ -221,8 +321,8 @@ export default function StudentDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 p-3 bg-secondary rounded-md">
-              <p className="text-lg font-mono text-primary flex-grow">{referralCode}</p>
-              <Button variant="ghost" size="icon" onClick={handleCopyReferralCode} disabled={!currentUser.referralCodeGenerated}>
+              <p className="text-lg font-mono text-primary flex-grow truncate">{referralCode}</p>
+              <Button variant="ghost" size="icon" onClick={handleCopyReferralCode} disabled={!currentUser.referralCodeGenerated || currentUser.referralCodeGenerated === 'GENERANDO...'}>
                 <Copy className="h-5 w-5" />
                 <span className="sr-only">Copiar código</span>
               </Button>
@@ -236,7 +336,6 @@ export default function StudentDashboardPage() {
         </Card>
       </div>
       
-      {/* Certificates Section */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -265,7 +364,6 @@ export default function StudentDashboardPage() {
           )}
         </CardContent>
       </Card>
-
     </div>
   );
 }

@@ -18,7 +18,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { auth, storage } from '@/lib/firebase/config'; // Import Firebase client storage & auth
+import { auth, storage } from '@/lib/firebase/config'; 
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Placeholder data (will be replaced or augmented by real data)
@@ -82,15 +82,15 @@ export default function StudentDashboardPage() {
   };
 
   async function onSubmit(values: ProfileFormValues) {
-    if (!auth.currentUser) { // Use auth.currentUser directly for this check
+    if (!auth.currentUser) {
       toast({ title: "Error de Autenticación", description: "Usuario no autenticado. Por favor, inicia sesión de nuevo.", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
-    const activeUser = auth.currentUser; // Use this for UID in path
+    const activeUser = auth.currentUser; 
 
     setIsSubmitting(true);
-    let uploadedPhotoURL: string | null = currentUser?.photoURL || null; // Keep context for initial value
+    let uploadedPhotoURL: string | null = currentUser?.photoURL || null;
 
     try {
       if (imageFile) {
@@ -100,8 +100,12 @@ export default function StudentDashboardPage() {
         const fileExtension = lastDot > -1 ? originalFileName.substring(lastDot + 1).toLowerCase() : 'png';
         
         const finalFileNameInStorage = `profile.${fileExtension}`; 
-        const storagePath = `users/${activeUser.uid}/${finalFileNameInStorage}`; // Use activeUser.uid
+        const storagePath = `users/${activeUser.uid}/${finalFileNameInStorage}`;
         
+        const fileMetadata = {
+          contentType: imageFile.type // Explicitly set content type
+        };
+
         console.log("--------------------------------------------------");
         console.log("[StudentDashboard] PRE-UPLOAD DEBUG INFO FOR STORAGE (using auth.currentUser.uid for path):");
         console.log(`  Attempting to upload to Storage path: "${storagePath}"`);
@@ -110,16 +114,15 @@ export default function StudentDashboardPage() {
         console.log(`  Determined extension (lowercase): ".${fileExtension}"`);
         console.log(`  Final name in storage: "${finalFileNameInStorage}"`);
         console.log(`  File size: ${imageFile.size} bytes (${(imageFile.size / 1024 / 1024).toFixed(2)} MB)`);
-        console.log(`  File type (MIME): ${imageFile.type}`);
-        console.log(`  Context user UID (currentUser.uid): ${currentUser?.uid}`); // Log context UID for comparison
-        console.log("  CHECK THESE VALUES AGAINST YOUR FIREBASE STORAGE RULES!");
-        console.log("  Rules can take a few minutes to propagate after deployment.");
+        console.log(`  File type (MIME) being sent: ${fileMetadata.contentType}`);
+        console.log(`  Context user UID (currentUser.uid from useAuth): ${currentUser?.uid}`);
+        console.log("  CHECK THESE VALUES AGAINST YOUR FIREBASE STORAGE RULES & ENSURE RULES ARE FULLY PROPAGATED!");
         console.log("--------------------------------------------------");
 
         const storageRefInstance = ref(storage, storagePath);
 
         try {
-            await uploadBytes(storageRefInstance, imageFile);
+            await uploadBytes(storageRefInstance, imageFile, fileMetadata); // Pass metadata here
             uploadedPhotoURL = await getDownloadURL(storageRefInstance);
             console.log(`[StudentDashboard] Upload successful. New Photo URL: ${uploadedPhotoURL}`);
         } catch (uploadError: any) {
@@ -136,7 +139,7 @@ export default function StudentDashboardPage() {
         setIsUploadingImage(false);
       }
       
-      const idToken = await activeUser.getIdToken(true); // Use activeUser for token
+      const idToken = await activeUser.getIdToken(true);
       const updateDto = {
         nombre: values.nombre,
         apellido: values.apellido,
@@ -164,7 +167,7 @@ export default function StudentDashboardPage() {
     } catch (error: any) {
       console.error("Error al actualizar perfil (onSubmit):", error);
       toast({ title: "Error de Actualización", description: error.message || "No se pudo actualizar el perfil.", variant: "destructive" });
-      setIsUploadingImage(false); // Ensure this is reset on general error too
+      setIsUploadingImage(false);
     } finally {
       setIsSubmitting(false);
     }

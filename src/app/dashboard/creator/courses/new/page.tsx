@@ -14,8 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+// import { useAuth } from '@/contexts/AuthContext'; // currentUser from AuthContext is our UserProfile
 import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
+import type { UpdateCourseDto } from '@/features/course/infrastructure/dto/update-course.dto';
 import type { CourseAccessType } from '@/features/course/domain/entities/course.entity';
 import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText } from 'lucide-react';
 import { auth } from '@/lib/firebase/config'; // Import auth from firebase config
@@ -42,8 +43,8 @@ const courseCategories = [
 export default function NewCoursePage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { currentUser } = useAuth(); // currentUser from AuthContext is our UserProfile
-  const [currentStep, setCurrentStep] = useState<string>("info"); // "info", "structure", "settings"
+  // const { currentUser } = useAuth(); 
+  const [currentStep, setCurrentStep] = useState<string>("info"); 
   const [isLoading, setIsLoading] = useState(false);
   const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
 
@@ -63,7 +64,6 @@ export default function NewCoursePage() {
   const handleNextStep = () => {
     if (currentStep === "info" && createdCourseId) setCurrentStep("structure");
     else if (currentStep === "structure" && createdCourseId) setCurrentStep("settings");
-    // Add more logic if needed
   };
   
   const handlePreviousStep = () => {
@@ -72,45 +72,61 @@ export default function NewCoursePage() {
   }
 
   const onSubmitStep1 = async (values: Step1FormValues) => {
-    if (!auth.currentUser) { // Check auth.currentUser for Firebase User object
-      toast({ title: "Error de autenticación", description: "Debes iniciar sesión para crear un curso.", variant: "destructive" });
+    if (!auth.currentUser) {
+      toast({ title: "Error de autenticación", description: "Debes iniciar sesión para crear/actualizar un curso.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
     try {
-      const idToken = await auth.currentUser.getIdToken(true); // Use auth.currentUser
-      const dto: CreateCourseDto = {
-        nombre: values.nombre,
-        descripcionCorta: values.descripcionCorta,
-        descripcionLarga: values.descripcionLarga,
-        categoria: values.categoria,
-        tipoAcceso: values.tipoAcceso as CourseAccessType,
-        precio: values.precio,
-        duracionEstimada: values.duracionEstimada,
-      };
+      const idToken = await auth.currentUser.getIdToken(true);
+      
+      let response;
+      let successMessage = "";
 
-      const response = await fetch('/api/courses/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify(dto),
-      });
+      if (createdCourseId) {
+        // Update existing course
+        const dto: UpdateCourseDto = { ...values, tipoAcceso: values.tipoAcceso as CourseAccessType };
+        response = await fetch(`/api/courses/update/${createdCourseId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify(dto),
+        });
+        successMessage = "Información básica del curso actualizada.";
+
+      } else {
+        // Create new course
+        const dto: CreateCourseDto = { ...values, tipoAcceso: values.tipoAcceso as CourseAccessType };
+        response = await fetch('/api/courses/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify(dto),
+        });
+        successMessage = "Información básica del curso guardada.";
+      }
+
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.details || errorData.error || 'Error al crear el curso.');
+        throw new Error(errorData.details || errorData.error || 'Error al procesar la información del curso.');
       }
 
       const responseData = await response.json();
-      setCreatedCourseId(responseData.courseId);
+      
+      if (!createdCourseId && responseData.courseId) {
+        setCreatedCourseId(responseData.courseId);
+      }
 
-      toast({ title: "Paso 1 Completado", description: "Información básica del curso guardada." });
-      setCurrentStep("structure"); // Move to next step
+      toast({ title: "Paso 1 Completado", description: successMessage });
+      setCurrentStep("structure"); 
     } catch (error: any) {
-      console.error("Error creando curso:", error);
-      toast({ title: "Error", description: error.message || "No se pudo crear el curso.", variant: "destructive" });
+      console.error("Error procesando curso:", error);
+      toast({ title: "Error", description: error.message || "No se pudo procesar el curso.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -121,11 +137,9 @@ export default function NewCoursePage() {
     if (tabValue === currentStep) {
       return `${baseClass} data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary`;
     }
-    // Enable previous steps if current step is beyond them
     if (tabValue === "info" && (currentStep === "structure" || currentStep === "settings") && createdCourseId) return baseClass;
     if (tabValue === "structure" && currentStep === "settings" && createdCourseId) return baseClass;
 
-    // Disable future steps if current course not created or current step not completed
     if ((tabValue === "structure" || tabValue === "settings") && !createdCourseId) return `${baseClass} text-muted-foreground cursor-not-allowed`;
     
     return baseClass;
@@ -136,13 +150,22 @@ export default function NewCoursePage() {
     <div className="container mx-auto py-8 px-4 md:px-6">
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className="text-3xl font-headline">Crear Nuevo Curso</CardTitle>
+          <CardTitle className="text-3xl font-headline">{createdCourseId ? "Editar Curso" : "Crear Nuevo Curso"}</CardTitle>
           <CardDescription>Completa los siguientes pasos para configurar tu curso.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs value={currentStep} onValueChange={setCurrentStep} className="w-full">
+          <Tabs value={currentStep} onValueChange={(newStep) => {
+            // Allow navigation to previous completed steps or current step
+            if (newStep === "info" || (newStep === "structure" && createdCourseId) || (newStep === "settings" && createdCourseId)) {
+              setCurrentStep(newStep);
+            } else {
+              // Prevent navigation to future uncompleted steps
+              toast({title: "Paso Bloqueado", description: "Completa los pasos anteriores primero.", variant: "default"});
+            }
+          }} 
+          className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="info" className={getTabClass("info")} disabled={isLoading || (currentStep !== "info" && !createdCourseId)}>
+              <TabsTrigger value="info" className={getTabClass("info")} disabled={isLoading}>
                 <Info className="h-5 w-5" /> Información
               </TabsTrigger>
               <TabsTrigger value="structure" className={getTabClass("structure")} disabled={isLoading || !createdCourseId}>
@@ -264,7 +287,7 @@ export default function NewCoursePage() {
                       <div className="flex justify-end pt-4">
                         <Button type="submit" disabled={isLoading}>
                           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                          Guardar y Continuar <ArrowRight className="ml-2 h-4 w-4" />
+                          {createdCourseId ? "Actualizar y Continuar" : "Guardar y Continuar"} <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                       </div>
                     </form>
@@ -347,8 +370,8 @@ export default function NewCoursePage() {
                        <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading}>
                         Anterior
                       </Button>
-                      <Button type="button" onClick={() => router.push('/dashboard/creator')} disabled={isLoading || !createdCourseId}>
-                        Finalizar y Guardar Borrador
+                      <Button type="button" onClick={() => router.push(`/dashboard/creator/courses/edit/${createdCourseId}`)} disabled={isLoading || !createdCourseId}>
+                        Finalizar e Ir a Edición Avanzada
                       </Button>
                     </div>
                 </CardContent>

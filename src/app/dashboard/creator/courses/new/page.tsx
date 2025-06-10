@@ -443,7 +443,7 @@ export default function NewCoursePage() {
                                 <h4 className="font-semibold">Imagen de Portada</h4>
                             </div>
                             <Input type="file" accept="image/*" />
-                            <FormDescription className="mt-1 text-xs">Sube una imagen atractiva para tu curso (recomendado 1200x675px).</FormDescription>
+                            <p className="mt-1 text-xs text-muted-foreground">Sube una imagen atractiva para tu curso (recomendado 1200x675px).</p>
                         </Card>
                          <Card className="p-4">
                             <div className="flex items-center gap-2 mb-2">
@@ -451,7 +451,7 @@ export default function NewCoursePage() {
                                 <h4 className="font-semibold">Video Trailer (Opcional)</h4>
                             </div>
                             <Input placeholder="URL de YouTube o Vimeo" />
-                            <FormDescription className="mt-1 text-xs">Un video corto para promocionar tu curso.</FormDescription>
+                             <p className="mt-1 text-xs text-muted-foreground">Un video corto para promocionar tu curso.</p>
                         </Card>
                       </div>
                       <div className="p-8 border-dashed border-2 border-muted-foreground/50 rounded-lg text-center">
@@ -480,3 +480,4 @@ export default function NewCoursePage() {
     </div>
   );
 }
+

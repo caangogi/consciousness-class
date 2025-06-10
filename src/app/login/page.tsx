@@ -1,16 +1,20 @@
+
 'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import React from 'react';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { auth } from '@/lib/firebase/config'; // Import Firebase auth
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor ingresa un email válido.' }),
@@ -21,6 +25,10 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -29,10 +37,29 @@ export default function LoginPage() {
     },
   });
 
-  function onSubmit(values: LoginFormValues) {
-    // TODO: Implement Firebase login logic
-    console.log(values);
-    // router.push('/dashboard/student'); // Example redirect
+  async function onSubmit(values: LoginFormValues) {
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      toast({
+        title: "¡Bienvenido de nuevo!",
+        description: "Has iniciado sesión correctamente.",
+      });
+      router.push('/dashboard'); // Placeholder redirect, will be role-based later
+    } catch (error: any) {
+      console.error("Error al iniciar sesión:", error);
+      let errorMessage = "Ocurrió un error al iniciar sesión. Por favor, verifica tus credenciales.";
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = "Email o contraseña incorrectos. Por favor, inténtalo de nuevo.";
+      }
+      toast({
+        title: "Error al Iniciar Sesión",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -55,7 +82,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="tu@email.com" {...field} />
+                      <Input type="email" placeholder="tu@email.com" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -80,6 +107,7 @@ export default function LoginPage() {
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••" 
                           {...field} 
+                          disabled={isLoading}
                         />
                         <Button 
                           type="button"
@@ -87,6 +115,7 @@ export default function LoginPage() {
                           size="icon" 
                           className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
                           onClick={() => setShowPassword(!showPassword)}
+                          disabled={isLoading}
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           <span className="sr-only">{showPassword ? 'Ocultar' : 'Mostrar'} contraseña</span>
@@ -97,8 +126,8 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Ingresando...' : 'Iniciar Sesión'}
+              <Button type="submit" className="w-full" disabled={isLoading || form.formState.isSubmitting}>
+                {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}
               </Button>
             </form>
           </Form>

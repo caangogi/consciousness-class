@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Activity, ArrowRight, BookOpen, BarChartBig, Users, Settings } from "lucide-react";
+import { Activity, ArrowRight, BookOpen, BarChartBig, Users, Settings, Gift } from "lucide-react"; // Added Gift import
 
 // Placeholder: In a real app, this would be determined by user's role
 const userRole = 'student'; // 'student', 'creator', 'superadmin'

@@ -39,7 +39,7 @@ export class CourseEntity {
   tipoAcceso: CourseAccessType;
   duracionEstimada: string;
   imagenPortadaUrl: string | null;
-  dataAiHintImagenPortada: string | null; // Changed from optional string to string | null
+  dataAiHintImagenPortada: string | null;
   videoTrailerUrl: string | null;
   categoria: string;
   readonly creadorUid: string;
@@ -64,7 +64,7 @@ export class CourseEntity {
     this.tipoAcceso = props.tipoAcceso;
     this.duracionEstimada = props.duracionEstimada;
     this.imagenPortadaUrl = props.imagenPortadaUrl || null;
-    this.dataAiHintImagenPortada = props.dataAiHintImagenPortada ?? null; // Ensure it's null if undefined/null
+    this.dataAiHintImagenPortada = props.dataAiHintImagenPortada ?? null;
     this.videoTrailerUrl = props.videoTrailerUrl || null;
     this.categoria = props.categoria;
     this.creadorUid = props.creadorUid;
@@ -85,7 +85,7 @@ export class CourseEntity {
     input: Omit<CourseProperties, 'id' | 'fechaCreacion' | 'fechaActualizacion' | 'estado' | 'ratingPromedio' | 'totalEstudiantes' | 'totalResenas' | 'ordenModulos'> & { id?: string }
   ): CourseEntity {
     const now = new Date();
-    const id = input.id || crypto.randomUUID(); // Generate UUID if not provided
+    const id = input.id || crypto.randomUUID(); 
 
     const props: CourseProperties = {
       ...input,
@@ -99,23 +99,43 @@ export class CourseEntity {
       totalResenas: 0,
       ordenModulos: [],
       imagenPortadaUrl: input.imagenPortadaUrl || null,
-      // dataAiHintImagenPortada will be handled by the constructor if input.dataAiHintImagenPortada is undefined
+      dataAiHintImagenPortada: input.dataAiHintImagenPortada ?? null,
     };
     return new CourseEntity(props);
   }
 
   update(data: Partial<Omit<CourseProperties, 'id' | 'creadorUid' | 'fechaCreacion'>>) {
-    Object.assign(this, data);
-    if (data.dataAiHintImagenPortada === undefined && this.dataAiHintImagenPortada !== null) {
-      // If explicitly set to undefined in update, make it null (or handle as per logic)
-      // For now, let's assume direct assignment is fine, or it gets filtered if truly undefined.
-      // However, if data can contain 'undefined', it's better to handle it.
-      // For this specific field, it's more likely to be string or null.
-    }
+    const oldStatus = this.estado;
 
+    // Explicitly update fields if they are present in data
+    if (data.nombre !== undefined) this.nombre = data.nombre;
+    if (data.descripcionCorta !== undefined) this.descripcionCorta = data.descripcionCorta;
+    if (data.descripcionLarga !== undefined) this.descripcionLarga = data.descripcionLarga;
+    if (data.precio !== undefined) this.precio = data.precio;
+    if (data.tipoAcceso !== undefined) this.tipoAcceso = data.tipoAcceso;
+    if (data.duracionEstimada !== undefined) this.duracionEstimada = data.duracionEstimada;
+    if (data.imagenPortadaUrl !== undefined) this.imagenPortadaUrl = data.imagenPortadaUrl;
+    if (data.dataAiHintImagenPortada !== undefined) this.dataAiHintImagenPortada = data.dataAiHintImagenPortada;
+    if (data.videoTrailerUrl !== undefined) this.videoTrailerUrl = data.videoTrailerUrl;
+    if (data.categoria !== undefined) this.categoria = data.categoria;
+    if (data.estado !== undefined) this.estado = data.estado;
+    if (data.ratingPromedio !== undefined) this.ratingPromedio = data.ratingPromedio;
+    if (data.totalEstudiantes !== undefined) this.totalEstudiantes = data.totalEstudiantes;
+    if (data.totalResenas !== undefined) this.totalResenas = data.totalResenas;
+    if (data.requisitos !== undefined) this.requisitos = data.requisitos;
+    if (data.objetivosAprendizaje !== undefined) this.objetivosAprendizaje = data.objetivosAprendizaje;
+    if (data.publicoObjetivo !== undefined) this.publicoObjetivo = data.publicoObjetivo;
+    if (data.ordenModulos !== undefined) this.ordenModulos = data.ordenModulos;
+    
+    // Update timestamp
     this.fechaActualizacion = new Date();
-    if (data.estado === 'publicado' && this.estado !== 'publicado') {
+
+    // Set publication date only if status changes TO 'publicado' from something else
+    // and fechaPublicacion is not already set (or if we want to allow re-publishing to update it)
+    if (this.estado === 'publicado' && oldStatus !== 'publicado') {
       this.fechaPublicacion = new Date();
+    } else if (data.fechaPublicacion === null) { // Allow explicitly setting it to null
+        this.fechaPublicacion = null;
     }
   }
 
@@ -129,7 +149,7 @@ export class CourseEntity {
       tipoAcceso: this.tipoAcceso,
       duracionEstimada: this.duracionEstimada,
       imagenPortadaUrl: this.imagenPortadaUrl,
-      dataAiHintImagenPortada: this.dataAiHintImagenPortada, // Will now be string or null
+      dataAiHintImagenPortada: this.dataAiHintImagenPortada,
       videoTrailerUrl: this.videoTrailerUrl,
       categoria: this.categoria,
       creadorUid: this.creadorUid,

@@ -1,12 +1,43 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      // WARNING: These rules allow anyone to read and write to your storage.
-      // Only for temporary debugging. Revert to secure rules ASAP.
-      allow read, write: if true;
+    // Reglas para imágenes de perfil de usuario
+    match /users/{userId}/{imageName} {
+      allow read: if true; // Cualquiera puede leer imágenes de perfil
+      allow write: if request.auth != null && 
+                      request.auth.uid == userId &&
+                      request.resource.size < (5 * 1024 * 1024) && // Máximo 5MB
+                      request.resource.contentType.matches('image/.*'); // Solo imágenes
     }
+
+    // Reglas para imágenes de portada de cursos
+    match /cursos/{courseId}/portada/{imageName} {
+      allow read: if true; // Cualquiera puede leer imágenes de portada de cursos
+      allow write: if request.auth != null &&
+                      request.resource.size < (5 * 1024 * 1024) && // Máximo 5MB
+                      request.resource.contentType.matches('image/.*') &&
+                      // Verificar que el usuario autenticado es el creador del curso
+                      get(/databases/(default)/documents/cursos/$(courseId)).data.creadorUid == request.auth.uid;
+    }
+
+    // TODO: Añadir reglas para otros tipos de contenido del curso (videos de lecciones, PDFs, etc.)
+    // match /cursos/{courseId}/modulos/{moduleId}/lecciones/{lessonId}/{fileName} {
+    //   allow read: if isEnrolledOrPreview(courseId, request.auth.uid) || isCreator(courseId, request.auth.uid);
+    //   allow write: if isCreator(courseId, request.auth.uid);
+    // }
+
+    // --- Funciones Helper (ejemplos, adaptar según necesidad) ---
+    // function isCreator(courseId, userId) {
+    //   return userId != null && get(/databases/(default)/documents/cursos/$(courseId)).data.creadorUid == userId;
+    // }
+
+    // function isEnrolledOrPreview(courseId, userId) {
+    //   // Lógica para verificar si el usuario está inscrito o si el contenido es de vista previa
+    //   // Esto requeriría leer datos de Firestore, por ejemplo, una lista de estudiantes inscritos
+    //   // o un flag de 'esVistaPrevia' en la lección.
+    //   // Por simplicidad, devolvemos true, pero esto DEBE implementarse correctamente.
+    //   return true; 
+    // }
   }
 }

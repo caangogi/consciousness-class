@@ -33,13 +33,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const updaterUid = decodedToken.uid;
     const updateCourseDto: UpdateCourseDto = await request.json();
 
-    // Basic validation for DTO
-    if (!updateCourseDto.nombre || !updateCourseDto.categoria || !updateCourseDto.tipoAcceso) {
-      return NextResponse.json({ error: 'Missing required fields: nombre, categoria, and tipoAcceso are required for update.' }, { status: 400 });
+    // DTO is now partial, so strict validation of all fields is removed.
+    // Basic validation for specific fields if they are present could be added here if needed,
+    // e.g., if precio is present, it must be a non-negative number.
+    if (updateCourseDto.precio !== undefined && (typeof updateCourseDto.precio !== 'number' || updateCourseDto.precio < 0)) {
+        return NextResponse.json({ error: 'Invalid precio: must be a non-negative number if provided.'}, {status: 400});
     }
-    if (typeof updateCourseDto.precio !== 'number' || updateCourseDto.precio < 0) {
-        return NextResponse.json({ error: 'Invalid precio: must be a non-negative number.'}, {status: 400});
+    if (updateCourseDto.nombre !== undefined && updateCourseDto.nombre.length < 5) {
+        return NextResponse.json({ error: 'Invalid nombre: must be at least 5 characters if provided.'}, {status: 400});
     }
+
 
     const courseRepository = new FirebaseCourseRepository();
     const courseService = new CourseService(courseRepository);
@@ -47,9 +50,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const updatedCourse = await courseService.updateCourse(courseId, updateCourseDto, updaterUid);
 
     if (!updatedCourse) {
-      // This could be due to course not found or updater not being the creator (handled by service)
-      // The service throws specific errors for forbidden access, which would be caught below.
-      // So, if null here, it's likely 'not found'.
       return NextResponse.json({ error: 'Course not found or update failed internally.' }, { status: 404 });
     }
 

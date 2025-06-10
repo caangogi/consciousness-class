@@ -16,11 +16,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
 import type { UpdateCourseDto } from '@/features/course/infrastructure/dto/update-course.dto';
-import type { CourseAccessType } from '@/features/course/domain/entities/course.entity';
+import { type CourseAccessType, type CourseStatus, type CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
 import type { CreateModuleDto } from '@/features/course/infrastructure/dto/create-module.dto';
-import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle } from 'lucide-react';
-import { auth } from '@/lib/firebase/config';
+import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud } from 'lucide-react';
+import { auth, storage } from '@/lib/firebase/config';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import Image from 'next/image';
 
 // Step 1 Schema: Basic Course Information
 const step1Schema = z.object({
@@ -41,12 +43,14 @@ const moduleSchema = z.object({
 type ModuleFormValues = z.infer<typeof moduleSchema>;
 
 
-// Placeholder categories
 const courseCategories = [
   "Desarrollo Web", "Desarrollo Móvil", "Data Science", "Marketing Digital", 
   "Diseño Gráfico", "Fotografía", "Negocios", "Finanzas Personales", 
   "Productividad", "Idiomas", "Música", "Salud y Bienestar"
 ];
+
+const courseStatuses: CourseStatus[] = ['borrador', 'publicado', 'en_revision', 'archivado'];
+
 
 export default function NewCoursePage() {
   const { toast } = useToast();
@@ -55,7 +59,16 @@ export default function NewCoursePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isModuleLoading, setIsModuleLoading] = useState(false);
   const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
+  const [courseDetails, setCourseDetails] = useState<CourseProperties | null>(null);
   const [modules, setModules] = useState<ModuleProperties[]>([]);
+
+  // State for Step 3 - Publication Settings
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreviewUrl, setCoverImagePreviewUrl] = useState<string | null>(null);
+  const [videoTrailerUrlInput, setVideoTrailerUrlInput] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<CourseStatus>('borrador');
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
 
   const formStep1 = useForm<Step1FormValues>({
     resolver: zodResolver(step1Schema),
@@ -76,6 +89,16 @@ export default function NewCoursePage() {
       moduleName: '',
     }
   });
+
+  // Load existing course details into Step 3 form states
+  useEffect(() => {
+    if (courseDetails) {
+      setCoverImagePreviewUrl(courseDetails.imagenPortadaUrl || null);
+      setVideoTrailerUrlInput(courseDetails.videoTrailerUrl || '');
+      setSelectedStatus(courseDetails.estado || 'borrador');
+    }
+  }, [courseDetails]);
+
 
   const fetchModules = useCallback(async (courseId: string) => {
     if (!courseId) return;
@@ -152,6 +175,7 @@ export default function NewCoursePage() {
       }
 
       const responseData = await response.json();
+      setCourseDetails(responseData.course); // Store full course details
       
       if (!createdCourseId && responseData.courseId) {
         setCreatedCourseId(responseData.courseId);
@@ -187,10 +211,9 @@ export default function NewCoursePage() {
         throw new Error(errorData.details || errorData.error || "Error al crear el módulo.");
       }
       
-      // const newModuleData = await response.json();
       toast({title: "Módulo Creado", description: `El módulo "${values.moduleName}" ha sido añadido.`});
       moduleForm.reset();
-      await fetchModules(createdCourseId); // Refresh module list
+      await fetchModules(createdCourseId); 
 
     } catch (error: any) {
       console.error("Error añadiendo módulo:", error);
@@ -199,17 +222,87 @@ export default function NewCoursePage() {
       setIsModuleLoading(false);
     }
   };
+
+  const handleCoverImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setCoverImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImagePreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setCoverImageFile(null);
+      setCoverImagePreviewUrl(courseDetails?.imagenPortadaUrl || null);
+    }
+  };
+
+  const onSaveSettings = async () => {
+    if (!createdCourseId || !auth.currentUser) {
+      toast({ title: "Error", description: "Se requiere un curso e iniciar sesión.", variant: "destructive" });
+      return;
+    }
+    setIsSavingSettings(true);
+    setIsUploadingCover(!!coverImageFile);
+
+    let uploadedImageUrl: string | null = courseDetails?.imagenPortadaUrl || null;
+
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+
+      if (coverImageFile) {
+        const fileExtension = coverImageFile.name.split('.').pop();
+        const storageRef = ref(storage, `cursos/${createdCourseId}/portada/cover.${fileExtension}`);
+        
+        // If there was a previous image, attempt to delete it (optional, depends on desired behavior)
+        // For simplicity, we might just overwrite or rely on unique names if versions are needed
+        // If previous URL is known and different, one might delete:
+        // if (courseDetails?.imagenPortadaUrl) { try { await deleteObject(ref(storage, courseDetails.imagenPortadaUrl)); } catch (e) { console.warn("Old image not found or delete failed", e)} }
+
+        await uploadBytes(storageRef, coverImageFile);
+        uploadedImageUrl = await getDownloadURL(storageRef);
+        setCoverImagePreviewUrl(uploadedImageUrl); // Update preview with final URL
+        setCoverImageFile(null); // Clear the file state
+        setIsUploadingCover(false);
+      }
+
+      const dto: UpdateCourseDto = {
+        imagenPortadaUrl: uploadedImageUrl,
+        videoTrailerUrl: videoTrailerUrlInput || null,
+        estado: selectedStatus,
+      };
+
+      const response = await fetch(`/api/courses/update/${createdCourseId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify(dto),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || "Error al guardar la configuración de publicación.");
+      }
+      const responseData = await response.json();
+      setCourseDetails(responseData.course); // Update local course details
+
+      toast({ title: "Configuración Guardada", description: "Los cambios de publicación han sido guardados." });
+    } catch (error: any) {
+      console.error("Error guardando configuración de publicación:", error);
+      toast({ title: "Error al Guardar", description: error.message, variant: "destructive" });
+      setIsUploadingCover(false);
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
   
   const getTabClass = (tabValue: string) => {
     let baseClass = "flex items-center gap-2";
     if (tabValue === currentStep) {
       return `${baseClass} data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary`;
     }
-    // Allow clicking on previous completed steps
     if (tabValue === "info" && (currentStep === "structure" || currentStep === "settings") && createdCourseId) return baseClass;
     if (tabValue === "structure" && currentStep === "settings" && createdCourseId) return baseClass;
-
-    // Disable future steps if course not created
     if ((tabValue === "structure" || tabValue === "settings") && !createdCourseId) return `${baseClass} text-muted-foreground cursor-not-allowed`;
     
     return baseClass;
@@ -217,7 +310,7 @@ export default function NewCoursePage() {
 
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6">
+    <div className="container mx-auto py-8 px-4 md:px:6">
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className="text-3xl font-headline">{createdCourseId ? "Editar Curso" : "Crear Nuevo Curso"}</CardTitle>
@@ -233,13 +326,13 @@ export default function NewCoursePage() {
           }} 
           className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="info" className={getTabClass("info")} disabled={isLoading}>
+              <TabsTrigger value="info" className={getTabClass("info")} disabled={isLoading || isSavingSettings}>
                 <Info className="h-5 w-5" /> Información
               </TabsTrigger>
-              <TabsTrigger value="structure" className={getTabClass("structure")} disabled={isLoading || !createdCourseId}>
+              <TabsTrigger value="structure" className={getTabClass("structure")} disabled={isLoading || isSavingSettings || !createdCourseId}>
                 <ListChecks className="h-5 w-5" /> Estructura
               </TabsTrigger>
-              <TabsTrigger value="settings" className={getTabClass("settings")} disabled={isLoading || !createdCourseId}>
+              <TabsTrigger value="settings" className={getTabClass("settings")} disabled={isLoading || isSavingSettings || !createdCourseId}>
                 <Settings className="h-5 w-5" /> Publicación
               </TabsTrigger>
             </TabsList>
@@ -372,7 +465,7 @@ export default function NewCoursePage() {
                 <CardContent>
                   {createdCourseId ? (
                     <>
-                      <p className="mb-4 text-muted-foreground">Editando estructura para el curso ID: {createdCourseId}</p>
+                      <p className="mb-4 text-sm text-muted-foreground">Curso: {courseDetails?.nombre || `ID: ${createdCourseId}`}</p>
                       
                       <Form {...moduleForm}>
                         <form onSubmit={moduleForm.handleSubmit(onAddModule)} className="flex items-start gap-4 mb-6">
@@ -396,13 +489,13 @@ export default function NewCoursePage() {
                         </form>
                       </Form>
 
-                      {isModuleLoading && modules.length === 0 && <p>Cargando módulos...</p>}
+                      {isModuleLoading && modules.length === 0 && <p className="text-muted-foreground text-center py-2">Cargando módulos...</p>}
                       {!isModuleLoading && modules.length === 0 && (
                         <p className="text-muted-foreground text-center py-4">Aún no has añadido módulos a este curso.</p>
                       )}
                       {modules.length > 0 && (
                         <div className="space-y-3">
-                          <h4 className="text-lg font-semibold">Módulos del Curso:</h4>
+                          <h4 className="text-lg font-semibold mb-2">Módulos del Curso:</h4>
                           <ul className="list-disc list-inside pl-4 space-y-1 bg-secondary/30 p-4 rounded-md">
                             {modules.sort((a,b) => a.orden - b.orden).map(module => (
                               <li key={module.id} className="text-foreground/90">{module.nombre}</li>
@@ -415,10 +508,10 @@ export default function NewCoursePage() {
                     <p className="text-center text-muted-foreground py-8">Completa el paso de Información Básica primero.</p>
                   )}
                    <div className="flex justify-between pt-6 mt-4 border-t">
-                      <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isModuleLoading}>
+                      <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isModuleLoading || isSavingSettings}>
                         Anterior
                       </Button>
-                      <Button type="button" onClick={handleNextStep} disabled={isLoading || isModuleLoading || !createdCourseId}>
+                      <Button type="button" onClick={handleNextStep} disabled={isLoading || isModuleLoading || isSavingSettings || !createdCourseId}>
                          Siguiente <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </div>
@@ -434,41 +527,88 @@ export default function NewCoursePage() {
                 </CardHeader>
                 <CardContent>
                    {createdCourseId ? (
-                    <>
-                      <p className="mb-4 text-muted-foreground">Configurando publicación para el curso ID: {createdCourseId}</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <Card className="p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <ImageIcon className="h-5 w-5 text-primary"/>
-                                <h4 className="font-semibold">Imagen de Portada</h4>
+                    <div className="space-y-8">
+                       <p className="mb-1 text-sm text-muted-foreground">Curso: {courseDetails?.nombre || `ID: ${createdCourseId}`}</p>
+                      <Card className="p-4 shadow-sm">
+                          <div className="flex items-center gap-2 mb-3">
+                              <ImageIcon className="h-5 w-5 text-primary"/>
+                              <h4 className="font-semibold text-lg">Imagen de Portada</h4>
+                          </div>
+                          {coverImagePreviewUrl && (
+                            <div className="mb-4 relative aspect-video max-w-sm mx-auto rounded-md overflow-hidden border">
+                              <Image src={coverImagePreviewUrl} alt="Vista previa de portada" layout="fill" objectFit="cover" data-ai-hint="course cover preview"/>
                             </div>
-                            <Input type="file" accept="image/*" />
-                            <p className="mt-1 text-xs text-muted-foreground">Sube una imagen atractiva para tu curso (recomendado 1200x675px).</p>
-                        </Card>
-                         <Card className="p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <FileText className="h-5 w-5 text-primary"/>
-                                <h4 className="font-semibold">Video Trailer (Opcional)</h4>
-                            </div>
-                            <Input placeholder="URL de YouTube o Vimeo" />
-                             <p className="mt-1 text-xs text-muted-foreground">Un video corto para promocionar tu curso.</p>
-                        </Card>
+                          )}
+                          <div className="relative">
+                            <Input 
+                                id="coverImage"
+                                type="file" 
+                                accept="image/png, image/jpeg, image/webp, image/gif"
+                                onChange={handleCoverImageChange} 
+                                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                                disabled={isSavingSettings || isUploadingCover}
+                            />
+                             <Button type="button" variant="outline" className="w-full pointer-events-none relative">
+                                {isUploadingCover && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}
+                                {!isUploadingCover && <ImageIcon className="mr-2 h-4 w-4" />}
+                                {isUploadingCover ? 'Subiendo...' : (coverImageFile ? (coverImageFile.name.length > 30 ? coverImageFile.name.substring(0,27) + '...' : coverImageFile.name) : 'Seleccionar Imagen de Portada')}
+                            </Button>
+                           </div>
+                          <p className="mt-2 text-xs text-muted-foreground text-center">Sube una imagen atractiva (recomendado 1200x675px, máx. 5MB).</p>
+                      </Card>
+                       <Card className="p-4 shadow-sm">
+                          <div className="flex items-center gap-2 mb-3">
+                              <FileText className="h-5 w-5 text-primary"/>
+                              <h4 className="font-semibold text-lg">Video Trailer (Opcional)</h4>
+                          </div>
+                          <Input 
+                            placeholder="URL de YouTube o Vimeo" 
+                            value={videoTrailerUrlInput}
+                            onChange={(e) => setVideoTrailerUrlInput(e.target.value)}
+                            disabled={isSavingSettings}
+                          />
+                           <p className="mt-2 text-xs text-muted-foreground">Un video corto para promocionar tu curso.</p>
+                      </Card>
+                       <Card className="p-4 shadow-sm">
+                          <div className="flex items-center gap-2 mb-3">
+                              <Settings className="h-5 w-5 text-primary"/>
+                              <h4 className="font-semibold text-lg">Estado de Publicación</h4>
+                          </div>
+                            <Select 
+                                onValueChange={(value) => setSelectedStatus(value as CourseStatus)} 
+                                defaultValue={selectedStatus}
+                                disabled={isSavingSettings}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona un estado" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                {courseStatuses.map(status => (
+                                    <SelectItem key={status} value={status}>
+                                    {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+                                    </SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                           <p className="mt-2 text-xs text-muted-foreground">Define si el curso es un borrador o está publicado.</p>
+                      </Card>
+
+                      <div className="flex justify-end pt-4">
+                        <Button onClick={onSaveSettings} disabled={isSavingSettings || isUploadingCover}>
+                          {isSavingSettings ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                          {isSavingSettings ? (isUploadingCover ? 'Subiendo imagen...' : 'Guardando...') : 'Guardar Cambios de Publicación'}
+                        </Button>
                       </div>
-                      <div className="p-8 border-dashed border-2 border-muted-foreground/50 rounded-lg text-center">
-                        <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-lg font-semibold mb-2">Próximamente: Opciones de Publicación</p>
-                        <p className="text-muted-foreground">Aquí podrás cambiar el estado de tu curso (borrador, publicar, etc.).</p>
-                      </div>
-                    </>
+                    </div>
                   ) : (
                     <p className="text-center text-muted-foreground py-8">Completa los pasos anteriores primero.</p>
                   )}
                    <div className="flex justify-between pt-6 mt-4 border-t">
-                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading}>
+                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isSavingSettings}>
                         Anterior
                       </Button>
-                      <Button type="button" onClick={() => router.push(`/dashboard/creator/courses/edit/${createdCourseId}`)} disabled={isLoading || !createdCourseId}>
-                        Finalizar e Ir a Edición Avanzada
+                      <Button type="button" onClick={() => router.push(`/dashboard/creator/courses`)} disabled={isLoading || isSavingSettings || !createdCourseId}>
+                        Finalizar e Ir al Listado
                       </Button>
                     </div>
                 </CardContent>
@@ -480,4 +620,3 @@ export default function NewCoursePage() {
     </div>
   );
 }
-

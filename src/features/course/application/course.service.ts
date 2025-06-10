@@ -1,5 +1,5 @@
 // src/features/course/application/course.service.ts
-import { CourseEntity } from '@/features/course/domain/entities/course.entity';
+import { CourseEntity, type CourseStatus } from '@/features/course/domain/entities/course.entity';
 import type { ICourseRepository } from '@/features/course/domain/repositories/course.repository';
 import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
 import type { UpdateCourseDto } from '@/features/course/infrastructure/dto/update-course.dto';
@@ -52,29 +52,35 @@ export class CourseService {
 
       if (courseEntity.creadorUid !== updaterUid) {
         console.error(`[CourseService] Forbidden: User ${updaterUid} is not the creator of course ${courseId}.`);
-        // In a real app, throw a specific ForbiddenError or handle appropriately
         throw new Error('Forbidden: User is not the creator of the course.'); 
       }
       
-      // Update properties from DTO
-      courseEntity.nombre = dto.nombre;
-      courseEntity.descripcionCorta = dto.descripcionCorta;
-      courseEntity.descripcionLarga = dto.descripcionLarga;
-      courseEntity.precio = dto.precio;
-      courseEntity.tipoAcceso = dto.tipoAcceso;
-      courseEntity.categoria = dto.categoria;
-      courseEntity.duracionEstimada = dto.duracionEstimada;
+      // Update properties from DTO if they are provided
+      const updateData: Partial<Parameters<typeof courseEntity.update>[0]> = {};
+      if (dto.nombre !== undefined) updateData.nombre = dto.nombre;
+      if (dto.descripcionCorta !== undefined) updateData.descripcionCorta = dto.descripcionCorta;
+      if (dto.descripcionLarga !== undefined) updateData.descripcionLarga = dto.descripcionLarga;
+      if (dto.precio !== undefined) updateData.precio = dto.precio;
+      if (dto.tipoAcceso !== undefined) updateData.tipoAcceso = dto.tipoAcceso;
+      if (dto.categoria !== undefined) updateData.categoria = dto.categoria;
+      if (dto.duracionEstimada !== undefined) updateData.duracionEstimada = dto.duracionEstimada;
+      if (dto.imagenPortadaUrl !== undefined) updateData.imagenPortadaUrl = dto.imagenPortadaUrl;
+      if (dto.dataAiHintImagenPortada !== undefined) updateData.dataAiHintImagenPortada = dto.dataAiHintImagenPortada;
+      if (dto.videoTrailerUrl !== undefined) updateData.videoTrailerUrl = dto.videoTrailerUrl;
+      if (dto.estado !== undefined) updateData.estado = dto.estado as CourseStatus; // Cast if necessary
       
-      // Mark as updated (entity method should handle this)
-      courseEntity.update({}); // Pass empty object or specific DTO fields that `update` handles
-
-      await this.courseRepository.save(courseEntity); // save uses set with merge:true
-      console.log(`[CourseService] Course ${courseId} updated successfully by UID: ${updaterUid}`);
+      if (Object.keys(updateData).length > 0) {
+        courseEntity.update(updateData);
+        await this.courseRepository.save(courseEntity);
+        console.log(`[CourseService] Course ${courseId} updated successfully by UID: ${updaterUid} with data:`, updateData);
+      } else {
+        console.log(`[CourseService] No update data provided for course ${courseId}.`);
+      }
+      
       return courseEntity;
 
     } catch (error: any) {
       console.error(`[CourseService] Error updating course ID ${courseId} by UID ${updaterUid}:`, error.message);
-      // Rethrow or handle specific errors
       if (error.message.startsWith('Forbidden:')) {
           throw error;
       }

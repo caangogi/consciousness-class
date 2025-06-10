@@ -13,8 +13,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-// Label removed as FormLabel is used from ui/form
-// import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -84,36 +82,38 @@ export default function StudentDashboardPage() {
   };
 
   async function onSubmit(values: ProfileFormValues) {
-    if (!currentUser) {
-      toast({ title: "Error", description: "Usuario no autenticado.", variant: "destructive" });
+    if (!auth.currentUser) { // Use auth.currentUser directly for this check
+      toast({ title: "Error de Autenticación", description: "Usuario no autenticado. Por favor, inicia sesión de nuevo.", variant: "destructive" });
+      setIsSubmitting(false);
       return;
     }
+    const activeUser = auth.currentUser; // Use this for UID in path
+
     setIsSubmitting(true);
-    let uploadedPhotoURL: string | null = currentUser.photoURL || null;
+    let uploadedPhotoURL: string | null = currentUser?.photoURL || null; // Keep context for initial value
 
     try {
       if (imageFile) {
         setIsUploadingImage(true);
         const originalFileName = imageFile.name;
         const lastDot = originalFileName.lastIndexOf('.');
-        const fileExtension = lastDot > -1 ? originalFileName.substring(lastDot + 1).toLowerCase() : 'png'; // Default to png if no extension
+        const fileExtension = lastDot > -1 ? originalFileName.substring(lastDot + 1).toLowerCase() : 'png';
         
-        // Ensure filename starts with "profile." as per storage rules
         const finalFileNameInStorage = `profile.${fileExtension}`; 
-        const storagePath = `users/${currentUser.uid}/${finalFileNameInStorage}`;
+        const storagePath = `users/${activeUser.uid}/${finalFileNameInStorage}`; // Use activeUser.uid
         
         console.log("--------------------------------------------------");
-        console.log("[StudentDashboard] PRE-UPLOAD DEBUG INFO FOR STORAGE:");
+        console.log("[StudentDashboard] PRE-UPLOAD DEBUG INFO FOR STORAGE (using auth.currentUser.uid for path):");
         console.log(`  Attempting to upload to Storage path: "${storagePath}"`);
+        console.log(`  User UID for path (from auth.currentUser.uid): ${activeUser.uid}`);
         console.log(`  Original file name: "${originalFileName}"`);
         console.log(`  Determined extension (lowercase): ".${fileExtension}"`);
         console.log(`  Final name in storage: "${finalFileNameInStorage}"`);
-        console.log(`  File size: ${imageFile.size} bytes`);
+        console.log(`  File size: ${imageFile.size} bytes (${(imageFile.size / 1024 / 1024).toFixed(2)} MB)`);
         console.log(`  File type (MIME): ${imageFile.type}`);
-        console.log(`  Current user UID (from context): ${currentUser.uid}`);
-        console.log(`  Current user UID (from auth object): ${auth.currentUser?.uid}`);
-        console.log("  Reminder: Check these values against your Firebase Storage rules.");
-        console.log("  Ensure rules are deployed and have propagated (can take a few minutes).");
+        console.log(`  Context user UID (currentUser.uid): ${currentUser?.uid}`); // Log context UID for comparison
+        console.log("  CHECK THESE VALUES AGAINST YOUR FIREBASE STORAGE RULES!");
+        console.log("  Rules can take a few minutes to propagate after deployment.");
         console.log("--------------------------------------------------");
 
         const storageRefInstance = ref(storage, storagePath);
@@ -126,7 +126,7 @@ export default function StudentDashboardPage() {
             console.error("[StudentDashboard] Firebase Storage Upload Error:", uploadError);
             toast({
                 title: "Error al Subir Imagen",
-                description: `Storage: ${uploadError.message || 'Error desconocido.'}. Ver consola.`,
+                description: `Storage: ${uploadError.message || 'Error desconocido.'}. Ver consola para detalles.`,
                 variant: "destructive",
             });
             setIsUploadingImage(false);
@@ -136,11 +136,11 @@ export default function StudentDashboardPage() {
         setIsUploadingImage(false);
       }
       
-      const idToken = await currentUser.getIdToken(true);
+      const idToken = await activeUser.getIdToken(true); // Use activeUser for token
       const updateDto = {
         nombre: values.nombre,
         apellido: values.apellido,
-        photoURL: uploadedPhotoURL, // This will be existing, new, or null
+        photoURL: uploadedPhotoURL,
       };
 
       const response = await fetch('/api/users/update-profile', {
@@ -164,8 +164,7 @@ export default function StudentDashboardPage() {
     } catch (error: any) {
       console.error("Error al actualizar perfil (onSubmit):", error);
       toast({ title: "Error de Actualización", description: error.message || "No se pudo actualizar el perfil.", variant: "destructive" });
-      // Ensure loading states are reset on any error during the submission process
-      setIsUploadingImage(false);
+      setIsUploadingImage(false); // Ensure this is reset on general error too
     } finally {
       setIsSubmitting(false);
     }
@@ -192,7 +191,6 @@ export default function StudentDashboardPage() {
     return 'CC';
   };
 
-
   if (authLoading) {
     return (
       <div className="space-y-8">
@@ -216,7 +214,6 @@ export default function StudentDashboardPage() {
   const referralCode = currentUser.referralCodeGenerated || 'GENERANDO...';
   const successfulReferrals = currentUser.referidosExitosos || 0;
   const rewardsEarned = `$${(currentUser.balanceCredito || 0).toFixed(2)} en créditos`;
-
 
   return (
     <div className="space-y-8">
@@ -405,5 +402,3 @@ export default function StudentDashboardPage() {
   );
 }
 
-
-    

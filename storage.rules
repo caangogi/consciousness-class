@@ -3,13 +3,10 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    match /users/{userId}/{imageName} {
-      allow read: if true;
-      allow write: if request.auth != null &&
-                       request.auth.uid == userId &&
-                       imageName.startsWith('profile.') &&
-                       request.resource.size < (5 * 1024 * 1024) && // Explicitly grouped calculation
-                       request.resource.contentType.matches('image/.*');
+    match /{allPaths=**} {
+      // WARNING: These rules allow anyone to read and write to your storage.
+      // Only for temporary debugging. Revert to secure rules ASAP.
+      allow read, write: if true;
     }
   }
 }

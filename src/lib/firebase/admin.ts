@@ -1,19 +1,23 @@
+
 import admin from 'firebase-admin';
 
 if (!admin.apps.length) {
   try {
+    const serviceAccountString = process.env.FIREBASE_ADMIN_CREDENTIALS_JSON;
+    if (!serviceAccountString) {
+      throw new Error('La variable de entorno FIREBASE_ADMIN_CREDENTIALS_JSON no está definida.');
+    }
+
+    const serviceAccount = JSON.parse(serviceAccountString);
+
     admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // Reemplaza los \\n con \n para que Firebase Admin SDK lo interprete correctamente
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      }),
+      credential: admin.credential.cert(serviceAccount),
     });
-    console.log('Firebase Admin SDK initialized successfully.');
-  } catch (error) {
-    console.error('Firebase Admin SDK initialization error:', error);
+    console.log('Firebase Admin SDK initialized successfully using JSON string.');
+  } catch (error: any) {
+    console.error('Firebase Admin SDK initialization error:', error.message);
     // Considera un manejo de error más robusto en producción
+    // Por ejemplo, podrías lanzar el error para que el build falle si las credenciales no son válidas.
   }
 }
 

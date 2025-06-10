@@ -6,6 +6,7 @@ import type { FirebaseError } from 'firebase-admin';
 
 const COURSES_COLLECTION = 'cursos';
 const MODULES_SUBCOLLECTION = 'modulos';
+const LESSONS_SUBCOLLECTION = 'lecciones';
 
 export class FirebaseModuleRepository implements IModuleRepository {
   private getModulesCollection(courseId: string) {
@@ -13,6 +14,13 @@ export class FirebaseModuleRepository implements IModuleRepository {
       throw new Error('Firebase Admin SDK (adminDb) not initialized.');
     }
     return adminDb.collection(COURSES_COLLECTION).doc(courseId).collection(MODULES_SUBCOLLECTION);
+  }
+
+  private getLessonsCollection(courseId: string, moduleId: string) {
+    if (!adminDb) {
+      throw new Error('Firebase Admin SDK (adminDb) not initialized.');
+    }
+    return this.getModulesCollection(courseId).doc(moduleId).collection(LESSONS_SUBCOLLECTION);
   }
 
   async save(module: ModuleEntity): Promise<void> {
@@ -58,12 +66,45 @@ export class FirebaseModuleRepository implements IModuleRepository {
 
   async delete(courseId: string, moduleId: string): Promise<void> {
     try {
+      const lessonsCollectionRef = this.getLessonsCollection(courseId, moduleId);
+      const lessonsSnapshot = await lessonsCollectionRef.get();
+      
+      const batch = adminDb!.batch(); // adminDb is checked in getModulesCollection
+      lessonsSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      console.log(`[FirebaseModuleRepository] All lessons in module ${moduleId} of course ${courseId} deleted.`);
+
       await this.getModulesCollection(courseId).doc(moduleId).delete();
       console.log(`[FirebaseModuleRepository] Module deleted successfully. Course ID: ${courseId}, Module ID: ${moduleId}`);
     } catch (error: any) {
       const firebaseError = error as FirebaseError;
       console.error(`[FirebaseModuleRepository] Error deleting module (Course ID: ${courseId}, Module ID: ${moduleId}):`, firebaseError.message);
       throw new Error(`Firestore delete operation for module failed: ${firebaseError.message}`);
+    }
+  }
+
+  async update(courseId: string, moduleId: string, data: Partial<Omit<ModuleProperties, 'id' | 'courseId' | 'fechaCreacion' | 'ordenLecciones'>>): Promise<ModuleEntity | null> {
+    try {
+      const moduleRef = this.getModulesCollection(courseId).doc(moduleId);
+      const moduleSnap = await moduleRef.get();
+      if (!moduleSnap.exists) {
+        console.warn(`[FirebaseModuleRepository] Module with ID ${moduleId} not found in course ${courseId} for update.`);
+        return null;
+      }
+      const updateData = { ...data, fechaActualizacion: new Date().toISOString() };
+      await moduleRef.update(updateData);
+      const updatedDocSnap = await moduleRef.get();
+      if (!updatedDocSnap.exists) {
+        return null;
+      }
+      console.log(`[FirebaseModuleRepository] Module ${moduleId} updated successfully in course ${courseId}.`);
+      return new ModuleEntity(updatedDocSnap.data() as ModuleProperties);
+    } catch (error: any) {
+      const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseModuleRepository] Error updating module (ID: ${moduleId}):`, firebaseError.message);
+      throw new Error(`Firestore update operation for module failed: ${firebaseError.message}`);
     }
   }
 }

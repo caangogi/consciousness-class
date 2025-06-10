@@ -14,7 +14,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Badge } from '@/components/ui/badge'; // Added import
+import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
@@ -53,7 +54,6 @@ const lessonSchema = z.object({
   lessonContentType: z.enum(['video', 'documento_pdf', 'texto_rico', 'quiz', 'audio'], { required_error: "Debes seleccionar un tipo de contenido."}),
   lessonDuration: z.string().min(1, "La duración estimada es requerida."),
   lessonIsPreview: z.boolean().default(false),
-  // TODO: Add lessonContentUrl and lessonContentText later if needed for direct input here
 });
 type LessonFormValues = z.infer<typeof lessonSchema>;
 
@@ -79,6 +79,8 @@ export default function NewCoursePage() {
   const [modules, setModules] = useState<ModuleProperties[]>([]);
   const [isModuleLoading, setIsModuleLoading] = useState(false);
   const [expandedModuleId, setExpandedModuleId] = useState<string | null>(null);
+  const [moduleToDelete, setModuleToDelete] = useState<ModuleProperties | null>(null);
+  const [showDeleteModuleDialog, setShowDeleteModuleDialog] = useState(false);
 
 
   // Lessons state
@@ -99,7 +101,7 @@ export default function NewCoursePage() {
       descripcionCorta: '',
       descripcionLarga: '',
       categoria: '',
-      tipoAcceso: undefined, // For Select, undefined will show placeholder
+      tipoAcceso: undefined,
       precio: 0,
       duracionEstimada: '',
     },
@@ -110,7 +112,6 @@ export default function NewCoursePage() {
     defaultValues: { moduleName: '' }
   });
   
-  // One form instance for all lesson forms, dynamically reset for each module
   const lessonForm = useForm<LessonFormValues>({
     resolver: zodResolver(lessonSchema),
     defaultValues: {
@@ -130,7 +131,7 @@ export default function NewCoursePage() {
         descripcionLarga: courseDetails.descripcionLarga || '',
         categoria: courseDetails.categoria || '',
         tipoAcceso: courseDetails.tipoAcceso,
-        precio: courseDetails.precio ?? 0, // Use ?? to handle null or undefined from DB
+        precio: courseDetails.precio ?? 0,
         duracionEstimada: courseDetails.duracionEstimada || '',
       });
       setCoverImagePreviewUrl(courseDetails.imagenPortadaUrl || null);
@@ -174,7 +175,7 @@ export default function NewCoursePage() {
       setLessonsByModule(prev => ({ ...prev, [moduleId]: data.lessons || [] }));
     } catch (error: any) {
       toast({ title: `Error al Cargar Lecciones (Módulo ${moduleId})`, description: error.message, variant: "destructive" });
-      setLessonsByModule(prev => ({ ...prev, [moduleId]: [] })); // Reset on error
+      setLessonsByModule(prev => ({ ...prev, [moduleId]: [] }));
     } finally {
       setIsLessonLoading(prev => ({ ...prev, [moduleId]: false }));
     }
@@ -185,7 +186,7 @@ export default function NewCoursePage() {
       setExpandedModuleId(null);
     } else {
       setExpandedModuleId(moduleId);
-      lessonForm.reset({ // Reset lesson form with defaults when opening a new module
+      lessonForm.reset({ 
         lessonName: '',
         lessonContentType: undefined,
         lessonDuration: '',
@@ -207,10 +208,8 @@ export default function NewCoursePage() {
     try {
       const idToken = await auth.currentUser.getIdToken(true);
       const endpoint = createdCourseId ? `/api/courses/update/${createdCourseId}` : '/api/courses/create';
-      const method = "POST"; // Both create and update use POST for simplicity here, differentiated by endpoint
+      const method = "POST";
       
-      // Ensure tipoAcceso has a value, as it's required by the DTO and schema.
-      // The form's zod schema already makes tipoAcceso required.
       const dto: CreateCourseDto | UpdateCourseDto = { ...values, tipoAcceso: values.tipoAcceso as CourseAccessType };
       
       const response = await fetch(endpoint, {
@@ -276,7 +275,6 @@ export default function NewCoursePage() {
       toast({ title: "Error", description: "Curso no creado o usuario no autenticado.", variant: "destructive" });
       return;
     }
-    // Ensure lessonContentType is selected
     if (!values.lessonContentType) {
         toast({ title: "Campo Requerido", description: "Por favor, selecciona un tipo de contenido para la lección.", variant: "destructive" });
         lessonForm.setError("lessonContentType", { type: "manual", message: "Debes seleccionar un tipo de contenido." });
@@ -288,7 +286,7 @@ export default function NewCoursePage() {
       const idToken = await auth.currentUser.getIdToken(true);
       const dto: CreateLessonDto = {
         nombre: values.lessonName,
-        contenidoPrincipal: { tipo: values.lessonContentType as LessonContentType }, // Add URL/text later
+        contenidoPrincipal: { tipo: values.lessonContentType as LessonContentType },
         duracionEstimada: values.lessonDuration,
         esVistaPrevia: values.lessonIsPreview,
       };
@@ -302,7 +300,7 @@ export default function NewCoursePage() {
         throw new Error(errorData.details || errorData.error || "Error al crear la lección.");
       }
       toast({title: "Lección Creada", description: `Lección "${values.lessonName}" añadida al módulo.`});
-      lessonForm.reset({ // Reset lesson form with defaults after successful submission
+      lessonForm.reset({ 
         lessonName: '',
         lessonContentType: undefined,
         lessonDuration: '',
@@ -316,16 +314,45 @@ export default function NewCoursePage() {
     }
   };
 
+  const handleDeleteModule = async () => {
+    if (!moduleToDelete || !createdCourseId || !auth.currentUser) {
+      toast({ title: "Error", description: "No se pudo determinar el módulo a eliminar o falta información del curso/usuario.", variant: "destructive" });
+      setShowDeleteModuleDialog(false);
+      return;
+    }
+    setIsModuleLoading(true);
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+      const response = await fetch(`/api/courses/${createdCourseId}/modules/${moduleToDelete.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${idToken}`},
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || "Error al eliminar el módulo.");
+      }
+      toast({ title: "Módulo Eliminado", description: `El módulo "${moduleToDelete.nombre}" ha sido eliminado.` });
+      setModuleToDelete(null);
+      await fetchModules(createdCourseId); 
+      if (expandedModuleId === moduleToDelete.id) { // Collapse if the deleted module was open
+        setExpandedModuleId(null);
+      }
+    } catch (error: any) {
+      toast({ title: "Error al Eliminar Módulo", description: error.message, variant: "destructive" });
+    } finally {
+      setIsModuleLoading(false);
+      setShowDeleteModuleDialog(false);
+    }
+  };
+
 
   const handleCoverImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file size (e.g., max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({ title: "Archivo Demasiado Grande", description: "La imagen de portada no debe exceder los 5MB.", variant: "destructive"});
         return;
       }
-      // Validate file type (optional, browser already does with `accept` but good for UX)
       if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
           toast({ title: "Tipo de Archivo Inválido", description: "Por favor, sube un archivo de imagen (PNG, JPG, WEBP, GIF).", variant: "destructive"});
           return;
@@ -338,7 +365,6 @@ export default function NewCoursePage() {
       reader.readAsDataURL(file);
     } else {
       setCoverImageFile(null);
-      // If no file is selected, revert to existing course image or null
       setCoverImagePreviewUrl(courseDetails?.imagenPortadaUrl || null);
     }
   };
@@ -349,7 +375,7 @@ export default function NewCoursePage() {
       return;
     }
     setIsSavingSettings(true);
-    setIsUploadingCover(!!coverImageFile); // Set uploading state if there's a new file
+    setIsUploadingCover(!!coverImageFile);
 
     let finalImageUrl = courseDetails?.imagenPortadaUrl || null;
 
@@ -357,27 +383,21 @@ export default function NewCoursePage() {
       const idToken = await auth.currentUser.getIdToken(true);
 
       if (coverImageFile) {
-        // Delete old image if it exists and is different (optional, good for storage management)
-        // This part requires knowing the old image path, which might need careful handling if URLs change format
-        // For now, we just upload the new one. A more robust solution would delete the old one.
-        // const oldImageStoragePath = courseDetails?.imagenPortadaUrl ? ... extract path ... : null;
-        // if (oldImageStoragePath && oldImageStoragePath !== newPath) await deleteObject(ref(storage, oldImageStoragePath));
-        
         const fileExtension = coverImageFile.name.split('.').pop()?.toLowerCase() || 'png';
         const storagePath = `cursos/${createdCourseId}/portada/cover.${fileExtension}`;
         const imageRef = ref(storage, storagePath);
         
         await uploadBytes(imageRef, coverImageFile);
         finalImageUrl = await getDownloadURL(imageRef);
-        setCoverImagePreviewUrl(finalImageUrl); // Update preview with the final URL from storage
-        setCoverImageFile(null); // Clear the file state after successful upload
+        setCoverImagePreviewUrl(finalImageUrl); 
+        setCoverImageFile(null); 
         toast({title: "Imagen Subida", description: "La imagen de portada se ha subido."});
       }
       setIsUploadingCover(false);
 
       const dto: UpdateCourseDto = {
         imagenPortadaUrl: finalImageUrl,
-        dataAiHintImagenPortada: finalImageUrl ? (courseDetails?.nombre.substring(0,20) || 'course cover') : null, // Basic AI hint
+        dataAiHintImagenPortada: finalImageUrl ? (courseDetails?.nombre.substring(0,20) || 'course cover') : null,
         videoTrailerUrl: videoTrailerUrlInput || null,
         estado: selectedStatus,
       };
@@ -394,7 +414,7 @@ export default function NewCoursePage() {
       }
       const responseData = await response.json();
       if(responseData.course) {
-        setCourseDetails(responseData.course); // Update local course details
+        setCourseDetails(responseData.course); 
       }
       toast({ title: "Configuración Guardada", description: "Los ajustes de publicación se han actualizado."});
 
@@ -411,11 +431,9 @@ export default function NewCoursePage() {
     let baseClass = "flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-inner";
     if (tabValue === currentStep) return baseClass;
     
-    // Enable previous tabs if current step is valid for them
     if (currentStep === "structure" && tabValue === "info") return baseClass;
     if (currentStep === "settings" && (tabValue === "info" || tabValue === "structure")) return baseClass;
 
-    // Disable future tabs if current step doesn't allow them yet
     if (tabValue === "structure" && !createdCourseId) return `${baseClass} opacity-50 cursor-not-allowed`;
     if (tabValue === "settings" && !createdCourseId) return `${baseClass} opacity-50 cursor-not-allowed`;
     
@@ -442,7 +460,6 @@ export default function NewCoursePage() {
         </CardHeader>
         <CardContent>
           <Tabs value={currentStep} onValueChange={(newStep) => {
-            // Allow navigation to previous completed steps or the current step
             if (newStep === "info" || 
                 (newStep === "structure" && createdCourseId) || 
                 (newStep === "settings" && createdCourseId)) {
@@ -520,9 +537,21 @@ export default function NewCoursePage() {
                                 <AccordionTrigger className="hover:no-underline bg-secondary/50 px-4 py-3 rounded-md hover:bg-secondary/70 data-[state=open]:rounded-b-none">
                                   <div className="flex justify-between items-center w-full">
                                     <span className="font-medium text-left">{module.nombre}</span>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
                                         <span className="text-xs text-muted-foreground">{lessonsByModule[module.id]?.length || 0} lecciones</span>
-                                        {/* TODO: Add Edit/Delete module buttons here. Maybe a DropdownMenu for actions */}
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); /* TODO: Implement Edit Module */ toast({title: "Próximamente", description: "Edición de módulo aún no implementada."}) }}>
+                                            <Edit className="h-3.5 w-3.5"/>
+                                            <span className="sr-only">Editar módulo</span>
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10 opacity-60 hover:opacity-100" 
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                setModuleToDelete(module); 
+                                                setShowDeleteModuleDialog(true); 
+                                            }}>
+                                            <Trash2 className="h-3.5 w-3.5"/>
+                                            <span className="sr-only">Eliminar módulo</span>
+                                        </Button>
                                     </div>
                                   </div>
                                 </AccordionTrigger>
@@ -558,8 +587,16 @@ export default function NewCoursePage() {
                                                     <span className="font-medium">{lesson.nombre}</span> <span className="text-xs text-muted-foreground">({lesson.contenidoPrincipal.tipo.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())})</span>
                                                     {lesson.esVistaPrevia && <Badge variant="outline" className="ml-2 text-xs">Vista Previa</Badge>}
                                                 </div>
-                                                {/* TODO: Edit/Delete lesson buttons */}
-                                                {/* <div> <Button variant="ghost" size="icon" className="h-7 w-7"><Edit className="h-3.5 w-3.5"/></Button> <Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="h-3.5 w-3.5"/></Button></div> */}
+                                                <div className="flex items-center gap-0.5">
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100" onClick={() => toast({title: "Próximamente", description: "Edición de lección aún no implementada."})}>
+                                                        <Edit className="h-3 w-3"/>
+                                                        <span className="sr-only">Editar lección</span>
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 opacity-50 hover:opacity-100" onClick={() => toast({title: "Próximamente", description: "Eliminación de lección aún no implementada."})}>
+                                                        <Trash2 className="h-3 w-3"/>
+                                                        <span className="sr-only">Eliminar lección</span>
+                                                    </Button>
+                                                </div>
                                               </li>
                                             ))}
                                           </ul>
@@ -642,7 +679,7 @@ export default function NewCoursePage() {
                           </div>
                             <Select 
                                 onValueChange={(value) => setSelectedStatus(value as CourseStatus)} 
-                                value={selectedStatus} // Use value here for controlled component
+                                value={selectedStatus}
                                 disabled={isSavingSettings}
                             >
                                 <SelectTrigger>
@@ -675,8 +712,6 @@ export default function NewCoursePage() {
                          type="button" 
                          onClick={() => {
                            if (createdCourseId) {
-                             // TODO: Decide if this should go to an edit page or a general courses list
-                             // For now, general list:
                              router.push(`/dashboard/creator/courses`); 
                            } else {
                              router.push('/dashboard/creator/courses');
@@ -693,6 +728,23 @@ export default function NewCoursePage() {
           </Tabs>
         </CardContent>
       </Card>
+      <AlertDialog open={showDeleteModuleDialog} onOpenChange={setShowDeleteModuleDialog}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro de que quieres eliminar este módulo?</AlertDialogTitle>
+            <AlertDialogDescription>
+                Esta acción no se puede deshacer. Se eliminará el módulo <span className="font-semibold">"{moduleToDelete?.nombre}"</span> y todas las lecciones que contiene.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setModuleToDelete(null)} disabled={isModuleLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteModule} disabled={isModuleLoading} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                {isModuleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Eliminar Módulo
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+     </AlertDialog>
     </div>
   );
 }

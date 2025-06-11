@@ -1,25 +1,21 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Star, Users, Clock } from 'lucide-react';
+import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 
-export interface Course {
-  id: string;
-  nombre: string;
-  descripcionCorta: string;
-  precio: number;
-  imagenPortada: string;
-  dataAiHint?: string;
-  creadorNombre?: string; // Optional: display creator name
-  duracionEstimada?: string;
-  rating?: number;
-  numEstudiantes?: number;
-  categoria?: string;
+
+// Usamos CourseProperties directamente ya que es lo que vendrá de la API (plain object)
+export interface CourseCardData extends Pick<CourseProperties, 
+  'id' | 'nombre' | 'descripcionCorta' | 'precio' | 'imagenPortadaUrl' | 'dataAiHintImagenPortada' | 'categoria' | 'duracionEstimada' | 'ratingPromedio' | 'totalEstudiantes'
+> {
+  creadorNombre?: string; // Mantenemos esto si queremos mostrarlo, aunque no está en CourseProperties directamente
 }
 
 interface CourseCardProps {
-  course: Course;
+  course: CourseCardData;
 }
 
 export function CourseCard({ course }: CourseCardProps) {
@@ -28,12 +24,12 @@ export function CourseCard({ course }: CourseCardProps) {
       <CardHeader className="p-0 relative">
         <Link href={`/courses/${course.id}`} aria-label={`Ver detalles del curso ${course.nombre}`}>
           <Image
-            src={course.imagenPortada}
+            src={course.imagenPortadaUrl || 'https://placehold.co/600x400.png'}
             alt={`Portada del curso ${course.nombre}`}
             width={600}
             height={400}
             className="aspect-[16/9] w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            data-ai-hint={course.dataAiHint || 'course cover'}
+            data-ai-hint={course.dataAiHintImagenPortada || 'course cover'}
           />
         </Link>
         {course.categoria && (
@@ -63,16 +59,16 @@ export function CourseCard({ course }: CourseCardProps) {
         </div>
 
         <div className="flex items-center justify-between text-sm text-muted-foreground">
-          {course.rating !== undefined && (
+          {course.ratingPromedio !== undefined && (
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 text-accent fill-accent" />
-              <span className="font-semibold text-foreground">{course.rating.toFixed(1)}</span>
+              <span className="font-semibold text-foreground">{course.ratingPromedio.toFixed(1)}</span>
             </div>
           )}
-          {course.numEstudiantes !== undefined && (
+          {course.totalEstudiantes !== undefined && (
             <div className="flex items-center gap-1">
               <Users className="h-4 w-4" />
-              <span>{course.numEstudiantes.toLocaleString()} estudiantes</span>
+              <span>{course.totalEstudiantes.toLocaleString()} estudiantes</span>
             </div>
           )}
         </div>
@@ -86,3 +82,5 @@ export function CourseCard({ course }: CourseCardProps) {
     </Card>
   );
 }
+
+    

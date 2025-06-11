@@ -60,8 +60,7 @@ export class LessonService {
       await this.lessonRepository.save(lessonEntity);
       
       module.ordenLecciones.push(lessonEntity.id);
-      // Potentially sort module.ordenLecciones here if a strict numerical order based on lessonEntity.orden is always needed
-      module.ordenLecciones = Array.from(new Set(module.ordenLecciones)); // Ensure uniqueness
+      module.ordenLecciones = Array.from(new Set(module.ordenLecciones)); 
       await this.moduleRepository.save(module);
 
       console.log(`[LessonService] Lesson created successfully for Module ID: ${moduleId}, Lesson ID: ${lessonEntity.id}`);
@@ -74,10 +73,23 @@ export class LessonService {
 
   async getLessonsByModuleId(courseId: string, moduleId: string, requesterUid?: string): Promise<LessonEntity[]> {
     try {
-        // If requesterUid is provided, we could check if they are creator or enrolled.
-        // For now, we assume access control is handled upstream or lessons are publicly viewable if module is accessible.
-        await this.getModuleEnsured(courseId, moduleId); // Ensures module exists in course
-        return await this.lessonRepository.findAllByModuleId(courseId, moduleId);
+        const moduleEntity = await this.getModuleEnsured(courseId, moduleId); 
+        let lessons = await this.lessonRepository.findAllByModuleId(courseId, moduleId);
+
+        if (moduleEntity.ordenLecciones && moduleEntity.ordenLecciones.length > 0) {
+            const orderMap = new Map(moduleEntity.ordenLecciones.map((id, index) => [id, index]));
+            lessons.sort((a, b) => {
+                const orderA = orderMap.get(a.id);
+                const orderB = orderMap.get(b.id);
+                if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
+                if (orderA !== undefined) return -1;
+                if (orderB !== undefined) return 1;
+                return (a.orden ?? 0) - (b.orden ?? 0); 
+            });
+        } else {
+            lessons.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+        }
+        return lessons;
     } catch (error: any) {
         console.error(`[LessonService] Error fetching lessons for Module ID ${moduleId}:`, error.message);
         throw new Error(`Failed to fetch lessons: ${error.message}`);
@@ -87,22 +99,19 @@ export class LessonService {
   async updateLesson(courseId: string, moduleId: string, lessonId: string, dto: UpdateLessonDto, updaterUid: string): Promise<LessonEntity | null> {
     try {
       await this.verifyCourseCreator(courseId, updaterUid);
-      await this.getModuleEnsured(courseId, moduleId); // Ensures module and course context is correct
+      await this.getModuleEnsured(courseId, moduleId); 
 
       const lessonToUpdate = await this.lessonRepository.findById(courseId, moduleId, lessonId);
       if (!lessonToUpdate) {
         throw new Error(`Lesson with ID ${lessonId} not found in module ${moduleId}.`);
       }
 
-      // Apply updates from DTO
       const updateData: Partial<Parameters<typeof lessonToUpdate.update>[0]> = {};
       if (dto.nombre !== undefined) updateData.nombre = dto.nombre;
       if (dto.descripcionBreve !== undefined) updateData.descripcionBreve = dto.descripcionBreve;
       if (dto.contenidoPrincipal !== undefined) updateData.contenidoPrincipal = {...lessonToUpdate.contenidoPrincipal, ...dto.contenidoPrincipal};
       if (dto.duracionEstimada !== undefined) updateData.duracionEstimada = dto.duracionEstimada;
       if (dto.esVistaPrevia !== undefined) updateData.esVistaPrevia = dto.esVistaPrevia;
-      // 'orden' is typically handled by a reorder service, not direct update here.
-      // 'materialesAdicionales' would also be handled separately or merged carefully.
       
       if (Object.keys(updateData).length === 0) {
         console.warn(`[LessonService] No update data provided for lesson ${lessonId}.`);
@@ -132,7 +141,6 @@ export class LessonService {
 
       await this.lessonRepository.delete(courseId, moduleId, lessonId);
 
-      // Update module's lesson order
       module.ordenLecciones = module.ordenLecciones.filter(id => id !== lessonId);
       await this.moduleRepository.save(module);
       
@@ -143,3 +151,5 @@ export class LessonService {
     }
   }
 }
+
+    

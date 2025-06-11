@@ -1,3 +1,4 @@
+
 // src/features/course/application/course.service.ts
 import { CourseEntity, type CourseStatus } from '@/features/course/domain/entities/course.entity';
 import type { ICourseRepository } from '@/features/course/domain/repositories/course.repository';
@@ -39,6 +40,15 @@ export class CourseService {
     } catch (error: any) {
       console.error('[CourseService] Error fetching courses for creator UID ' + creatorUid + ':', error.message);
       throw new Error('Failed to fetch courses by creator: ' + error.message);
+    }
+  }
+
+  async getAllPublicCourses(): Promise<CourseEntity[]> {
+    try {
+      return await this.courseRepository.findAllPublic();
+    } catch (error: any) {
+      console.error('[CourseService] Error fetching all public courses:', error.message);
+      throw new Error('Failed to fetch public courses: ' + error.message);
     }
   }
 
@@ -116,3 +126,5 @@ export class CourseService {
     }
   }
 }
+
+    

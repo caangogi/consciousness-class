@@ -55,4 +55,23 @@ export class FirebaseCourseRepository implements ICourseRepository {
       throw new Error(`Firestore findAllByCreator operation for course failed: ${firebaseError.message}`);
     }
   }
+
+  async findAllPublic(): Promise<CourseEntity[]> {
+    try {
+      const snapshot = await this.coursesCollection
+        .where('estado', '==', 'publicado')
+        .orderBy('fechaPublicacion', 'desc') // Order by most recently published
+        .get();
+      if (snapshot.empty) {
+        return [];
+      }
+      return snapshot.docs.map(doc => new CourseEntity(doc.data() as CourseProperties));
+    } catch (error: any) {
+      const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseCourseRepository] Error finding all public courses:`, firebaseError.message);
+      throw new Error(`Firestore findAllPublic operation for course failed: ${firebaseError.message}`);
+    }
+  }
 }
+
+    

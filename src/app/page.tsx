@@ -3,8 +3,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap } from 'lucide-react';
+import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap, Award, Users as UsersIcon, Clock } from 'lucide-react'; // Added Award, UsersIcon, Clock
 import { motion } from 'framer-motion';
+import { CourseCard, type CourseCardData } from '@/components/CourseCard'; // Import CourseCard
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -48,6 +50,95 @@ const partnerLogos = [
   { name: 'NextGen Skills', src: 'https://placehold.co/100x40/cbd5e1/475569?text=NextGen', dataAiHint: 'skills logo' },
 ];
 
+const featuredCoursesData: CourseCardData[] = [
+  {
+    id: 'course-1',
+    nombre: 'Desarrollo Web Moderno con React y Next.js',
+    descripcionCorta: 'Aprende a construir aplicaciones web rápidas y escalables con las tecnologías más demandadas.',
+    precio: 79.99,
+    imagenPortadaUrl: 'https://placehold.co/600x400.png',
+    dataAiHintImagenPortada: 'web development react',
+    categoria: 'Desarrollo Web',
+    duracionEstimada: '40 horas',
+    ratingPromedio: 4.9,
+    totalEstudiantes: 1250,
+    creadorNombre: 'Carlos Estevez',
+  },
+  {
+    id: 'course-2',
+    nombre: 'Mindfulness y Reducción de Estrés (MBSR)',
+    descripcionCorta: 'Descubre técnicas de mindfulness para mejorar tu bienestar y manejar el estrés diario.',
+    precio: 49.00,
+    imagenPortadaUrl: 'https://placehold.co/600x400.png',
+    dataAiHintImagenPortada: 'mindfulness meditation',
+    categoria: 'Bienestar',
+    duracionEstimada: '8 semanas',
+    ratingPromedio: 4.8,
+    totalEstudiantes: 870,
+    creadorNombre: 'Elena García',
+  },
+  {
+    id: 'course-3',
+    nombre: 'Introducción a la Inteligencia Artificial',
+    descripcionCorta: 'Explora los fundamentos de la IA y sus aplicaciones prácticas en el mundo real.',
+    precio: 99.50,
+    imagenPortadaUrl: 'https://placehold.co/600x400.png',
+    dataAiHintImagenPortada: 'artificial intelligence',
+    categoria: 'Tecnología',
+    duracionEstimada: '30 horas',
+    ratingPromedio: 4.7,
+    totalEstudiantes: 920,
+    creadorNombre: 'Dr. Alan Turing Jr.',
+  },
+];
+
+const keyBenefits = [
+  {
+    icon: Zap,
+    title: "Aprende a Tu Ritmo",
+    description: "Accede a los cursos cuando quieras y donde quieras, adaptando el aprendizaje a tu horario.",
+    dataAiHint: "flexible learning icon"
+  },
+  {
+    icon: UsersIcon,
+    title: "Instructores Expertos",
+    description: "Contenido creado y enseñado por profesionales con experiencia real en sus campos.",
+    dataAiHint: "expert teacher icon"
+  },
+  {
+    icon: MessageSquare,
+    title: "Comunidad Vibrante",
+    description: "Conecta, colabora y crece junto a otros estudiantes y creators apasionados.",
+    dataAiHint: "community chat icon"
+  },
+  {
+    icon: Award,
+    title: "Certificación Profesional",
+    description: "Obtén certificados al completar tus cursos y valida tus nuevas habilidades.",
+    dataAiHint: "certificate award icon"
+  }
+];
+
+const testimonials = [
+  {
+    id: 't1',
+    name: 'Laura Fernández',
+    role: 'Desarrolladora Web',
+    avatarUrl: 'https://placehold.co/80x80.png',
+    dataAiHint: 'woman portrait',
+    quote: "MentorBloom me ayudó a actualizar mis habilidades en React de una forma muy práctica. ¡Los cursos son de alta calidad!"
+  },
+  {
+    id: 't2',
+    name: 'Marcos Giménez',
+    role: 'Emprendedor',
+    avatarUrl: 'https://placehold.co/80x80.png',
+    dataAiHint: 'man portrait',
+    quote: "La flexibilidad de la plataforma y la calidad de los instructores han sido clave para mi desarrollo profesional."
+  }
+];
+
+
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
@@ -58,7 +149,6 @@ export default function HomePage() {
         initial="hidden"
         animate="visible"
       >
-        {/* Background elements - using placeholders and simple shapes */}
         <motion.div 
           className="absolute top-1/4 left-[10%] md:left-[15%] text-slate-200"
           variants={floatingItemVariants(0.1)}
@@ -162,8 +252,157 @@ export default function HomePage() {
         </div>
       </motion.section>
 
-      {/* Partner Logos Section */}
-      <section className="py-12 md:py-16 bg-secondary/30">
+      {/* Featured Courses Section */}
+      <motion.section 
+        className="py-16 md:py-24 bg-secondary/30"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="container mx-auto px-4 md:px-6">
+          <motion.h2 
+            className="font-headline text-3xl md:text-4xl font-bold text-center mb-4"
+            variants={itemVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.5 }}
+          >
+            Cursos Destacados para <span className="text-primary">Impulsar Tu Crecimiento</span>
+          </motion.h2>
+          <motion.p 
+            className="text-center text-lg text-muted-foreground max-w-xl mx-auto mb-12"
+            variants={itemVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.5 }}
+          >
+            Seleccionados por nuestros expertos para ofrecerte el mejor contenido y transformar tus habilidades.
+          </motion.p>
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
+          >
+            {featuredCoursesData.map((course, index) => (
+              <motion.div key={course.id} variants={itemVariants} className="flex">
+                <CourseCard course={course} />
+              </motion.div>
+            ))}
+          </motion.div>
+          <motion.div 
+            className="text-center mt-12"
+            initial={{ opacity:0, y: 20 }}
+            whileInView={{ opacity:1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <Button size="lg" asChild className="rounded-full px-8 py-6 text-base shadow-md hover:shadow-lg transition-shadow">
+              <Link href="/courses">Ver Todos los Cursos <ArrowRight className="ml-2 h-5 w-5" /></Link>
+            </Button>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* Key Benefits Section */}
+      <motion.section 
+        className="py-16 md:py-24"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="container mx-auto px-4 md:px-6">
+          <motion.h2 
+            className="font-headline text-3xl md:text-4xl font-bold text-center mb-4"
+            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
+          >
+            Descubre lo que <span className="text-primary">MentorBloom</span> Te Ofrece
+          </motion.h2>
+          <motion.p 
+            className="text-center text-lg text-muted-foreground max-w-xl mx-auto mb-16"
+            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
+          >
+            Hemos diseñado nuestra plataforma pensando en tus necesidades de aprendizaje y crecimiento.
+          </motion.p>
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
+            variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }}
+          >
+            {keyBenefits.map((benefit, index) => (
+              <motion.div 
+                key={benefit.title} 
+                variants={itemVariants}
+                className="flex flex-col items-center text-center p-6 bg-card rounded-xl shadow-soft-xl hover:shadow-soft-2xl transition-shadow duration-300"
+              >
+                <div className="p-4 bg-primary/10 rounded-full mb-5">
+                  <benefit.icon className="h-8 w-8 text-primary" data-ai-hint={benefit.dataAiHint} />
+                </div>
+                <h3 className="text-xl font-headline font-semibold mb-2">{benefit.title}</h3>
+                <p className="text-sm text-muted-foreground">{benefit.description}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* Testimonials Section */}
+      <motion.section 
+        className="py-16 md:py-24 bg-secondary/30"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="container mx-auto px-4 md:px-6">
+          <motion.h2 
+            className="font-headline text-3xl md:text-4xl font-bold text-center mb-4"
+            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
+          >
+            Lo que Dicen <span className="text-primary">Nuestros Estudiantes</span>
+          </motion.h2>
+          <motion.p 
+            className="text-center text-lg text-muted-foreground max-w-xl mx-auto mb-16"
+            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
+          >
+            Experiencias reales de personas que están transformando sus vidas con MentorBloom.
+          </motion.p>
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto"
+            variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }}
+          >
+            {testimonials.map((testimonial) => (
+              <motion.div 
+                key={testimonial.id}
+                variants={itemVariants}
+                className="bg-card p-8 rounded-xl shadow-soft-xl"
+              >
+                <p className="text-muted-foreground italic mb-6 relative">
+                  <span className="text-4xl text-primary/50 absolute -top-2 -left-4 font-serif">“</span>
+                  {testimonial.quote}
+                  <span className="text-4xl text-primary/50 absolute -bottom-6 -right-0 font-serif">”</span>
+                </p>
+                <div className="flex items-center">
+                  <Avatar className="h-12 w-12 mr-4">
+                    <AvatarImage src={testimonial.avatarUrl} alt={testimonial.name} data-ai-hint={testimonial.dataAiHint} />
+                    <AvatarFallback>{testimonial.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold font-headline">{testimonial.name}</p>
+                    <p className="text-sm text-primary">{testimonial.role}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </motion.section>
+
+
+      {/* Partner Logos Section - Kept from previous version if desired */}
+      <section className="py-12 md:py-16">
         <div className="container mx-auto px-4 md:px-6">
           <h3 className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-8">
             Con la confianza de educadores y aprendices
@@ -182,20 +421,50 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Why Choose Us Section (Simplified) - To be expanded or replaced by Courses Section */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4 md:px-6">
-          <h2 className="font-headline text-3xl md:text-4xl font-bold text-center mb-4">Comienza tu Viaje de Aprendizaje</h2>
-          <p className="text-center text-lg text-muted-foreground max-w-xl mx-auto mb-12">
-            MentorBloom te ofrece las herramientas y la comunidad para crecer personal y profesionalmente.
-          </p>
-           <div className="text-center">
-             <Button size="lg" asChild className="rounded-full px-10 py-7 text-lg shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105 bg-gradient-to-r from-accent to-orange-400 hover:from-accent/90 hover:to-orange-500 text-accent-foreground">
-                <Link href="/courses">Ver Cursos Populares</Link>
+       {/* Final CTA Section */}
+      <motion.section 
+        className="py-20 md:py-32 bg-gradient-to-br from-primary/80 to-blue-500/80 text-primary-foreground"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 0.7 }}
+      >
+        <div className="container mx-auto px-4 md:px-6 text-center relative">
+           <motion.div 
+            className="absolute -top-16 left-1/2 -translate-x-1/2  w-32 h-32 md:w-40 md:h-40 opacity-20"
+            animate={{ rotate: 360, transition: { duration: 20, repeat: Infinity, ease: "linear" } }}
+          >
+            <Image src="https://placehold.co/200x200/ffffff/ffffff.png?text=" alt="Decorative element" width={160} height={160} data-ai-hint="white swirl" />
+          </motion.div>
+          <motion.h2 
+            className="font-headline text-3xl md:text-5xl font-bold mb-6"
+            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
+          >
+            ¿Listo para Iniciar tu Viaje de Aprendizaje?
+          </motion.h2>
+          <motion.p 
+            className="text-lg md:text-xl max-w-xl mx-auto mb-10 opacity-90"
+            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
+          >
+            Únete a miles de estudiantes y creators que están alcanzando sus metas con MentorBloom.
+          </motion.p>
+          <motion.div 
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}
+          >
+            <motion.div variants={itemVariants}>
+              <Button size="lg" asChild className="rounded-full px-8 py-6 text-base bg-background text-primary hover:bg-background/90 shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105">
+                <Link href="/signup">Comenzar Gratis Ahora</Link>
               </Button>
-           </div>
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <Button size="lg" variant="outline" asChild className="rounded-full px-8 py-6 text-base border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105">
+                <Link href="/courses">Explorar Cursos</Link>
+              </Button>
+            </motion.div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 }

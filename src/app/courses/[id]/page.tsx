@@ -1,103 +1,158 @@
+
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
+import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
+import type { LessonProperties } from '@/features/course/domain/entities/lesson.entity';
 
-// Placeholder data for a single course
-const course = {
-  id: '1',
-  nombre: 'Desarrollo Web Avanzado con Next.js y GraphQL',
-  descripcionCorta: 'Construye APIs robustas y aplicaciones full-stack interactivas.',
-  descripcionLarga: `
-    <p>Sumérgete en el mundo del desarrollo web moderno con este curso completo. Aprenderás a construir aplicaciones full-stack de alto rendimiento utilizando Next.js para el frontend y backend, y GraphQL para una gestión de datos eficiente y flexible. Cubriremos temas desde la configuración inicial, enrutamiento avanzado, renderizado del lado del servidor (SSR) y generación de sitios estáticos (SSG), hasta la autenticación, gestión de estado, y despliegue en producción.</p>
-    <h3 class="text-lg font-semibold mt-4 mb-2">Lo que aprenderás:</h3>
-    <ul class="list-disc list-inside space-y-1">
-      <li>Configurar y desarrollar con Next.js y TypeScript.</li>
-      <li>Crear esquemas y resolvers de GraphQL.</li>
-      <li>Integrar Apollo Client/Server.</li>
-      <li>Implementar autenticación segura (JWT/OAuth).</li>
-      <li>Optimizar el rendimiento de tu aplicación.</li>
-      <li>Desplegar en plataformas como Vercel o Firebase Hosting.</li>
-    </ul>
-    <h3 class="text-lg font-semibold mt-4 mb-2">Requisitos:</h3>
-    <ul class="list-disc list-inside space-y-1">
-      <li>Conocimientos básicos de HTML, CSS y JavaScript (ES6+).</li>
-      <li>Experiencia previa con React (recomendado).</li>
-      <li>Comprensión de conceptos de APIs (REST o GraphQL básico).</li>
-    </ul>
-  `,
-  precio: 149.99,
-  tipoAcceso: 'unico' as const,
-  duracionEstimada: '25 horas de video',
-  imagenPortada: 'https://placehold.co/1200x675.png',
-  dataAiHint: 'web development course',
-  estado: 'publicado' as const,
-  creador: {
-    id: 'creator1',
-    nombre: 'Ana Pérez',
-    avatarUrl: 'https://placehold.co/80x80.png',
-    bio: 'Ingeniera de Software con 10+ años de experiencia en desarrollo web y móvil. Apasionada por enseñar tecnologías de vanguardia.',
-  },
-  rating: 4.9,
-  numEstudiantes: 850,
-  numResenas: 150,
-  fechaActualizacion: '2024-07-15',
-  modulos: [
-    {
-      id: 'm1',
-      nombre: 'Introducción a Next.js y Configuración del Entorno',
-      descripcion: 'Primeros pasos con Next.js, estructura del proyecto y herramientas.',
-      orden: 1,
-      lecciones: [
-        { id: 'l1a', nombre: '¿Qué es Next.js y por qué usarlo?', formato: 'video' as const, duracion: '10 min', esVistaPrevia: true },
-        { id: 'l1b', nombre: 'Instalación y configuración inicial', formato: 'video' as const, duracion: '15 min', esVistaPrevia: false },
-        { id: 'l1c', nombre: 'Estructura de un proyecto Next.js', formato: 'pdf' as const, duracion: 'N/A', esVistaPrevia: false },
-      ],
-    },
-    {
-      id: 'm2',
-      nombre: 'GraphQL: Fundamentos y Esquemas',
-      descripcion: 'Conceptos clave de GraphQL, tipos, queries, mutations y subscriptions.',
-      orden: 2,
-      lecciones: [
-        { id: 'l2a', nombre: 'Introducción a GraphQL', formato: 'video' as const, duracion: '12 min', esVistaPrevia: true },
-        { id: 'l2b', nombre: 'Definición de esquemas y tipos', formato: 'video' as const, duracion: '20 min', esVistaPrevia: false },
-        { id: 'l2c', nombre: 'Queries y Mutations', formato: 'video' as const, duracion: '18 min', esVistaPrevia: false },
-      ],
-    },
-    {
-      id: 'm3',
-      nombre: 'Integración Frontend y Backend',
-      descripcion: 'Conectando Next.js con tu API GraphQL usando Apollo Client.',
-      orden: 3,
-      lecciones: [
-        { id: 'l3a', nombre: 'Configurando Apollo Client en Next.js', formato: 'video' as const, duracion: '25 min', esVistaPrevia: false },
-        { id: 'l3b', nombre: 'Realizando queries y mostrando datos', formato: 'video' as const, duracion: '30 min', esVistaPrevia: false },
-        { id: 'l3c', nombre: 'Manejo de estado local y cache con Apollo', formato: 'video' as const, duracion: '22 min', esVistaPrevia: false },
-      ],
-    },
-  ],
-  materialesAdicionales: [
-    { nombre: 'Código fuente completo del proyecto final', url: '#' },
-    { nombre: 'Guía de referencia rápida de Next.js y GraphQL', url: '#' },
-  ],
-  comentarios: [
-    { id: 'c1', usuario: { nombre: 'Carlos S.', avatarUrl: 'https://placehold.co/40x40.png' }, texto: '¡Excelente curso! Muy bien explicado y con ejemplos prácticos.', rating: 5, fecha: '2024-07-01' },
-    { id: 'c2', usuario: { nombre: 'Laura M.', avatarUrl: 'https://placehold.co/40x40.png' }, texto: 'Me ayudó mucho a entender GraphQL. Lo recomiendo.', rating: 5, fecha: '2024-06-28' },
-  ]
-};
+interface ModuleWithLessons extends ModuleProperties {
+  lessons: LessonProperties[];
+}
+
+interface CourseStructureData {
+  course: CourseProperties;
+  modules: ModuleWithLessons[];
+}
+
+// Placeholder data for reviews if API doesn't provide them yet
+const placeholderReviews = [
+  { id: 'c1', usuario: { nombre: 'Carlos S.', avatarUrl: 'https://placehold.co/40x40.png?text=CS' }, texto: '¡Excelente curso! Muy bien explicado y con ejemplos prácticos.', rating: 5, fecha: '2024-07-01' },
+  { id: 'c2', usuario: { nombre: 'Laura M.', avatarUrl: 'https://placehold.co/40x40.png?text=LM' }, texto: 'Me ayudó mucho a entender GraphQL. Lo recomiendo.', rating: 5, fecha: '2024-06-28' },
+];
 
 // TODO: Replace with actual user enrollment status
-const isEnrolled = false;
+const isEnrolled = false; 
 
-export default function CourseDetailPage({ params }: { params: { id: string } }) {
-  // In a real app, fetch course data based on params.id
-  // For now, we use the placeholder `course` object.
-  // You might want to add a check if the course exists or show a 404 page.
+export default function CourseDetailPage() {
+  const params = useParams<{ id: string }>();
+  const courseId = params.id;
+
+  const [courseData, setCourseData] = useState<CourseStructureData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCourseData = useCallback(async () => {
+    if (!courseId) {
+      setError("ID del curso no encontrado en la URL.");
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/learn/course-structure/${courseId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Error al cargar los datos del curso');
+      }
+      const data: CourseStructureData = await response.json();
+      setCourseData(data);
+    } catch (err: any) {
+      setError(err.message);
+      console.error("Error fetching course data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [courseId]);
+
+  useEffect(() => {
+    fetchCourseData();
+  }, [fetchCourseData]);
+
+  if (isLoading) {
+    return (
+      <div className="bg-secondary/30">
+        <div className="bg-primary py-12 md:py-20">
+          <div className="container mx-auto px-4 md:px-6 grid md:grid-cols-2 gap-8 items-center">
+            <div>
+              <Skeleton className="h-6 w-24 mb-2" />
+              <Skeleton className="h-10 w-3/4 mb-3" />
+              <Skeleton className="h-6 w-full mb-4" />
+              <div className="flex items-center space-x-4 mb-6">
+                <Skeleton className="h-8 w-8 rounded-full mr-2" /> <Skeleton className="h-4 w-32" />
+              </div>
+              <div className="flex items-center space-x-4"><Skeleton className="h-4 w-20" /> <Skeleton className="h-4 w-24" /> <Skeleton className="h-4 w-32" /></div>
+            </div>
+            <Card className="overflow-hidden shadow-2xl">
+                <Skeleton className="w-full aspect-video" />
+                <CardContent className="p-6 space-y-3">
+                    <Skeleton className="h-10 w-1/3" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-4 w-3/4 mx-auto" />
+                </CardContent>
+            </Card>
+          </div>
+        </div>
+        <div className="container mx-auto px-4 md:px-6 py-12">
+          <div className="grid lg:grid-cols-3 gap-12">
+            <div className="lg:col-span-2 space-y-8">
+                <Card><CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
+                <Card><CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+                <Card><CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
+            </div>
+            <div className="lg:col-span-1 space-y-8">
+                 <Card><CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader><CardContent className="text-center space-y-2"><Skeleton className="h-20 w-20 rounded-full mx-auto"/><Skeleton className="h-5 w-1/2 mx-auto"/><Skeleton className="h-12 w-full"/><Skeleton className="h-9 w-3/4 mx-auto"/></CardContent></Card>
+                 <Card><CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent></Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+        <div className="container mx-auto py-12 px-4 md:px-6 text-center">
+            <Card className="max-w-md mx-auto shadow-lg">
+                <CardHeader>
+                    <CardTitle className="text-2xl text-destructive flex items-center justify-center gap-2">
+                        <AlertTriangle className="h-8 w-8" /> Error al Cargar
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground mb-4">No pudimos cargar los detalles del curso.</p>
+                    <p className="text-sm text-destructive-foreground bg-destructive/10 p-3 rounded-md">{error}</p>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-3">
+                     <Button onClick={fetchCourseData} variant="default" disabled={isLoading}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        Intentar de Nuevo
+                    </Button>
+                    <Button variant="outline" asChild>
+                        <Link href="/courses">Volver a Cursos</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
+    );
+  }
+
+  if (!courseData) {
+    return <div className="container py-8 text-center">No se encontraron datos para este curso.</div>;
+  }
+
+  const { course, modules } = courseData;
+
+  // Placeholder data for creator if not fully provided by API
+  const creatorDisplay = {
+    id: course.creadorUid,
+    nombre: `Creator ${course.creadorUid.substring(0, 6)}`, // Placeholder
+    avatarUrl: `https://placehold.co/80x80.png?text=${course.creadorUid.substring(0,2).toUpperCase()}`,
+    bio: 'Información del creador no disponible en esta vista.',
+  };
+
+  const totalLessons = modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
 
   return (
     <div className="bg-secondary/30">
@@ -105,43 +160,43 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
       <div className="bg-primary text-primary-foreground py-12 md:py-20">
         <div className="container mx-auto px-4 md:px-6 grid md:grid-cols-2 gap-8 items-center">
           <div>
-            <Badge variant="secondary" className="mb-2 bg-accent text-accent-foreground">{course.modulos.length} Módulos</Badge>
+            <Badge variant="secondary" className="mb-2 bg-accent text-accent-foreground">{modules.length} Módulos</Badge>
             <h1 className="text-3xl md:text-4xl font-bold font-headline mb-3">{course.nombre}</h1>
             <p className="text-lg text-primary-foreground/90 mb-4">{course.descripcionCorta}</p>
             <div className="flex items-center space-x-4 mb-6 text-sm">
               <div className="flex items-center">
                 <Avatar className="h-8 w-8 mr-2 border-2 border-accent">
-                  <AvatarImage src={course.creador.avatarUrl} alt={course.creador.nombre} data-ai-hint="instructor avatar" />
-                  <AvatarFallback>{course.creador.nombre.substring(0,2)}</AvatarFallback>
+                  <AvatarImage src={creatorDisplay.avatarUrl} alt={creatorDisplay.nombre} data-ai-hint="instructor avatar" />
+                  <AvatarFallback>{creatorDisplay.nombre.substring(0,2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <span>Creado por <Link href={`/creators/${course.creador.id}`} className="font-semibold hover:underline">{course.creador.nombre}</Link></span>
+                <span>Creado por <Link href={`/creators/${creatorDisplay.id}`} className="font-semibold hover:underline">{creatorDisplay.nombre}</Link></span>
               </div>
               <div className="flex items-center">
                 <Star className="h-4 w-4 mr-1 text-accent fill-accent" />
-                <span>{course.rating} ({course.numResenas} reseñas)</span>
+                <span>{course.ratingPromedio?.toFixed(1) || 'N/A'} ({course.totalResenas || 0} reseñas)</span>
               </div>
             </div>
             <div className="flex items-center space-x-4 text-sm">
-                <div className="flex items-center gap-1.5"><Users className="h-4 w-4" /> {course.numEstudiantes} estudiantes</div>
+                <div className="flex items-center gap-1.5"><Users className="h-4 w-4" /> {course.totalEstudiantes || 0} estudiantes</div>
                 <div className="flex items-center gap-1.5"><Clock className="h-4 w-4" /> {course.duracionEstimada}</div>
-                <div className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4" /> Última actualización: {new Date(course.fechaActualizacion).toLocaleDateString()}</div>
+                {course.fechaActualizacion && <div className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4" /> Última actualización: {new Date(course.fechaActualizacion).toLocaleDateString()}</div>}
             </div>
           </div>
           <Card className="overflow-hidden shadow-2xl">
             <Image
-              src={course.imagenPortada}
+              src={course.imagenPortadaUrl || 'https://placehold.co/1200x675.png'}
               alt={`Portada del curso ${course.nombre}`}
               width={1200}
               height={675}
               className="w-full aspect-video object-cover"
-              data-ai-hint={course.dataAiHint}
+              data-ai-hint={course.dataAiHintImagenPortada || 'course detail cover'}
               priority
             />
             <CardContent className="p-6">
               <p className="text-3xl font-bold text-primary mb-4">${course.precio.toFixed(2)}</p>
               {isEnrolled ? (
                  <Button size="lg" className="w-full" asChild>
-                    <Link href={`/learn/${course.id}/${course.modulos[0].lecciones[0].id}`}>Ir al Curso</Link>
+                    <Link href={`/learn/${course.id}/${modules[0]?.lessons[0]?.id || 'start'}`}>Ir al Curso</Link>
                   </Button>
               ) : (
                 <Button size="lg" className="w-full">
@@ -171,45 +226,48 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
             <Card className="mb-8 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-2xl font-headline">Contenido del Curso</CardTitle>
+                <CardDescription>{modules.length} módulos &bull; {totalLessons} lecciones &bull; {course.duracionEstimada} total</CardDescription>
               </CardHeader>
               <CardContent>
-                <Accordion type="single" collapsible className="w-full">
-                  {course.modulos.map((modulo) => (
-                    <AccordionItem value={`module-${modulo.id}`} key={modulo.id}>
+                <Accordion type="single" collapsible className="w-full" defaultValue={modules[0]?.id ? `module-${modules[0].id}` : undefined}>
+                  {modules.map((moduleItem) => (
+                    <AccordionItem value={`module-${moduleItem.id}`} key={moduleItem.id}>
                       <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                         <div className="flex justify-between w-full items-center pr-2">
-                           <span>{modulo.orden}. {modulo.nombre}</span>
-                           <span className="text-sm text-muted-foreground font-normal">{modulo.lecciones.length} lecciones</span>
+                           <span>{moduleItem.orden}. {moduleItem.nombre}</span>
+                           <span className="text-sm text-muted-foreground font-normal">{moduleItem.lessons.length} lecciones</span>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
                         <ul className="space-y-2 pt-2">
-                          {modulo.lecciones.map((leccion) => (
+                          {moduleItem.lessons.map((leccion) => (
                             <li key={leccion.id} className="flex justify-between items-center p-3 rounded-md hover:bg-secondary/50 transition-colors">
                               <div className="flex items-center">
-                                {leccion.formato === 'video' ? <PlayCircle className="h-5 w-5 mr-3 text-primary" /> : <FileText className="h-5 w-5 mr-3 text-primary" />}
+                                {leccion.contenidoPrincipal.tipo === 'video' ? <PlayCircle className="h-5 w-5 mr-3 text-primary" /> : <FileText className="h-5 w-5 mr-3 text-primary" />}
                                 <span className="text-foreground/90">{leccion.nombre}</span>
                                 {leccion.esVistaPrevia && <Badge variant="outline" className="ml-2 border-accent text-accent">Vista Previa</Badge>}
                               </div>
-                              <span className="text-sm text-muted-foreground">{leccion.duracion}</span>
+                              <span className="text-sm text-muted-foreground">{leccion.duracionEstimada}</span>
                             </li>
                           ))}
                         </ul>
+                        {moduleItem.lessons.length === 0 && <p className="text-sm text-muted-foreground p-3">Este módulo aún no tiene lecciones.</p>}
                       </AccordionContent>
                     </AccordionItem>
                   ))}
                 </Accordion>
+                 {modules.length === 0 && <p className="text-muted-foreground text-center py-4">Este curso aún no tiene módulos definidos.</p>}
               </CardContent>
             </Card>
             
-            {/* Reviews Section */}
+            {/* Reviews Section (using placeholder data) */}
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="text-2xl font-headline">Valoraciones y Reseñas</CardTitle>
                 <div className="flex items-center mt-2">
                   <Star className="h-6 w-6 text-accent fill-accent mr-1" />
-                  <span className="text-2xl font-bold mr-1">{course.rating.toFixed(1)}</span>
-                  <span className="text-muted-foreground">({course.numResenas} reseñas)</span>
+                  <span className="text-2xl font-bold mr-1">{course.ratingPromedio?.toFixed(1) || 'N/A'}</span>
+                  <span className="text-muted-foreground">({course.totalResenas || 0} reseñas)</span>
                 </div>
               </CardHeader>
               <CardContent>
@@ -217,10 +275,10 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
                   <Edit3 className="mr-2 h-4 w-4" /> Escribir una reseña
                 </Button>
                 <div className="space-y-6">
-                  {course.comentarios.map(comment => (
+                  {placeholderReviews.map(comment => (
                     <div key={comment.id} className="flex gap-4">
                       <Avatar>
-                        <AvatarImage src={comment.usuario.avatarUrl} alt={comment.usuario.nombre} data-ai-hint="user avatar"/>
+                        <AvatarImage src={comment.usuario.avatarUrl} alt={comment.usuario.nombre} data-ai-hint="user avatar review"/>
                         <AvatarFallback>{comment.usuario.nombre.substring(0,1)}</AvatarFallback>
                       </Avatar>
                       <div>
@@ -238,7 +296,8 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
                     </div>
                   ))}
                 </div>
-                <Button variant="link" className="mt-6 text-primary">Ver todas las reseñas</Button>
+                {placeholderReviews.length > 0 && <Button variant="link" className="mt-6 text-primary">Ver todas las reseñas</Button>}
+                 {placeholderReviews.length === 0 && <p className="text-muted-foreground text-sm">Aún no hay reseñas para este curso. ¡Sé el primero!</p>}
               </CardContent>
             </Card>
 
@@ -252,33 +311,35 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
               </CardHeader>
               <CardContent className="text-center">
                 <Avatar className="h-20 w-20 mx-auto mb-3 border-4 border-primary">
-                  <AvatarImage src={course.creador.avatarUrl} alt={course.creador.nombre} data-ai-hint="instructor portrait"/>
-                  <AvatarFallback>{course.creador.nombre.substring(0,2)}</AvatarFallback>
+                  <AvatarImage src={creatorDisplay.avatarUrl} alt={creatorDisplay.nombre} data-ai-hint="instructor portrait detail"/>
+                  <AvatarFallback>{creatorDisplay.nombre.substring(0,2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <h3 className="text-lg font-semibold text-primary">{course.creador.nombre}</h3>
-                <p className="text-sm text-muted-foreground mt-2 mb-4">{course.creador.bio}</p>
+                <h3 className="text-lg font-semibold text-primary">{creatorDisplay.nombre}</h3>
+                <p className="text-sm text-muted-foreground mt-2 mb-4">{creatorDisplay.bio}</p>
                 <Button variant="outline" asChild>
-                  <Link href={`/creators/${course.creador.id}`}>Ver Perfil del Creator</Link>
+                  <Link href={`/creators/${creatorDisplay.id}`}>Ver Perfil del Creator</Link>
                 </Button>
               </CardContent>
             </Card>
 
-            {course.materialesAdicionales && course.materialesAdicionales.length > 0 && (
+            {/* Materials - Placeholder for now, or use if part of course entity */}
+            {course.requisitos && course.requisitos.length > 0 && ( // Example: using requisitos as a placeholder for downloadable materials
               <Card className="shadow-lg">
                 <CardHeader>
                   <CardTitle className="text-xl font-headline">Materiales Adicionales</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2">
-                    {course.materialesAdicionales.map((material, index) => (
+                    {course.requisitos.slice(0,2).map((material, index) => ( // Show max 2 for demo
                       <li key={index}>
                         <Button variant="link" asChild className="p-0 h-auto text-primary hover:underline flex items-center">
-                          <Link href={material.url} download>
-                            <Download className="h-4 w-4 mr-2" /> {material.nombre}
+                          <Link href="#" download>
+                            <Download className="h-4 w-4 mr-2" /> {material} (Ej: Guía PDF)
                           </Link>
                         </Button>
                       </li>
                     ))}
+                    {course.requisitos.length === 0 && <p className="text-sm text-muted-foreground">No hay materiales adicionales especificados.</p>}
                   </ul>
                 </CardContent>
               </Card>
@@ -289,3 +350,4 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
     </div>
   );
 }
+      

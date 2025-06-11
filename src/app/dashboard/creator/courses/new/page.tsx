@@ -219,11 +219,12 @@ export default function NewCoursePage() {
     if (!courseId) return;
     setIsModuleLoading(true);
     try {
-      // Fetch course details first
       const courseDetailsResponse = await fetch(`/api/courses/${courseId}`);
       if (!courseDetailsResponse.ok) {
         const errorData = await courseDetailsResponse.json();
-        toast({ title: "Error al Cargar Detalles del Curso para Ordenamiento", description: errorData.details || errorData.error || "Error al cargar detalles del curso.", variant: "destructive" });
+        toast({ title: "Error al Cargar Detalles del Curso", description: errorData.details || errorData.error || "No se pudieron cargar los detalles del curso.", variant: "destructive" });
+        setCourseDetails(null);
+        setModules([]);
         throw new Error(errorData.details || errorData.error || "Error al cargar detalles del curso.");
       }
       const courseData = await courseDetailsResponse.json();
@@ -233,21 +234,22 @@ export default function NewCoursePage() {
         setCourseDetails(currentCourseData);
       } else {
         toast({ title: "Error", description: "No se encontraron los detalles del curso.", variant: "destructive" });
+        setCourseDetails(null);
+        setModules([]);
         throw new Error("No se encontraron los detalles del curso.");
       }
 
-      // Fetch modules
       const modulesResponse = await fetch(`/api/courses/${courseId}/modules`);
       if (!modulesResponse.ok) {
         const errorData = await modulesResponse.json();
         toast({ title: "Error al Cargar Módulos", description: errorData.details || errorData.error || "Error al cargar módulos.", variant: "destructive" });
+        setModules([]); 
         throw new Error(errorData.details || errorData.error || "Error al cargar módulos.");
       }
       const modulesData = await modulesResponse.json();
       let fetchedModules: ModuleProperties[] = modulesData.modules || [];
 
-      // Order modules using the currentCourseData (which is now up-to-date)
-      if (currentCourseData.ordenModulos && currentCourseData.ordenModulos.length > 0) {
+      if (currentCourseData && currentCourseData.ordenModulos && currentCourseData.ordenModulos.length > 0) {
         const orderMap = new Map(currentCourseData.ordenModulos.map((id: string, index: number) => [id, index]));
         fetchedModules.sort((a, b) => {
           const orderA = orderMap.get(a.id);
@@ -255,19 +257,18 @@ export default function NewCoursePage() {
           if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
           if (orderA !== undefined) return -1;
           if (orderB !== undefined) return 1;
-          return (a.orden ?? 0) - (b.orden ?? 0); // Fallback to numerical order
+          return (a.orden ?? 0) - (b.orden ?? 0);
         });
       } else {
-        // Fallback to numerical order if ordenModulos is not set
         fetchedModules.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)); 
       }
       setModules(fetchedModules);
 
     } catch (error: any) {
-      if (!toast.toString().includes(error.message)) { // Avoid duplicate toasts if already shown
+      if (!toast.toString().includes(error.message)) { 
         toast({ title: "Error General al Cargar Estructura", description: error.message, variant: "destructive" });
       }
-      setModules([]); 
+       setModules([]); 
     } finally {
       setIsModuleLoading(false);
     }
@@ -400,11 +401,10 @@ export default function NewCoursePage() {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || "Error al crear el módulo.");
       }
-      // const newModuleResponse = await response.json(); 
-
+      
       toast({title: "Módulo Creado"});
       moduleForm.reset();
-      await fetchCourseStructure(createdCourseId); // Re-fetch to ensure full consistency including courseDetails.ordenModulos
+      await fetchCourseStructure(createdCourseId); 
     } catch (error: any) {
       toast({title: "Error al Añadir Módulo", description: error.message, variant: "destructive"});
     } finally {
@@ -469,7 +469,7 @@ export default function NewCoursePage() {
         nombre: values.lessonName,
         contenidoPrincipal: { 
             tipo: values.lessonContentType as LessonContentType,
-            url: null, // URL is handled on edit for file types to simplify creation
+            url: null, 
             texto: (values.lessonContentType === 'texto_rico' || values.lessonContentType === 'quiz') ? values.lessonContentText || null : null,
         }, 
         duracionEstimada: values.lessonDuration,
@@ -484,7 +484,6 @@ export default function NewCoursePage() {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || "Error al crear la lección.");
       }
-      // const newLessonData = await response.json();
       
       toast({title: "Lección Creada", description: `Lección "${values.lessonName}" añadida. Edítala para subir archivos si es necesario.`});
       lessonForm.reset({ 
@@ -498,8 +497,6 @@ export default function NewCoursePage() {
       setSelectedLessonContentType(undefined);
       const moduleToUpdateLessons = modules.find(m => m.id === moduleId);
       await fetchLessonsForModule(createdCourseId, moduleId, moduleToUpdateLessons);
-      // Potentially refetch entire course structure if lesson creation affects module-level summaries visible in the UI
-      // await fetchCourseStructure(createdCourseId); 
     } catch (error: any) {
       toast({title: "Error al Añadir Lección", description: error.message, variant: "destructive"});
     } finally {
@@ -535,9 +532,8 @@ export default function NewCoursePage() {
         contentText = values.lessonContentText || null;
         downloadURL = null; 
       } else if (isFileType && !lessonContentFile) {
-        // If type changed from text to file, or file type changed, but no new file, clear existing text and keep existing URL or clear if type changed
         if (currentEditingLesson.contenidoPrincipal.tipo !== values.lessonContentType) {
-            downloadURL = null; // If type changed to file from text, and no new file, URL should be null
+            downloadURL = null; 
             contentText = null;
         }
       }
@@ -833,10 +829,8 @@ export default function NewCoursePage() {
         }
         const updatedCourseData = await response.json();
         if (updatedCourseData.course) {
-            setCourseDetails(updatedCourseData.course); 
-            // The `modules` state will be updated via `fetchCourseStructure` if called, 
-            // or manually ensure `reorderedModules` becomes the new `modules` list after success.
-            // For now, relying on `fetchCourseStructure` after other operations, or local update here.
+            // setCourseDetails(updatedCourseData.course); // Already done by fetchCourseStructure
+            await fetchCourseStructure(createdCourseId); // Ensures modules are also re-fetched and re-sorted based on new courseDetails
         }
         toast({ title: "Módulos Reordenados", description: "El orden de los módulos ha sido actualizado." });
     } catch (error: any) {
@@ -923,17 +917,31 @@ export default function NewCoursePage() {
                         </form>
                       </Form>
 
-                      {(isModuleLoading || isReorderingModules) && modules.length === 0 && <div className="text-center py-2"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />Cargando/Reordenando módulos...</div>}
-                      {!isModuleLoading && !isReorderingModules && modules.length === 0 && (<p className="text-muted-foreground text-center py-4">Aún no has añadido módulos. Comienza creando uno.</p>)}
-                      
-                      {modules.length > 0 && (
-                        <div className="space-y-1 mt-6">
-                          <h4 className="text-lg font-semibold mb-2">Módulos del Curso:</h4>
-                          <DragDropContext onDragEnd={onDragEndModules}>
-                            <Droppable droppableId="modules-droppable" isDropDisabled={isReorderingModules} isCombineEnabled={false} ignoreContainerClipping={false}>
+                      <DragDropContext onDragEnd={onDragEndModules}>
+                        { (isModuleLoading || isReorderingModules) && modules.length === 0 && 
+                          <div className="text-center py-2"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />Cargando/Reordenando módulos...</div>
+                        }
+                        { !isModuleLoading && !isReorderingModules && modules.length === 0 && 
+                          (<p className="text-muted-foreground text-center py-4">Aún no has añadido módulos. Comienza creando uno.</p>)
+                        }
+
+                        {modules.length > 0 && (
+                          <div className="space-y-1 mt-6">
+                            <h4 className="text-lg font-semibold mb-2">Módulos del Curso:</h4>
+                            <Droppable
+                              droppableId="modules-droppable"
+                              isDropDisabled={isReorderingModules} 
+                              isCombineEnabled={false}
+                              ignoreContainerClipping={false}
+                            >
                               {(provided) => (
                                 <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                                  <Accordion type="single" collapsible className="w-full" value={expandedModuleId || undefined} onValueChange={(value) => {
+                                  <Accordion 
+                                    type="single" 
+                                    collapsible 
+                                    className="w-full" 
+                                    value={expandedModuleId || undefined} 
+                                    onValueChange={(value) => {
                                       handleToggleModuleLessons(value);
                                       lessonForm.reset({ lessonName: '', lessonContentType: undefined, lessonDuration: '', lessonIsPreview: false, lessonContentText: '' });
                                       setLessonContentFile(null);
@@ -1080,9 +1088,9 @@ export default function NewCoursePage() {
                                 </div>
                               )}
                             </Droppable>
-                          </DragDropContext>
-                        </div>
-                      )}
+                          </div>
+                        )}
+                      </DragDropContext>
                     </>
                   ) : (
                     <p className="text-center text-muted-foreground py-8">Completa el paso de Información Básica primero para poder añadir módulos y lecciones.</p>

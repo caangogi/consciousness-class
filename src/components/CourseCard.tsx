@@ -1,17 +1,19 @@
 
+'use client'; // Ensure this is a client component if using hooks like useState/useEffect
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Star, Users, Clock } from 'lucide-react';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
-
+import React, { useState, useEffect } from 'react'; // Import React, useState, and useEffect
 
 // Usamos CourseProperties directamente ya que es lo que vendrá de la API (plain object)
 export interface CourseCardData extends Pick<CourseProperties, 
   'id' | 'nombre' | 'descripcionCorta' | 'precio' | 'imagenPortadaUrl' | 'dataAiHintImagenPortada' | 'categoria' | 'duracionEstimada' | 'ratingPromedio' | 'totalEstudiantes'
 > {
-  creadorNombre?: string; // Mantenemos esto si queremos mostrarlo, aunque no está en CourseProperties directamente
+  creadorNombre?: string; 
 }
 
 interface CourseCardProps {
@@ -19,6 +21,14 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course }: CourseCardProps) {
+  const [formattedTotalEstudiantes, setFormattedTotalEstudiantes] = useState<string | number>(course.totalEstudiantes || 0);
+
+  useEffect(() => {
+    if (course.totalEstudiantes !== undefined && course.totalEstudiantes !== null) {
+      setFormattedTotalEstudiantes(course.totalEstudiantes.toLocaleString());
+    }
+  }, [course.totalEstudiantes]);
+
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-lg">
       <CardHeader className="p-0 relative">
@@ -68,7 +78,7 @@ export function CourseCard({ course }: CourseCardProps) {
           {course.totalEstudiantes !== undefined && (
             <div className="flex items-center gap-1">
               <Users className="h-4 w-4" />
-              <span>{course.totalEstudiantes.toLocaleString()} estudiantes</span>
+              <span>{formattedTotalEstudiantes} estudiantes</span>
             </div>
           )}
         </div>
@@ -82,5 +92,4 @@ export function CourseCard({ course }: CourseCardProps) {
     </Card>
   );
 }
-
     

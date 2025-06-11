@@ -60,8 +60,9 @@ export class FirebaseCourseRepository implements ICourseRepository {
     try {
       const snapshot = await this.coursesCollection
         .where('estado', '==', 'publicado')
-        .orderBy('fechaPublicacion', 'desc') // Order by most recently published
+        .orderBy('fechaPublicacion', 'desc') 
         .get();
+      console.log(`[FirebaseCourseRepository] findAllPublic query found ${snapshot.docs.length} documents.`); // Log añadido
       if (snapshot.empty) {
         return [];
       }

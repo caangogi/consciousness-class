@@ -27,7 +27,7 @@ import type { UpdateModuleDto } from '@/features/course/infrastructure/dto/updat
 import type { CreateLessonDto } from '@/features/course/infrastructure/dto/create-lesson.dto';
 import type { UpdateLessonDto } from '@/features/course/infrastructure/dto/update-lesson.dto';
 import { type LessonProperties, type LessonContentType } from '@/features/course/domain/entities/lesson.entity';
-import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud, GripVertical, Trash2, Edit, Rocket } from 'lucide-react';
+import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud, GripVertical, Trash2, Edit, Rocket, Eye } from 'lucide-react';
 import { auth, storage } from '@/lib/firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
@@ -116,6 +116,9 @@ export default function NewCoursePage() {
   const [showDeleteLessonDialog, setShowDeleteLessonDialog] = useState(false);
   const [isDeletingLesson, setIsDeletingLesson] = useState(false);
   const [isReorderingLessons, setIsReorderingLessons] = useState<Record<string, boolean>>({});
+
+  const [isPreviewLessonDialogOpen, setIsPreviewLessonDialogOpen] = useState(false);
+  const [lessonToPreview, setLessonToPreview] = useState<LessonProperties | null>(null);
 
 
   const [lessonContentFile, setLessonContentFile] = useState<File | null>(null);
@@ -822,7 +825,7 @@ export default function NewCoursePage() {
         const [movedModule] = reorderedModules.splice(source.index, 1);
         reorderedModules.splice(destination.index, 0, movedModule);
         
-        setModules(reorderedModules); // Optimistic update for UI responsiveness
+        setModules(reorderedModules); 
 
         const orderedModuleIds = reorderedModules.map(mod => mod.id);
         try {
@@ -877,7 +880,7 @@ export default function NewCoursePage() {
         const [movedLesson] = lessonsInModule.splice(source.index, 1);
         lessonsInModule.splice(destination.index, 0, movedLesson);
 
-        setLessonsByModule(prev => ({ ...prev, [moduleId]: lessonsInModule })); // Optimistic update
+        setLessonsByModule(prev => ({ ...prev, [moduleId]: lessonsInModule })); 
 
         const orderedLessonIds = lessonsInModule.map(lesson => lesson.id);
 
@@ -897,7 +900,10 @@ export default function NewCoursePage() {
                 setModules(prevModules => prevModules.map(m => 
                     m.id === moduleId ? updatedModuleData.module : m
                 ));
-                await fetchLessonsForModule(createdCourseId, moduleId, updatedModuleData.module);
+                // Instead of full fetchLessonsForModule, update local lesson order directly if API confirms
+                // or rely on the optimistic update if API just returns success.
+                // For robustness, fetchLessonsForModule is safer if backend module data drives lesson display.
+                 await fetchLessonsForModule(createdCourseId, moduleId, updatedModuleData.module);
             }
              toast({ title: "Lecciones Reordenadas", description: `El orden de las lecciones en el módulo ha sido actualizado.` });
         } catch (error: any) {
@@ -907,6 +913,48 @@ export default function NewCoursePage() {
         } finally {
             setIsReorderingLessons(prev => ({...prev, [moduleId]: false}));
         }
+    }
+  };
+
+  const renderLessonPreviewContent = () => {
+    if (!lessonToPreview) return <p className="text-muted-foreground">No hay lección seleccionada para vista previa.</p>;
+
+    const { tipo, url, texto } = lessonToPreview.contenidoPrincipal;
+
+    switch (tipo) {
+      case 'video':
+        if (!url) return <p className="text-muted-foreground">URL del video no disponible.</p>;
+        // Basic check for YouTube/Vimeo embeds
+        if (url.includes('youtube.com/embed') || url.includes('player.vimeo.com/video')) {
+          return (
+            <div className="aspect-video">
+              <iframe
+                src={url}
+                width="100%"
+                height="100%"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="rounded-md border"
+                title={`Vista previa: ${lessonToPreview.nombre}`}
+              ></iframe>
+            </div>
+          );
+        }
+        return <video controls src={url} className="w-full rounded-md aspect-video bg-black"><track kind="captions" /></video>;
+      case 'documento_pdf':
+        if (!url) return <p className="text-muted-foreground">URL del PDF no disponible.</p>;
+        return <iframe src={url} className="w-full h-[70vh] rounded-md border" title={`Vista previa: ${lessonToPreview.nombre}`}></iframe>;
+      case 'audio':
+        if (!url) return <p className="text-muted-foreground">URL del audio no disponible.</p>;
+        return <audio controls src={url} className="w-full"><track kind="captions" /></audio>;
+      case 'texto_rico':
+        if (!texto) return <p className="text-muted-foreground">Contenido de texto no disponible.</p>;
+        return <div className="prose max-w-none p-4 border rounded-md bg-secondary/30" dangerouslySetInnerHTML={{ __html: texto }} />;
+      case 'quiz':
+        if (!texto) return <p className="text-muted-foreground">Contenido del quiz no disponible.</p>;
+        return <div className="p-4 border rounded-md bg-secondary/30 whitespace-pre-wrap">{texto}</div>;
+      default:
+        return <p className="text-muted-foreground">Tipo de contenido no soportado para vista previa.</p>;
     }
   };
 
@@ -986,10 +1034,10 @@ export default function NewCoursePage() {
                         </form>
                       </Form>
 
-                      { (isModuleLoading || isReorderingModules) && modules.length === 0 && 
-                        <div className="text-center py-2"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />Cargando/Reordenando módulos...</div>
+                      { (isModuleLoading && modules.length === 0) && 
+                        <div className="text-center py-2"><Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />Cargando módulos...</div>
                       }
-                      { !isModuleLoading && !isReorderingModules && modules.length === 0 &&
+                      { !isModuleLoading && modules.length === 0 && !isReorderingModules &&
                         (<p className="text-muted-foreground text-center py-4">Aún no has añadido módulos. Comienza creando uno.</p>)
                       }
 
@@ -1001,7 +1049,7 @@ export default function NewCoursePage() {
                             type="MODULE"
                             isDropDisabled={isReorderingModules} 
                             isCombineEnabled={false}
-                            ignoreContainerClipping={false}
+                            ignoreContainerClipping={false} 
                           >
                             {(providedDroppableModules) => (
                               <div {...providedDroppableModules.droppableProps} ref={providedDroppableModules.innerRef} className="space-y-2">
@@ -1139,6 +1187,18 @@ export default function NewCoursePage() {
                                                                                       </div>
                                                                                   </div>
                                                                                   <div className="flex items-center gap-0.5">
+                                                                                       <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            setLessonToPreview(lesson);
+                                                                                            setIsPreviewLessonDialogOpen(true);
+                                                                                        }}
+                                                                                        disabled={!!(isLessonLoading[module.id] || isReorderingLessons[module.id])}
+                                                                                        title="Vista Previa Lección"
+                                                                                        >
+                                                                                            <Eye className="h-3 w-3"/>
+                                                                                            <span className="sr-only">Vista Previa lección</span>
+                                                                                        </Button>
                                                                                       <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20" 
                                                                                       onClick={(e) => { 
                                                                                           e.stopPropagation(); 
@@ -1146,6 +1206,7 @@ export default function NewCoursePage() {
                                                                                           setShowEditLessonDialog(true); 
                                                                                       }}
                                                                                       disabled={!!(isLessonLoading[module.id] || isReorderingLessons[module.id])}
+                                                                                      title="Editar Lección"
                                                                                       >
                                                                                           <Edit className="h-3 w-3"/>
                                                                                           <span className="sr-only">Editar lección</span>
@@ -1157,6 +1218,7 @@ export default function NewCoursePage() {
                                                                                           setShowDeleteLessonDialog(true);
                                                                                       }}
                                                                                       disabled={!!(isLessonLoading[module.id] || isReorderingLessons[module.id])}
+                                                                                      title="Eliminar Lección"
                                                                                       >
                                                                                           <Trash2 className="h-3 w-3"/>
                                                                                           <span className="sr-only">Eliminar lección</span>
@@ -1456,6 +1518,31 @@ export default function NewCoursePage() {
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
+
+    {/* Preview Lesson Dialog */}
+    <Dialog open={isPreviewLessonDialogOpen} onOpenChange={(isOpen) => {
+        setIsPreviewLessonDialogOpen(isOpen);
+        if (!isOpen) {
+            setLessonToPreview(null);
+        }
+    }}>
+        <DialogContent className="sm:max-w-[700px] md:max-w-[80vw] lg:max-w-[60vw] max-h-[90vh] flex flex-col">
+            <DialogHeader>
+                <DialogTitle className="truncate">Vista Previa: {lessonToPreview?.nombre || 'Lección'}</DialogTitle>
+                <DialogDescription>
+                    Tipo: {lessonToPreview?.contenidoPrincipal.tipo.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} | Duración: {lessonToPreview?.duracionEstimada}
+                </DialogDescription>
+            </DialogHeader>
+            <div className="flex-grow overflow-y-auto py-4">
+                {renderLessonPreviewContent()}
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button type="button" variant="outline">Cerrar</Button>
+                </DialogClose>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 
     </div>
   );

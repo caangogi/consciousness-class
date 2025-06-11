@@ -11,18 +11,22 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CheckCircle, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, PlayCircle, Info, HelpCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, PlayCircle, Info, HelpCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
 import type { LessonProperties } from '@/features/course/domain/entities/lesson.entity';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { auth } from '@/lib/firebase/config';
+import type { UserCourseProgressProperties } from '@/features/progress/domain/entities/user-course-progress.entity';
 
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
 }
 
-interface CourseStructure {
+interface CourseStructureData {
   course: CourseProperties;
   modules: ModuleWithLessons[];
 }
@@ -35,12 +39,16 @@ const lessonCommentsPlaceholder = [
 export default function LessonPage() {
   const params = useParams<{ courseId: string; lessonId: string }>();
   const router = useRouter();
+  const { currentUser } = useAuth();
+  const { toast } = useToast();
 
-  const [courseStructure, setCourseStructure] = useState<CourseStructure | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [courseStructure, setCourseStructure] = useState<CourseStructureData | null>(null);
+  const [isLoadingCourse, setIsLoadingCourse] = useState(true);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+  const [isTogglingCompletion, setIsTogglingCompletion] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
-
   const [currentModule, setCurrentModule] = useState<ModuleWithLessons | null>(null);
   const [currentLesson, setCurrentLesson] = useState<LessonProperties | null>(null);
   const [prevLesson, setPrevLesson] = useState<LessonProperties | null>(null);
@@ -48,9 +56,9 @@ export default function LessonPage() {
   const [flatLessons, setFlatLessons] = useState<LessonProperties[]>([]);
   const [courseProgress, setCourseProgress] = useState(0);
 
-  const fetchCourseStructure = useCallback(async () => {
+  const fetchCourseStructureData = useCallback(async () => {
     if (!params.courseId) return;
-    setIsLoading(true);
+    setIsLoadingCourse(true);
     setError(null);
     try {
       const response = await fetch(`/api/learn/course-structure/${params.courseId}`);
@@ -58,19 +66,56 @@ export default function LessonPage() {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || 'Failed to fetch course structure');
       }
-      const data: CourseStructure = await response.json();
+      const data: CourseStructureData = await response.json();
       setCourseStructure(data);
     } catch (err: any) {
       setError(err.message);
       console.error("Error fetching course structure:", err);
     } finally {
-      setIsLoading(false);
+      setIsLoadingCourse(false);
     }
   }, [params.courseId]);
 
+  const fetchUserProgress = useCallback(async () => {
+    if (!currentUser || !params.courseId) return;
+    setIsLoadingProgress(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error("User not authenticated");
+
+      const response = await fetch(`/api/learn/progress/${params.courseId}`, {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        // It's okay if progress is not found (404), means user hasn't started.
+        if (response.status !== 404) {
+            throw new Error(errorData.details || errorData.error || 'Failed to fetch user progress');
+        }
+        setCompletedLessons(new Set()); // No progress found, initialize as empty
+        return;
+      }
+      const data: { completedLessonIds: string[] } = await response.json();
+      setCompletedLessons(new Set(data.completedLessonIds || []));
+    } catch (err: any) {
+      console.warn("Error fetching user progress (might be normal if no progress yet):", err.message);
+      setCompletedLessons(new Set()); // Default to empty set on error
+    } finally {
+      setIsLoadingProgress(false);
+    }
+  }, [currentUser, params.courseId]);
+
+
   useEffect(() => {
-    fetchCourseStructure();
-  }, [fetchCourseStructure]);
+    fetchCourseStructureData();
+  }, [fetchCourseStructureData]);
+
+  useEffect(() => {
+    if (currentUser && courseStructure) {
+      fetchUserProgress();
+    }
+  }, [currentUser, courseStructure, fetchUserProgress]);
+
 
   useEffect(() => {
     if (!courseStructure || !params.lessonId) return;
@@ -98,37 +143,57 @@ export default function LessonPage() {
       setPrevLesson(currentIndex > 0 ? allLessons[currentIndex - 1] : null);
       setNextLesson(currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null);
     } else {
-      // Handle lesson not found, maybe redirect or show error
       console.warn(`Lesson with ID ${params.lessonId} not found in course structure.`);
-      // Potentially redirect to course page or first lesson if lessonId is invalid
-      // For now, just setting to null which will result in "Lección no encontrada"
       setPrevLesson(null);
       setNextLesson(null);
     }
   }, [courseStructure, params.lessonId]);
 
   useEffect(() => {
-    if (flatLessons.length > 0) {
-      const completedCount = completedLessons.size;
-      setCourseProgress(Math.round((completedCount / flatLessons.length) * 100));
+    if (flatLessons.length > 0 && completedLessons.size > 0) {
+      setCourseProgress(Math.round((completedLessons.size / flatLessons.length) * 100));
+    } else if (flatLessons.length > 0 && completedLessons.size === 0) {
+      setCourseProgress(0);
     } else {
       setCourseProgress(0);
     }
   }, [completedLessons, flatLessons]);
 
+  const toggleLessonComplete = async () => {
+    if (!currentUser || !currentLesson || !params.courseId || flatLessons.length === 0) return;
+    
+    setIsTogglingCompletion(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error("User not authenticated");
 
-  const toggleLessonComplete = () => {
-    if (!currentLesson) return;
-    setCompletedLessons(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(currentLesson.id)) {
-        newSet.delete(currentLesson.id);
-      } else {
-        newSet.add(currentLesson.id);
+      const response = await fetch(`/api/learn/progress/${params.courseId}/${currentLesson.id}`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ totalLessonsInCourse: flatLessons.length })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Failed to update lesson completion');
       }
-      return newSet;
-    });
-    // TODO: Persist this change to backend
+      const updatedProgressData: UserCourseProgressProperties = await response.json();
+      setCompletedLessons(new Set(updatedProgressData.lessonIdsCompletadas));
+      setCourseProgress(updatedProgressData.porcentajeCompletado);
+      toast({
+        title: "Progreso Actualizado",
+        description: `Lección "${currentLesson.nombre}" marcada como ${new Set(updatedProgressData.lessonIdsCompletadas).has(currentLesson.id) ? 'completada' : 'no completada'}.`
+      });
+
+    } catch (err: any) {
+      toast({ title: "Error al Actualizar Progreso", description: err.message, variant: "destructive" });
+      console.error("Error toggling lesson completion:", err);
+    } finally {
+      setIsTogglingCompletion(false);
+    }
   };
   
   const isCurrentLessonCompleted = currentLesson ? completedLessons.has(currentLesson.id) : false;
@@ -137,9 +202,7 @@ export default function LessonPage() {
     if (!currentLesson || !currentLesson.contenidoPrincipal) {
         return <div className="p-6 bg-card rounded-lg shadow-md">Selecciona una lección para ver su contenido.</div>;
     }
-
     const { tipo, url, texto } = currentLesson.contenidoPrincipal;
-
     switch (tipo) {
       case 'video':
         if (!url) return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground">URL del video no disponible.</div>;
@@ -156,7 +219,7 @@ export default function LessonPage() {
             </div>
         );
       case 'pdf':
-      case 'documento_pdf': // Handle both cases if data might have this
+      case 'documento_pdf':
         if (!url) return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground">URL del PDF no disponible.</div>;
         return (
           <div className="h-[70vh] md:h-[calc(100vh-250px)] bg-muted rounded-lg shadow-inner">
@@ -191,7 +254,7 @@ export default function LessonPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoadingCourse || isLoadingProgress) {
     return (
       <div className="flex h-[calc(100vh-theme(spacing.16))] bg-background">
         <Skeleton className="w-full md:w-80 lg:w-96 border-r bg-card hidden md:block p-4 space-y-4">
@@ -213,16 +276,39 @@ export default function LessonPage() {
             <div className="flex justify-between">
                 <Skeleton className="h-10 w-32" />
                 <Skeleton className="h-10 w-40" />
+                <Skeleton className="h-10 w-52" />
             </div>
-            <Skeleton className="h-10 w-full" /> 
-             <Skeleton className="h-40 w-full" /> 
+            <Skeleton className="h-40 w-full" /> 
         </div>
       </div>
     );
   }
 
   if (error) {
-    return <div className="container py-8 text-center text-destructive">Error al cargar el curso: {error}. <Button onClick={fetchCourseStructure}>Reintentar</Button></div>;
+    return (
+        <div className="container mx-auto py-12 px-4 md:px-6 text-center">
+            <Card className="max-w-md mx-auto shadow-lg">
+                <CardHeader>
+                    <CardTitle className="text-2xl text-destructive flex items-center justify-center gap-2">
+                        <AlertTriangle className="h-8 w-8" /> Error al Cargar Curso
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground mb-4">No pudimos cargar la estructura del curso.</p>
+                    <p className="text-sm text-destructive-foreground bg-destructive/10 p-3 rounded-md">{error}</p>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-3">
+                     <Button onClick={fetchCourseStructureData} variant="default" disabled={isLoadingCourse}>
+                        {isLoadingCourse ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        Intentar de Nuevo
+                    </Button>
+                    <Button variant="outline" asChild>
+                        <Link href="/courses">Volver a Cursos</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
+    );
   }
 
   if (!courseStructure || !currentLesson || !currentModule) {
@@ -263,6 +349,7 @@ export default function LessonPage() {
                       </Link>
                     </li>
                   ))}
+                   {moduleItem.lessons.length === 0 && <p className="text-xs text-muted-foreground p-2">No hay lecciones en este módulo.</p>}
                 </ul>
               </AccordionContent>
             </AccordionItem>
@@ -300,9 +387,10 @@ export default function LessonPage() {
               onClick={toggleLessonComplete}
               variant={isCurrentLessonCompleted ? "secondary" : "default"}
               className={`w-full md:w-auto ${isCurrentLessonCompleted ? 'bg-green-500/20 hover:bg-green-500/30 text-green-700 border border-green-500/50' : ''}`}
+              disabled={isTogglingCompletion || !currentUser}
             >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              {isCurrentLessonCompleted ? 'Lección Completada' : 'Marcar como Completada'}
+              {isTogglingCompletion ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="h-4 w-4 mr-2" />}
+              {isTogglingCompletion ? 'Actualizando...' : (isCurrentLessonCompleted ? 'Lección Completada' : 'Marcar como Completada')}
             </Button>
           </div>
 
@@ -326,7 +414,7 @@ export default function LessonPage() {
                   {currentLesson.materialesAdicionales && currentLesson.materialesAdicionales.length > 0 ? (
                     <ul className="space-y-3">
                       {currentLesson.materialesAdicionales.map((material, index) => (
-                        <li key={index}> {/* Idealmente usar material.id si estuviera disponible */}
+                        <li key={material.id || index}>
                           <Button variant="link" asChild className="p-0 h-auto text-primary hover:underline">
                             <a href={material.url} download target="_blank" rel="noopener noreferrer">
                               <Download className="h-4 w-4 mr-2" /> {material.nombre}
@@ -390,5 +478,3 @@ export default function LessonPage() {
     </div>
   );
 }
-
-    

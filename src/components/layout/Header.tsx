@@ -13,30 +13,33 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { BookOpen, LayoutDashboard, LogOut, UserCircle, Menu as MenuIcon } from 'lucide-react';
+import { BookOpen, LayoutDashboard, LogOut, UserCircle, Menu as MenuIcon, Briefcase, MessageCircleQuestion } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 
 const navLinks = [
   { href: '/courses', label: 'Cursos' },
-  { href: '/#pricing', label: 'Precios' },
-  { href: '/#faq', label: 'FAQ' },
+  { href: '/#pricing', label: 'Precios', isHashLink: true },
+  { href: '/#faq', label: 'FAQ', isHashLink: true },
+  { href: '/blog', label: 'Blog' },
 ];
 
 export function Header() {
   const { currentUser, userRole, loading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
 
   const handleLogout = async () => {
     try {
       await logout();
       toast({ title: "Sesión Cerrada", description: "Has cerrado sesión exitosamente." });
-      router.push('/'); // Redirect to home page after logout
+      router.push('/'); 
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
       toast({ title: "Error", description: "No se pudo cerrar la sesión.", variant: "destructive" });
@@ -44,7 +47,7 @@ export function Header() {
   };
   
   const getInitials = (name?: string | null) => {
-    if (!name) return 'CC';
+    if (!name) return 'MB';
     const names = name.split(' ');
     if (names.length > 1) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
@@ -52,137 +55,153 @@ export function Header() {
     return name.substring(0, 2).toUpperCase();
   };
 
-
   const renderAuthSection = () => {
     if (loading) {
       return (
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-8 w-20" />
-          <Skeleton className="h-8 w-20" />
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-24 rounded-md" />
+          <Skeleton className="h-9 w-9 rounded-full" />
         </div>
       );
     }
 
     if (currentUser) {
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} data-ai-hint="user avatar" />
-                <AvatarFallback>{getInitials(currentUser.displayName)}</AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <p className="font-medium truncate">{currentUser.displayName || currentUser.email}</p>
-              <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/dashboard"><LayoutDashboard className="mr-2 h-4 w-4" />Dashboard</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/dashboard/student"><UserCircle className="mr-2 h-4 w-4" />Mi Perfil</Link>
-            </DropdownMenuItem>
-            {userRole === 'student' && (
+        <div className="flex items-center gap-3">
+           <Button variant="outline" size="sm" asChild className="hidden sm:inline-flex">
+            <Link href="/dashboard">
+              <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+            </Link>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+                <Avatar className="h-9 w-9 border-2 border-border hover:border-primary transition-colors">
+                  <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} data-ai-hint="user avatar" />
+                  <AvatarFallback>{getInitials(currentUser.displayName)}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 mt-2 shadow-soft-xl">
+              <DropdownMenuLabel>
+                <p className="font-medium truncate">{currentUser.displayName || currentUser.email}</p>
+                <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/student"><BookOpen className="mr-2 h-4 w-4" />Mis Cursos</Link>
+                <Link href="/dashboard"><LayoutDashboard className="mr-2 h-4 w-4" />Dashboard Principal</Link>
               </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              Cerrar Sesión
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/student"><UserCircle className="mr-2 h-4 w-4" />Mi Perfil</Link>
+              </DropdownMenuItem>
+              {userRole === 'student' && (
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/student"><BookOpen className="mr-2 h-4 w-4" />Mis Cursos</Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                Cerrar Sesión
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       );
     }
 
     return (
       <div className="hidden md:flex items-center gap-2">
-        <Button variant="ghost" asChild>
+        <Button variant="ghost" asChild className="text-foreground/80 hover:text-foreground">
           <Link href="/login">Iniciar Sesión</Link>
         </Button>
-        <Button asChild>
-          <Link href="/signup">Registrarse</Link>
+        <Button asChild className="rounded-full shadow-sm hover:shadow-md transition-shadow bg-foreground text-background hover:bg-foreground/80">
+          <Link href="/signup">Comenzar</Link>
         </Button>
       </div>
     );
   };
 
-  const renderMobileAuthSection = () => {
+  const renderMobileAuthSection = (closeSheet?: () => void) => {
     if (loading) {
       return <Skeleton className="h-8 w-full mt-4" />
     }
+    const handleLinkClick = (href: string) => {
+      router.push(href);
+      if (closeSheet) closeSheet();
+    };
     if (currentUser) {
       return (
         <>
-          <Link href="/dashboard" className="text-muted-foreground transition-colors hover:text-foreground">Dashboard</Link>
-          <Link href="/dashboard/student" className="text-muted-foreground transition-colors hover:text-foreground">Mi Perfil</Link>
-          <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-muted-foreground hover:text-foreground p-0 h-auto">Cerrar Sesión</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} className="w-full justify-start">Dashboard</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} className="w-full justify-start">Mi Perfil</Button>
+          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
         </>
       );
     }
     return (
       <>
-        <Button variant="ghost" asChild className="w-full justify-start p-0 h-auto">
-          <Link href="/login" className="text-muted-foreground transition-colors hover:text-foreground">Iniciar Sesión</Link>
-        </Button>
-        <Button asChild className="w-full justify-start">
-          <Link href="/signup">Registrarse</Link>
-        </Button>
+        <Button variant="ghost" onClick={() => handleLinkClick('/login')} className="w-full justify-start">Iniciar Sesión</Button>
+        <Button onClick={() => handleLinkClick('/signup')} className="w-full">Comenzar</Button>
       </>
     );
   }
+  
+  const [isSheetOpen, setIsSheetOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <Logo />
+    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-[72px] items-center justify-between">
+        <Logo useIconOnly={false} />
         
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+        <nav className="hidden md:flex items-center gap-1 bg-secondary/50 px-2 py-1.5 rounded-full shadow-sm">
           {navLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="text-foreground/70 transition-colors hover:text-foreground">
-              {link.label}
-            </Link>
+            <Button 
+              key={link.label} 
+              variant="ghost" 
+              size="sm" 
+              asChild 
+              className={cn(
+                "rounded-full px-4 py-1.5 text-sm",
+                pathname === link.href ? "bg-background text-primary shadow-sm" : "text-foreground/70 hover:text-foreground hover:bg-background/70"
+              )}
+            >
+              <Link href={link.href}>{link.label}</Link>
+            </Button>
           ))}
         </nav>
 
         <div className="flex items-center gap-2 md:gap-4">
-          <div className="hidden md:block">
-            {renderAuthSection()}
-          </div>
+          {renderAuthSection()}
          
-          <Sheet>
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="md:hidden">
-                <MenuIcon className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="md:hidden text-foreground/80 hover:text-foreground">
+                <MenuIcon className="h-6 w-6" />
                 <span className="sr-only">Abrir menú</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left">
+            <SheetContent side="left" className="w-[280px] flex flex-col">
               <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
-              <nav className="grid gap-4 text-lg font-medium mt-8">
-                <div className="mb-4">
-                  <Logo />
-                </div>
+              <div className="mb-6 border-b pb-4">
+                 <Logo useIconOnly={false} onClick={() => setIsSheetOpen(false)}/>
+              </div>
+              <nav className="grid gap-3 text-base font-medium flex-grow">
                 {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="text-muted-foreground transition-colors hover:text-foreground text-base"
+                  <Button
+                    key={link.label}
+                    variant={pathname === link.href ? "secondary" : "ghost"}
+                    asChild
+                    className="justify-start text-md"
+                    onClick={() => setIsSheetOpen(false)}
                   >
-                    {link.label}
-                  </Link>
+                    <Link href={link.href}>{link.label}</Link>
+                  </Button>
                 ))}
-                <hr className="my-2"/>
-                <div className="flex flex-col gap-4">
-                 {renderMobileAuthSection()}
-                </div>
               </nav>
+              <div className="mt-auto border-t pt-4 space-y-3">
+                 {renderMobileAuthSection(() => setIsSheetOpen(false))}
+              </div>
             </SheetContent>
           </Sheet>
         </div>
@@ -190,4 +209,3 @@ export function Header() {
     </header>
   );
 }
-

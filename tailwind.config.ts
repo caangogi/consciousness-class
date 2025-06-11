@@ -10,8 +10,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['PT Sans', 'sans-serif'],
-        headline: ['Playfair Display', 'serif'],
+        body: ['Inter', 'sans-serif'],
+        headline: ['Manrope', 'sans-serif'], // Changed from Playfair Display
         code: ['monospace'],
       },
       colors: {
@@ -70,6 +70,11 @@ export default {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+        xl: 'calc(var(--radius) + 4px)', // Added for potentially larger rounding
+        '2xl': 'calc(var(--radius) + 8px)',
+        '3xl': 'calc(var(--radius) + 16px)',
+        '4xl': 'calc(var(--radius) + 24px)', // For pill-like buttons
+        full: '9999px',
       },
       keyframes: {
         'accordion-down': {
@@ -88,11 +93,25 @@ export default {
             height: '0',
           },
         },
+        'fadeInUp': {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'backgroundShine': {
+          'from': { backgroundPosition: '0 0' },
+          'to': { backgroundPosition: '-200% 0' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'fadeInUp': 'fadeInUp 0.5s ease-out forwards',
+        'backgroundShine': 'backgroundShine 2s linear infinite',
       },
+      boxShadow: {
+        'soft-xl': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 20px 50px -12px rgba(0, 0, 0, 0.07)',
+        'soft-2xl': '0 15px 35px -10px rgba(0, 0, 0, 0.06), 0 30px 70px -15px rgba(0, 0, 0, 0.08)',
+      }
     },
   },
   plugins: [require('tailwindcss-animate')],

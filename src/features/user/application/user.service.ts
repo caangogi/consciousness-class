@@ -1,6 +1,6 @@
 
 // src/features/user/application/user.service.ts
-import { UserEntity, type UserProperties } from '@/features/user/domain/entities/user.entity';
+import { UserEntity, type UserProperties, type UserRole } from '@/features/user/domain/entities/user.entity';
 import type { IUserRepository } from '@/features/user/domain/repositories/user.repository';
 import type { CreateUserDto } from '@/features/user/infrastructure/dto/create-user.dto';
 import type { UpdateUserProfileDto } from '@/features/user/infrastructure/dto/update-user.dto'; 
@@ -94,6 +94,33 @@ export class UserService {
         throw new Error('Failed to update user profile: ' + error.message);
       }
       throw new Error('An unexpected error occurred while updating user profile.');
+    }
+  }
+
+  async requestCreatorRole(uid: string): Promise<UserEntity | null> {
+    try {
+      const user = await this.userRepository.findByUid(uid);
+      if (!user) {
+        throw new Error(`User with UID ${uid} not found.`);
+      }
+      if (user.role === 'creator') {
+        console.warn(`[UserService] User ${uid} is already a creator.`);
+        return user;
+      }
+      if (user.role !== 'student') {
+        throw new Error(`User ${uid} has role ${user.role} and cannot be directly converted to creator from this role.`);
+      }
+
+      const updatedUser = await this.userRepository.update(uid, { role: 'creator' });
+      if (updatedUser) {
+        console.log(`[UserService] User ${uid} role updated to creator successfully.`);
+      } else {
+        throw new Error(`Failed to update role for user ${uid}.`);
+      }
+      return updatedUser;
+    } catch (error: any) {
+      console.error(`[UserService] Error updating user role to creator for UID ${uid}:`, error.message);
+      throw error;
     }
   }
 

@@ -22,12 +22,12 @@ import {
   ShieldCheck,
   Palette,
   MessageSquare,
-  Menu as MenuIcon,
+  PlusCircle, // Added for "Crear Nuevo Curso"
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+// Sheet components are not directly used here for the main sidebar, but might be for mobile in layout
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface NavItem {
@@ -38,23 +38,30 @@ interface NavItem {
   subItems?: NavItem[];
 }
 
-const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, roles: ['student', 'creator', 'superadmin'] },
-  // Student specific
-  { href: '/dashboard/student', label: 'Mis Cursos', icon: BookOpen, roles: ['student'] }, // Adjusted
-  { href: '/dashboard/student', label: 'Mi Perfil', icon: UserCircle, roles: ['student'] }, // Adjusted
-  { href: '/dashboard/student', label: 'Mis Referidos', icon: Gift, roles: ['student'] }, // Adjusted
-  { href: '/dashboard/student', label: 'Certificados', icon: AwardIcon, roles: ['student'] }, // Adjusted
+// This navItems array is now the single source of truth for navigation structure
+export const navItems: NavItem[] = [
+  { href: '/dashboard', label: 'Resumen General', icon: LayoutDashboard, roles: ['student', 'creator', 'superadmin'] },
+  
+  // Student specific (grouping conceptually)
+  // The actual student dashboard page is now at /dashboard/student
+  { href: '/dashboard/student', label: 'Panel Estudiante', icon: LayoutDashboard, roles: ['student'] },
+  // { href: '/dashboard/student/my-courses', label: 'Mis Cursos', icon: BookOpen, roles: ['student'] }, // Example if we had sub-pages
+  // { href: '/dashboard/student/profile', label: 'Mi Perfil', icon: UserCircle, roles: ['student'] },
+  // { href: '/dashboard/student/referrals', label: 'Mis Referidos', icon: Gift, roles: ['student'] },
+  // { href: '/dashboard/student/certificates', label: 'Certificados', icon: AwardIcon, roles: ['student'] },
+  
   // Creator specific
-  { href: '/dashboard/creator', label: 'Resumen Creator', icon: LayoutDashboard, roles: ['creator'] },
+  { href: '/dashboard/creator', label: 'Panel Creator', icon: LayoutDashboard, roles: ['creator'] },
+  { href: '/dashboard/creator/courses/new', label: 'Crear Nuevo Curso', icon: PlusCircle, roles: ['creator'] },
   { href: '/dashboard/creator/courses', label: 'Gestionar Cursos', icon: Edit3, roles: ['creator'] },
-  { href: '/dashboard/creator/lessons', label: 'Gestionar Lecciones', icon: Palette, roles: ['creator'] },
+  // { href: '/dashboard/creator/lessons', label: 'Gestionar Lecciones', icon: Palette, roles: ['creator'] }, // Maybe combine with course management
   { href: '/dashboard/creator/stats', label: 'Estadísticas', icon: BarChart2, roles: ['creator'] },
   { href: '/dashboard/creator/referral-config', label: 'Config. Referidos', icon: Settings, roles: ['creator'] },
   { href: '/dashboard/creator/earnings', label: 'Ingresos', icon: DollarSign, roles: ['creator'] },
   { href: '/dashboard/creator/comments', label: 'Comentarios', icon: MessageSquare, roles: ['creator'] },
+  
   // Superadmin specific
-  { href: '/dashboard/superadmin', label: 'Resumen Admin', icon: LayoutDashboard, roles: ['superadmin'] },
+  { href: '/dashboard/superadmin', label: 'Panel Admin', icon: LayoutDashboard, roles: ['superadmin'] },
   { href: '/dashboard/superadmin/user-management', label: 'Gestión Usuarios', icon: Users, roles: ['superadmin'] },
   { href: '/dashboard/superadmin/course-management', label: 'Gestión Cursos', icon: BookOpen, roles: ['superadmin'] },
   { href: '/dashboard/superadmin/platform-stats', label: 'Métricas Plataforma', icon: BarChart2, roles: ['superadmin'] },
@@ -109,8 +116,6 @@ export function DashboardSidebar() {
   }
   
   if (!currentUser) {
-    // Or redirect, or show a message. For now, null to not render sidebar if not logged in.
-    // This case should ideally be handled by route protection in DashboardLayout.
     return null; 
   }
 
@@ -122,7 +127,7 @@ export function DashboardSidebar() {
           <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} />
           <AvatarFallback>{getInitials(currentUser.displayName)}</AvatarFallback>
         </Avatar>
-        <div className="flex flex-col">
+        <div className="flex flex-col overflow-hidden"> {/* Added overflow-hidden */}
          <span className="text-sm font-semibold truncate">{currentUser.displayName || currentUser.email}</span>
          <span className="text-xs text-muted-foreground capitalize">{userRole}</span>
         </div>
@@ -131,12 +136,11 @@ export function DashboardSidebar() {
         <nav className="grid items-start px-4 text-sm font-medium">
           {filteredNavItems.map((item) => (
             <Link
-              key={item.href + item.label} // Ensure key is unique if hrefs are repeated
+              key={item.href + item.label} 
               href={item.href}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10',
-                // For generic /dashboard/student, make sure it highlights correctly
-                (pathname === item.href || (item.href === '/dashboard/student' && pathname.startsWith('/dashboard/student'))) && 'bg-primary/10 text-primary font-semibold'
+                (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)) ) && 'bg-primary/10 text-primary font-semibold'
               )}
             >
               <item.icon className="h-4 w-4" />

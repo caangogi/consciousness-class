@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud } from "lucide-react";
+import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton"; 
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useForm } from 'react-hook-form';
@@ -39,13 +40,15 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function StudentDashboardPage() {
-  const { currentUser, loading: authLoading, refreshUserProfile } = useAuth();
+  const { currentUser, userRole, loading: authLoading, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRequestingCreatorRole, setIsRequestingCreatorRole] = useState(false);
+  const [showBecomeCreatorDialog, setShowBecomeCreatorDialog] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -81,7 +84,7 @@ export default function StudentDashboardPage() {
     }
   };
 
-  async function onSubmit(values: ProfileFormValues) {
+  async function onSubmitProfile(values: ProfileFormValues) {
     if (!auth.currentUser) {
       toast({ title: "Error de Autenticación", description: "Usuario no autenticado. Por favor, inicia sesión de nuevo.", variant: "destructive" });
       setIsSubmitting(false);
@@ -103,26 +106,14 @@ export default function StudentDashboardPage() {
         const storagePath = `users/${activeUser.uid}/${finalFileNameInStorage}`;
         
         const fileMetadata = {
-          contentType: imageFile.type // Explicitly set content type
+          contentType: imageFile.type
         };
 
-        console.log("--------------------------------------------------");
-        console.log("[StudentDashboard] PRE-UPLOAD DEBUG INFO FOR STORAGE (using auth.currentUser.uid for path):");
-        console.log(`  Attempting to upload to Storage path: "${storagePath}"`);
-        console.log(`  User UID for path (from auth.currentUser.uid): ${activeUser.uid}`);
-        console.log(`  Original file name: "${originalFileName}"`);
-        console.log(`  Determined extension (lowercase): ".${fileExtension}"`);
-        console.log(`  Final name in storage: "${finalFileNameInStorage}"`);
-        console.log(`  File size: ${imageFile.size} bytes (${(imageFile.size / 1024 / 1024).toFixed(2)} MB)`);
-        console.log(`  File type (MIME) being sent: ${fileMetadata.contentType}`);
-        console.log(`  Context user UID (currentUser.uid from useAuth): ${currentUser?.uid}`);
-        console.log("  CHECK THESE VALUES AGAINST YOUR FIREBASE STORAGE RULES & ENSURE RULES ARE FULLY PROPAGATED!");
-        console.log("--------------------------------------------------");
-
+        console.log("[StudentDashboard] Uploading profile image to:", storagePath);
         const storageRefInstance = ref(storage, storagePath);
 
         try {
-            await uploadBytes(storageRefInstance, imageFile, fileMetadata); // Pass metadata here
+            await uploadBytes(storageRefInstance, imageFile, fileMetadata);
             uploadedPhotoURL = await getDownloadURL(storageRefInstance);
             console.log(`[StudentDashboard] Upload successful. New Photo URL: ${uploadedPhotoURL}`);
         } catch (uploadError: any) {
@@ -187,6 +178,38 @@ export default function StudentDashboardPage() {
         toast({ title: "Error", description: "No hay código de referido para copiar.", variant: "destructive"});
     }
   }
+
+  const handleRequestCreatorRole = async () => {
+    if (!auth.currentUser) {
+      toast({ title: "Error de Autenticación", variant: "destructive" });
+      return;
+    }
+    setIsRequestingCreatorRole(true);
+    setShowBecomeCreatorDialog(false);
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+      const response = await fetch('/api/users/request-creator-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || "Error al solicitar rol de creador.");
+      }
+      
+      await refreshUserProfile();
+      toast({ title: "¡Rol Actualizado!", description: "Ahora eres un Creator. Explora las nuevas opciones en tu dashboard." });
+      // No need to redirect here, AuthContext update should trigger UI changes.
+    } catch (error: any) {
+      toast({ title: "Error al Cambiar Rol", description: error.message, variant: "destructive" });
+    } finally {
+      setIsRequestingCreatorRole(false);
+    }
+  };
 
   const getInitials = (name?: string | null, surname?: string | null) => {
     if (name && surname) return `${name[0]}${surname[0]}`.toUpperCase();
@@ -273,78 +296,105 @@ export default function StudentDashboardPage() {
                     <p className="text-sm text-muted-foreground">{currentUser.email || 'Email no especificado'}</p>
                 </div>
             </div>
-             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Edit className="mr-2 h-4 w-4" /> Editar Perfil
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[480px]">
-                <DialogHeader>
-                  <DialogTitle>Editar Perfil</DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
-                    <div className="space-y-4 text-center">
-                        <Avatar className="h-32 w-32 mx-auto ring-2 ring-primary ring-offset-2 ring-offset-background">
-                            <AvatarImage src={imagePreviewUrl || `https://placehold.co/128x128.png?text=${getInitials(form.getValues('nombre'), form.getValues('apellido'))}`} alt="Vista previa de perfil" data-ai-hint="profile preview"/>
-                            <AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback>
-                        </Avatar>
-                        <div className="relative w-full max-w-xs mx-auto">
-                            <Input 
-                                id="picture" 
-                                type="file" 
-                                accept="image/png, image/jpeg, image/webp, image/gif"
-                                onChange={handleImageChange} 
-                                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
-                                disabled={isUploadingImage || isSubmitting}
-                            />
-                            <Button type="button" variant="outline" className="w-full pointer-events-none relative">
-                                {isUploadingImage && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}
-                                {!isUploadingImage && <Camera className="mr-2 h-4 w-4" />}
-                                {isUploadingImage ? 'Subiendo...' : (imageFile ? (imageFile.name.length > 25 ? imageFile.name.substring(0,22) + '...' : imageFile.name) : 'Cambiar foto')}
-                            </Button>
-                            {isUploadingImage && <Progress value={undefined} className="absolute bottom-0 left-0 right-0 h-1 w-full rounded-b-md" />}
+            <div className="flex flex-wrap gap-2">
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                    <Edit className="mr-2 h-4 w-4" /> Editar Perfil
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[480px]">
+                    <DialogHeader>
+                    <DialogTitle>Editar Perfil</DialogTitle>
+                    </DialogHeader>
+                    <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmitProfile)} className="space-y-6 py-4">
+                        <div className="space-y-4 text-center">
+                            <Avatar className="h-32 w-32 mx-auto ring-2 ring-primary ring-offset-2 ring-offset-background">
+                                <AvatarImage src={imagePreviewUrl || `https://placehold.co/128x128.png?text=${getInitials(form.getValues('nombre'), form.getValues('apellido'))}`} alt="Vista previa de perfil" data-ai-hint="profile preview"/>
+                                <AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback>
+                            </Avatar>
+                            <div className="relative w-full max-w-xs mx-auto">
+                                <Input 
+                                    id="picture" 
+                                    type="file" 
+                                    accept="image/png, image/jpeg, image/webp, image/gif"
+                                    onChange={handleImageChange} 
+                                    className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                                    disabled={isUploadingImage || isSubmitting}
+                                />
+                                <Button type="button" variant="outline" className="w-full pointer-events-none relative">
+                                    {isUploadingImage && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}
+                                    {!isUploadingImage && <Camera className="mr-2 h-4 w-4" />}
+                                    {isUploadingImage ? 'Subiendo...' : (imageFile ? (imageFile.name.length > 25 ? imageFile.name.substring(0,22) + '...' : imageFile.name) : 'Cambiar foto')}
+                                </Button>
+                                {isUploadingImage && <Progress value={undefined} className="absolute bottom-0 left-0 right-0 h-1 w-full rounded-b-md" />}
+                            </div>
                         </div>
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="nombre"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nombre</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Tu nombre" {...field} disabled={isSubmitting || isUploadingImage} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="apellido"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Apellido</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Tu apellido" {...field} disabled={isSubmitting || isUploadingImage} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <DialogFooter>
-                      <DialogClose asChild>
-                        <Button type="button" variant="outline" disabled={isSubmitting || isUploadingImage}>Cancelar</Button>
-                      </DialogClose>
-                      <Button type="submit" disabled={isUploadingImage || isSubmitting}>
-                        {isSubmitting ? (isUploadingImage ? 'Subiendo Imagen...' : 'Guardando...') : 'Guardar Cambios'}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+                        <FormField
+                        control={form.control}
+                        name="nombre"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nombre</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Tu nombre" {...field} disabled={isSubmitting || isUploadingImage} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="apellido"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Apellido</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Tu apellido" {...field} disabled={isSubmitting || isUploadingImage} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline" disabled={isSubmitting || isUploadingImage}>Cancelar</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={isUploadingImage || isSubmitting}>
+                            {isSubmitting ? (isUploadingImage ? 'Subiendo Imagen...' : 'Guardando...') : 'Guardar Cambios'}
+                        </Button>
+                        </DialogFooter>
+                    </form>
+                    </Form>
+                </DialogContent>
+                </Dialog>
+
+                {userRole === 'student' && (
+                   <AlertDialog open={showBecomeCreatorDialog} onOpenChange={setShowBecomeCreatorDialog}>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="default" size="sm" disabled={isRequestingCreatorRole}>
+                                <Rocket className="mr-2 h-4 w-4" /> Convertirme en Creator
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>¿Quieres convertirte en Creator?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Como Creator, podrás crear y vender tus propios cursos en consciousness-class.
+                                Esta acción cambiará tu rol de Student a Creator.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isRequestingCreatorRole}>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleRequestCreatorRole} disabled={isRequestingCreatorRole}>
+                                {isRequestingCreatorRole ? 'Procesando...' : 'Sí, Convertirme en Creator'}
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
+            </div>
           </CardContent>
         </Card>
 

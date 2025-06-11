@@ -4,13 +4,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn } from 'lucide-react';
+import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn, CreditCard, ShoppingCart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
@@ -18,7 +18,7 @@ import type { LessonProperties } from '@/features/course/domain/entities/lesson.
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/config';
-
+import { loadStripe, type Stripe } from '@stripe/stripe-js';
 
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
@@ -34,19 +34,50 @@ const placeholderReviews = [
   { id: 'c2', usuario: { nombre: 'Laura M.', avatarUrl: 'https://placehold.co/40x40.png?text=LM' }, texto: 'Me ayudó mucho a entender GraphQL. Lo recomiendo.', rating: 5, fecha: '2024-06-28' },
 ];
 
+// Initialize Stripe.js
+let stripePromise: Promise<Stripe | null> | null = null;
+const getStripe = () => {
+  if (!stripePromise) {
+    if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+      stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+    } else {
+      console.error("Stripe publishable key is not set in environment variables.");
+      // Return a promise that resolves to null or handles the error appropriately
+      stripePromise = Promise.resolve(null);
+    }
+  }
+  return stripePromise;
+};
+
+
 export default function CourseDetailPage() {
   const params = useParams<{ id: string }>();
   const courseId = params.id;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentUser, loading: authLoading, refreshUserProfile } = useAuth();
   const { toast } = useToast();
 
   const [courseData, setCourseData] = useState<CourseStructureData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [isProcessingEnrollment, setIsProcessingEnrollment] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isUserEnrolled = currentUser?.cursosInscritos?.includes(courseId) ?? false;
+
+  useEffect(() => {
+    if (searchParams.get('canceled') === 'true') {
+      toast({
+        title: 'Pago Cancelado',
+        description: 'Has cancelado el proceso de pago. Puedes intentarlo de nuevo.',
+        variant: 'default',
+        duration: 5000,
+      });
+      // Clean the URL parameter
+      router.replace(`/courses/${courseId}`, { scroll: false });
+    }
+  }, [searchParams, courseId, router, toast]);
 
   const fetchCourseData = useCallback(async () => {
     if (!courseId) {
@@ -76,40 +107,101 @@ export default function CourseDetailPage() {
     fetchCourseData();
   }, [fetchCourseData]);
 
-  const handleEnroll = async () => {
-    if (!currentUser || !courseId) {
-      toast({ title: "Error", description: "Debes iniciar sesión para inscribirte.", variant: "destructive" });
-      router.push(`/login?redirect=/courses/${courseId}`);
-      return;
+  const handleFreeEnrollment = async () => {
+    if (!currentUser || !courseId || !courseData) {
+        toast({ title: "Error", description: "Usuario no autenticado o datos del curso no disponibles.", variant: "destructive" });
+        if (!currentUser) router.push(`/login?redirect=/courses/${courseId}`);
+        return;
     }
-    setIsEnrolling(true);
+    setIsProcessingEnrollment(true);
     try {
-      const idToken = await auth.currentUser?.getIdToken(true);
-      if (!idToken) throw new Error("No se pudo obtener el token de autenticación.");
+        const idToken = await auth.currentUser?.getIdToken(true);
+        if (!idToken) throw new Error("No se pudo obtener el token de autenticación.");
 
-      const response = await fetch(`/api/courses/${courseId}/enroll`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-      });
+        const response = await fetch(`/api/courses/${courseId}/enroll`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || errorData.error || 'Error al inscribirse en el curso.');
-      }
-      
-      toast({ title: "¡Inscripción Exitosa!", description: `Te has inscrito correctamente en "${courseData?.course.nombre}".` });
-      await refreshUserProfile(); // Refresh user profile to get updated cursosInscritos
-      // No need to manually set isUserEnrolled, AuthContext update will trigger re-render
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || errorData.error || 'Error al inscribirse en el curso.');
+        }
+        
+        toast({ title: "¡Inscripción Exitosa!", description: `Te has inscrito correctamente en "${courseData.course.nombre}".` });
+        await refreshUserProfile();
     } catch (err: any) {
-      toast({ title: "Error de Inscripción", description: err.message, variant: "destructive" });
-      console.error("Error enrolling in course:", err);
+        toast({ title: "Error de Inscripción", description: err.message, variant: "destructive" });
+        console.error("Error enrolling in free course:", err);
     } finally {
-      setIsEnrolling(false);
+        setIsProcessingEnrollment(false);
     }
   };
+
+  const handlePaidCheckout = async () => {
+    if (!currentUser || !courseId || !courseData) {
+        toast({ title: "Error", description: "Usuario no autenticado o datos del curso no disponibles.", variant: "destructive" });
+        if (!currentUser) router.push(`/login?redirect=/courses/${courseId}`);
+        return;
+    }
+    if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+      toast({ title: "Error de Configuración", description: "La pasarela de pago no está configurada correctamente (Clave Pública).", variant: "destructive" });
+      return;
+    }
+    setIsProcessingPayment(true);
+    try {
+        const idToken = await auth.currentUser?.getIdToken(true);
+        if (!idToken) throw new Error("No se pudo obtener el token de autenticación.");
+
+        const response = await fetch(`/api/checkout/create-session`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({ courseId }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || errorData.error || 'Error al iniciar el proceso de pago.');
+        }
+        const { sessionId } = await response.json();
+        if (!sessionId) {
+            throw new Error('No se pudo obtener el ID de la sesión de pago.');
+        }
+
+        const stripe = await getStripe();
+        if (!stripe) {
+          throw new Error('Stripe.js no se ha cargado.');
+        }
+        
+        const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
+        
+        if (stripeError) {
+            console.error("Stripe redirectToCheckout error:", stripeError);
+            toast({ title: "Error de Pago", description: stripeError.message || "Ocurrió un error al redirigir al pago.", variant: "destructive" });
+        }
+    } catch (err: any) {
+        toast({ title: "Error de Compra", description: err.message, variant: "destructive" });
+        console.error("Error processing paid checkout:", err);
+    } finally {
+        setIsProcessingPayment(false);
+    }
+  };
+
+  const handleEnrollOrPurchase = () => {
+    if (!courseData) return;
+    if (courseData.course.precio > 0) {
+        handlePaidCheckout();
+    } else {
+        handleFreeEnrollment();
+    }
+  };
+
 
   if (isLoading || authLoading) {
     return (
@@ -194,6 +286,42 @@ export default function CourseDetailPage() {
 
   const totalLessons = modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
   const firstLessonId = modules[0]?.lessons[0]?.id || 'start';
+  const isCourseFree = course.precio <= 0;
+
+  const renderActionButton = () => {
+    const processing = isProcessingEnrollment || isProcessingPayment;
+    if (!currentUser) {
+        return (
+            <Button size="lg" className="w-full" asChild>
+                <Link href={`/login?redirect=/courses/${courseId}`}>
+                    <LogIn className="mr-2 h-5 w-5" /> Iniciar Sesión para Acceder
+                </Link>
+            </Button>
+        );
+    }
+    if (isUserEnrolled) {
+        return (
+            <Button size="lg" className="w-full" asChild>
+               <Link href={`/learn/${course.id}/${firstLessonId}`}>Ir al Curso</Link>
+            </Button>
+        );
+    }
+    if (isCourseFree) {
+        return (
+            <Button size="lg" className="w-full" onClick={handleFreeEnrollment} disabled={processing}>
+                {processing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5"/>}
+                {processing ? 'Inscribiendo...' : 'Inscribirse Gratis'}
+            </Button>
+        );
+    }
+    return (
+        <Button size="lg" className="w-full" onClick={handlePaidCheckout} disabled={processing}>
+             {processing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ShoppingCart className="mr-2 h-5 w-5"/>}
+             {processing ? 'Procesando...' : `Comprar Ahora por ${course.precio.toFixed(2)} €`}
+        </Button>
+    );
+  };
+
 
   return (
     <div className="bg-secondary/30">
@@ -233,23 +361,10 @@ export default function CourseDetailPage() {
               priority
             />
             <CardContent className="p-6">
-              <p className="text-3xl font-bold text-primary mb-4">{course.precio.toFixed(2)} €</p>
-              {!currentUser ? (
-                  <Button size="lg" className="w-full" asChild>
-                      <Link href={`/login?redirect=/courses/${courseId}`}>
-                          <LogIn className="mr-2 h-5 w-5" /> Iniciar Sesión para Inscribirse
-                      </Link>
-                  </Button>
-              ) : isUserEnrolled ? (
-                 <Button size="lg" className="w-full" asChild>
-                    <Link href={`/learn/${course.id}/${firstLessonId}`}>Ir al Curso</Link>
-                  </Button>
-              ) : (
-                <Button size="lg" className="w-full" onClick={handleEnroll} disabled={isEnrolling}>
-                  {isEnrolling ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-                  {isEnrolling ? 'Inscribiendo...' : 'Inscribirse Ahora'}
-                </Button>
-              )}
+              <p className="text-3xl font-bold text-primary mb-4">
+                  {isCourseFree ? 'Gratis' : `${course.precio.toFixed(2)} €`}
+              </p>
+              {renderActionButton()}
               <p className="text-xs text-muted-foreground mt-3 text-center">Acceso de por vida. Certificado de finalización.</p>
             </CardContent>
           </Card>

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Filter, Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardFooter } from "@/components/ui/card"; // Added imports
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<CourseCardData[]>([]);

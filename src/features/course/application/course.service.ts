@@ -87,4 +87,32 @@ export class CourseService {
       throw new Error(`Failed to update course: ${error.message}`);
     }
   }
+
+  async reorderModules(courseId: string, orderedModuleIds: string[], updaterUid: string): Promise<CourseEntity | null> {
+    try {
+      const courseEntity = await this.courseRepository.findById(courseId);
+      if (!courseEntity) {
+        throw new Error(`Course with ID ${courseId} not found.`);
+      }
+      if (courseEntity.creadorUid !== updaterUid) {
+        throw new Error(`Forbidden: User ${updaterUid} is not the creator of course ${courseId}.`);
+      }
+
+      // Validate that all orderedModuleIds belong to the course (optional, but good practice)
+      const currentModuleIds = courseEntity.ordenModulos || [];
+      const allExistAndMatch = orderedModuleIds.every(id => currentModuleIds.includes(id)) && orderedModuleIds.length === currentModuleIds.length;
+      if (!allExistAndMatch && currentModuleIds.length > 0) { // Only validate if there were modules to begin with
+        console.warn(`[CourseService] Reorder validation failed. Ordered IDs: ${orderedModuleIds}. Current IDs: ${currentModuleIds}`);
+        // throw new Error('Invalid module IDs provided for reordering.'); // Can be stricter
+      }
+      
+      courseEntity.update({ ordenModulos: orderedModuleIds });
+      await this.courseRepository.save(courseEntity);
+      console.log(`[CourseService] Modules reordered for course ${courseId} by UID: ${updaterUid}. New order: ${orderedModuleIds.join(', ')}`);
+      return courseEntity;
+    } catch (error: any) {
+      console.error(`[CourseService] Error reordering modules for course ID ${courseId} by UID ${updaterUid}:`, error.message);
+      throw error;
+    }
+  }
 }

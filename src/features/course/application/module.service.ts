@@ -34,6 +34,8 @@ export class ModuleService {
       await this.moduleRepository.save(moduleEntity);
       
       course.ordenModulos.push(moduleEntity.id);
+      // Ensure course.ordenModulos reflects the numerical order as well, or sort it if necessary
+      // For now, just appending. Reorder will handle specific ordering.
       await this.courseRepository.save(course);
 
       console.log(`[ModuleService] Module created successfully for Course ID: ${courseId}, Module ID: ${moduleEntity.id}`);
@@ -50,7 +52,20 @@ export class ModuleService {
       if (!course) {
         throw new Error(`Course with ID ${courseId} not found.`);
       }
-      return await this.moduleRepository.findAllByCourseId(courseId);
+      // Fetch modules and then sort them according to course.ordenModulos if available
+      const modules = await this.moduleRepository.findAllByCourseId(courseId);
+      if (course.ordenModulos && course.ordenModulos.length > 0) {
+        const orderMap = new Map(course.ordenModulos.map((id, index) => [id, index]));
+        return modules.sort((a, b) => {
+          const orderA = orderMap.get(a.id);
+          const orderB = orderMap.get(b.id);
+          if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
+          if (orderA !== undefined) return -1; // a comes first if b is not in order list
+          if (orderB !== undefined) return 1;  // b comes first if a is not in order list
+          return a.orden - b.orden; // Fallback to numerical order
+        });
+      }
+      return modules.sort((a,b) => a.orden - b.orden); // Default sort by numerical order
     } catch (error: any) {
       console.error(`[ModuleService] Error fetching modules for Course ID ${courseId}:`, error.message);
       throw new Error(`Failed to fetch modules: ${error.message}`);
@@ -114,6 +129,39 @@ export class ModuleService {
     } catch (error: any) {
       console.error(`[ModuleService] Error deleting module ${moduleId} from course ${courseId}:`, error.message);
       throw error; // Re-throw to be caught by API handler
+    }
+  }
+
+  async reorderLessons(courseId: string, moduleId: string, orderedLessonIds: string[], updaterUid: string): Promise<ModuleEntity | null> {
+    try {
+        const course = await this.courseRepository.findById(courseId);
+        if (!course) {
+            throw new Error(`Course with ID ${courseId} not found.`);
+        }
+        if (course.creadorUid !== updaterUid) {
+            throw new Error(`Forbidden: User ${updaterUid} is not the creator of course ${courseId}.`);
+        }
+
+        const moduleEntity = await this.moduleRepository.findById(courseId, moduleId);
+        if (!moduleEntity) {
+            throw new Error(`Module with ID ${moduleId} not found in course ${courseId}.`);
+        }
+        
+        // Basic validation (optional, but good practice)
+        const currentLessonIds = moduleEntity.ordenLecciones || [];
+        const allExistAndMatch = orderedLessonIds.every(id => currentLessonIds.includes(id)) && orderedLessonIds.length === currentLessonIds.length;
+        if (!allExistAndMatch && currentLessonIds.length > 0) {
+          // Potentially relax this check if some lessons might not be in ordenLecciones yet due to direct creation
+          console.warn(`[ModuleService] Reorder lessons validation issue. Ordered IDs: ${orderedLessonIds}. Current IDs: ${currentLessonIds}`);
+        }
+
+        moduleEntity.update({ ordenLecciones: orderedLessonIds });
+        await this.moduleRepository.save(moduleEntity);
+        console.log(`[ModuleService] Lessons reordered for module ${moduleId} in course ${courseId}. New order: ${orderedLessonIds.join(', ')}`);
+        return moduleEntity;
+    } catch (error: any) {
+        console.error(`[ModuleService] Error reordering lessons for module ID ${moduleId}:`, error.message);
+        throw error;
     }
   }
 }

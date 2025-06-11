@@ -233,7 +233,7 @@ export default function CourseDetailPage() {
               priority
             />
             <CardContent className="p-6">
-              <p className="text-3xl font-bold text-primary mb-4">${course.precio.toFixed(2)}</p>
+              <p className="text-3xl font-bold text-primary mb-4">{course.precio.toFixed(2)} €</p>
               {!currentUser ? (
                   <Button size="lg" className="w-full" asChild>
                       <Link href={`/login?redirect=/courses/${courseId}`}>

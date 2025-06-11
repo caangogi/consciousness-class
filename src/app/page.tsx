@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -132,7 +133,7 @@ export default function Home() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-6 bg-secondary/30 flex justify-between items-center">
-                  <span className="text-2xl font-bold text-primary">${course.precio.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-primary">{course.precio.toFixed(2)} €</span>
                   <Button asChild variant="default" size="sm">
                     <Link href={`/courses/${course.id}`}>Ver Curso</Link>
                   </Button>

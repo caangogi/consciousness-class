@@ -1,9 +1,12 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PlusCircle, Edit3, BarChart2, Settings, DollarSign, MessageSquare, Users, Eye } from "lucide-react";
+import { PlusCircle, Edit3, BarChart2, Settings, MessageSquare, Users, Eye } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { BookOpen as BookOpenIcon, Star as StarIcon, DollarSign as DollarSignIcon } from "lucide-react"; // Renamed to avoid conflict
+
 
 // Placeholder data
 const creatorCourses = [
@@ -36,10 +39,10 @@ export default function CreatorDashboardPage() {
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
-            <DollarSign className="h-5 w-5 text-muted-foreground" />
+            <DollarSignIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalEarnings.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{stats.totalEarnings.toFixed(2)} €</div>
             <p className="text-xs text-muted-foreground">Desde el inicio</p>
           </CardContent>
         </Card>
@@ -56,7 +59,7 @@ export default function CreatorDashboardPage() {
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Cursos Activos</CardTitle>
-            <BookOpen className="h-5 w-5 text-muted-foreground" />
+            <BookOpenIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.activeCourses}</div>
@@ -66,7 +69,7 @@ export default function CreatorDashboardPage() {
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Valoración Promedio</CardTitle>
-            <Star className="h-5 w-5 text-muted-foreground" />
+            <StarIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.avgRating.toFixed(1)}</div>
@@ -104,7 +107,7 @@ export default function CreatorDashboardPage() {
                 <TableRow key={course.id}>
                   <TableCell className="font-medium">{course.title}</TableCell>
                   <TableCell className="text-center hidden md:table-cell">{course.students}</TableCell>
-                  <TableCell className="text-right hidden md:table-cell">${course.earnings.toFixed(2)}</TableCell>
+                  <TableCell className="text-right hidden md:table-cell">{course.earnings.toFixed(2)} €</TableCell>
                   <TableCell className="text-center">
                     <Badge variant={course.status === 'publicado' ? 'default' : 'secondary'}
                            className={course.status === 'publicado' ? 'bg-green-500/20 text-green-700 border-green-500/50' : 'bg-yellow-500/20 text-yellow-700 border-yellow-500/50'}>
@@ -164,13 +167,3 @@ export default function CreatorDashboardPage() {
     </div>
   );
 }
-
-// Minimal icons for dashboard, if not already used
-const BookOpen = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-);
-
-const Star = (props: React.SVGProps<SVGSVGElement>) => (
- <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-);
-

@@ -239,7 +239,7 @@ export default function StudentDashboardPage() {
   const certificates = certificatesPlaceholder;
   const referralCode = currentUser.referralCodeGenerated || 'GENERANDO...';
   const successfulReferrals = currentUser.referidosExitosos || 0;
-  const rewardsEarned = `$${(currentUser.balanceCredito || 0).toFixed(2)} en créditos`;
+  const rewardsEarned = `${(currentUser.balanceCredito || 0).toFixed(2)} € en créditos`;
 
   return (
     <div className="space-y-8">

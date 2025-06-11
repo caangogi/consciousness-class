@@ -74,7 +74,7 @@ export function CourseCard({ course }: CourseCardProps) {
         </div>
       </CardContent>
       <CardFooter className="p-5 border-t bg-secondary/30 flex justify-between items-center">
-        <span className="text-xl font-bold text-primary">${course.precio.toFixed(2)}</span>
+        <span className="text-xl font-bold text-primary">{course.precio.toFixed(2)} €</span>
         <Button asChild variant="default" size="sm">
           <Link href={`/courses/${course.id}`}>Ver Detalles</Link>
         </Button>

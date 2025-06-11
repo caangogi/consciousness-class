@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -188,17 +189,32 @@ export default function NewCoursePage() {
       setVideoTrailerUrlInput(courseDetails.videoTrailerUrl || '');
       setSelectedStatus(courseDetails.estado || 'borrador');
       // Apply saved module order if available
-      if (courseDetails.ordenModulos && courseDetails.ordenModulos.length > 0) {
+      if (courseDetails.ordenModulos && courseDetails.ordenModulos.length > 0 && modules.length > 0) {
         setModules(prevModules => {
-          const ordered = [...prevModules].sort((a, b) => {
-            const indexA = courseDetails.ordenModulos!.indexOf(a.id);
-            const indexB = courseDetails.ordenModulos!.indexOf(b.id);
-            if (indexA === -1 && indexB === -1) return a.orden - b.orden; // Both not in saved order, use numerical
-            if (indexA === -1) return 1; // a is new, put at end
-            if (indexB === -1) return -1; // b is new, put at end
-            return indexA - indexB;
+          const currentOrderMap = new Map(prevModules.map((mod, index) => [mod.id, index]));
+          const fetchedOrderMap = new Map(courseDetails.ordenModulos!.map((id, index) => [id, index]));
+          
+          const allModulesMap = new Map(prevModules.map(mod => [mod.id, mod]));
+          const orderedModules: ModuleProperties[] = [];
+          const newModules: ModuleProperties[] = [];
+
+          // Add modules present in courseDetails.ordenModulos in that order
+          courseDetails.ordenModulos!.forEach(id => {
+            if (allModulesMap.has(id)) {
+              orderedModules.push(allModulesMap.get(id)!);
+              allModulesMap.delete(id); // Remove from map to track remaining
+            }
           });
-          return ordered;
+          
+          // Add any remaining modules from prevModules (newly created, not yet in backend order)
+          // preserving their relative order from prevModules
+          prevModules.forEach(mod => {
+            if(allModulesMap.has(mod.id)) { // if it's still in the map, it wasn't in courseDetails.ordenModulos
+              newModules.push(mod);
+            }
+          });
+          
+          return [...orderedModules, ...newModules];
         });
       }
     }
@@ -239,10 +255,15 @@ export default function NewCoursePage() {
       const data = await response.json();
       
       let fetchedModules: ModuleProperties[] = data.modules || [];
-      const currentCourseDetails = courseDetails || (await fetch(`/api/courses/${courseId}`).then(res => res.json()).then(d => d.course)); // Fetch if not in state
+      
+      // Ensure courseDetails is fetched if not already available or to get the latest version
+      const courseDetailsResponse = await fetch(`/api/courses/${courseId}`); // Assuming course has an API endpoint
+      if (!courseDetailsResponse.ok) throw new Error("Error al cargar detalles del curso para ordenamiento.");
+      const courseData = await courseDetailsResponse.json();
+      const currentCourseData = courseData.course;
 
-      if (currentCourseDetails && currentCourseDetails.ordenModulos && currentCourseDetails.ordenModulos.length > 0) {
-        const orderMap = new Map(currentCourseDetails.ordenModulos.map((id, index) => [id, index]));
+      if (currentCourseData && currentCourseData.ordenModulos && currentCourseData.ordenModulos.length > 0) {
+        const orderMap = new Map(currentCourseData.ordenModulos.map((id: string, index: number) => [id, index]));
         fetchedModules.sort((a, b) => {
           const orderA = orderMap.get(a.id);
           const orderB = orderMap.get(b.id);
@@ -255,18 +276,33 @@ export default function NewCoursePage() {
         fetchedModules.sort((a, b) => a.orden - b.orden); 
       }
       setModules(fetchedModules);
+      if(currentCourseData) setCourseDetails(currentCourseData);
+
     } catch (error: any) {
       toast({ title: "Error al Cargar Módulos", description: error.message, variant: "destructive" });
     } finally {
       setIsModuleLoading(false);
     }
-  }, [toast, courseDetails]);
+  }, [toast]);
 
   useEffect(() => {
+    if (createdCourseId && !courseDetails) { // Fetch initial course details if not present
+        const fetchInitialCourse = async () => {
+            try {
+                const response = await fetch(`/api/courses/${createdCourseId}`);
+                if(!response.ok) throw new Error("No se pudieron cargar los detalles iniciales del curso.");
+                const data = await response.json();
+                setCourseDetails(data.course);
+            } catch (error: any) {
+                toast({title: "Error", description: error.message, variant: "destructive"});
+            }
+        };
+        fetchInitialCourse();
+    }
     if (createdCourseId) {
       fetchModules(createdCourseId);
     }
-  }, [createdCourseId, fetchModules]);
+  }, [createdCourseId, fetchModules, courseDetails, toast]);
 
   const fetchLessonsForModule = useCallback(async (courseId: string, moduleId: string, moduleData?: ModuleProperties) => {
     if (!courseId || !moduleId) return;
@@ -387,9 +423,9 @@ export default function NewCoursePage() {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || "Error al crear el módulo.");
       }
-      const newModuleData = await response.json();
-      if (newModuleData.course) { // If backend returns the updated course with new module order
-        setCourseDetails(newModuleData.course);
+      const newModuleResponse = await response.json();
+      if (newModuleResponse.module) { 
+        setCourseDetails(prev => prev ? ({ ...prev, ordenModulos: [...(prev.ordenModulos || []), newModuleResponse.module.id] }) : null);
       }
       toast({title: "Módulo Creado"});
       moduleForm.reset();
@@ -445,7 +481,7 @@ export default function NewCoursePage() {
     if (isFileType && lessonContentFile) {
         toast({
             title: "Subida Pendiente",
-            description: `El archivo "${lessonContentFile.name}" se subirá cuando edites esta lección después de crearla.`,
+            description: `El archivo "${lessonContentFile.name}" se deberá subir cuando edites esta lección después de crearla.`,
             duration: 6000,
         });
     }
@@ -473,7 +509,7 @@ export default function NewCoursePage() {
         throw new Error(errorData.details || errorData.error || "Error al crear la lección.");
       }
       const newLessonData = await response.json();
-      // Update module's lesson order in local state
+      
       setModules(prevModules => prevModules.map(mod => {
         if (mod.id === moduleId) {
           return { ...mod, ordenLecciones: [...(mod.ordenLecciones || []), newLessonData.lessonId] };
@@ -801,7 +837,7 @@ export default function NewCoursePage() {
   };
   
   const onDragEndModules: OnDragEndResponder = async (result: DropResult) => {
-    const { source, destination, draggableId } = result;
+    const { source, destination } = result;
     if (!destination || !createdCourseId || !auth.currentUser) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
@@ -823,15 +859,29 @@ export default function NewCoursePage() {
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.details || errorData.error || "Error al reordenar módulos.");
+            toast({ title: "Error al Reordenar Módulos", description: errorData.details || errorData.error || "No se pudo actualizar el orden.", variant: "destructive" });
+            // Revert to original order from courseDetails or re-fetch
+            if (courseDetails?.ordenModulos) {
+                const originalOrderMap = new Map(courseDetails.ordenModulos.map((id, index) => [id, index]));
+                 setModules(prev => [...prev].sort((a,b) => (originalOrderMap.get(a.id) ?? Infinity) - (originalOrderMap.get(b.id) ?? Infinity)));
+            } else {
+                await fetchModules(createdCourseId); // Fallback to re-fetch
+            }
+            return;
         }
         const updatedCourseData = await response.json();
         setCourseDetails(updatedCourseData.course); 
         toast({ title: "Módulos Reordenados", description: "El orden de los módulos ha sido actualizado." });
-        await fetchModules(createdCourseId); // Re-fetch to ensure consistency
+        // Optimistically updated, but re-fetch can ensure consistency if needed, though might cause a flicker
+        // await fetchModules(createdCourseId); 
     } catch (error: any) {
         toast({ title: "Error al Reordenar", description: error.message, variant: "destructive" });
-        await fetchModules(createdCourseId); // Revert by re-fetching original order
+        if (courseDetails?.ordenModulos) {
+             const originalOrderMap = new Map(courseDetails.ordenModulos.map((id, index) => [id, index]));
+             setModules(prev => [...prev].sort((a,b) => (originalOrderMap.get(a.id) ?? Infinity) - (originalOrderMap.get(b.id) ?? Infinity)));
+        } else {
+            await fetchModules(createdCourseId);
+        }
     } finally {
         setIsReorderingModules(false);
     }
@@ -920,7 +970,7 @@ export default function NewCoursePage() {
                         <div className="space-y-1 mt-6">
                           <h4 className="text-lg font-semibold mb-2">Módulos del Curso:</h4>
                           <DragDropContext onDragEnd={onDragEndModules}>
-                            <Droppable droppableId="modules-droppable" isDropDisabled={isReorderingModules}>
+                            <Droppable droppableId="modules-droppable" isDropDisabled={isReorderingModules} isCombineEnabled={false}>
                               {(provided) => (
                                 <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
                                   <Accordion type="single" collapsible className="w-full" value={expandedModuleId || undefined} onValueChange={(value) => {
@@ -1201,11 +1251,11 @@ export default function NewCoursePage() {
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setModuleToDelete(null)} disabled={isModuleLoading}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteModule} disabled={isModuleLoading} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+            <Button variant="outline" onClick={() => {setModuleToDelete(null); setShowDeleteModuleDialog(false);}} disabled={isModuleLoading}>Cancelar</Button>
+            <Button onClick={handleDeleteModule} disabled={isModuleLoading} variant="destructive">
                 {isModuleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Eliminar Módulo
-            </AlertDialogAction>
+            </Button>
             </AlertDialogFooter>
         </AlertDialogContent>
      </AlertDialog>
@@ -1332,11 +1382,11 @@ export default function NewCoursePage() {
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setLessonToDelete(null)} disabled={isDeletingLesson}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteLesson} disabled={isDeletingLesson} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+            <Button variant="outline" onClick={() => {setLessonToDelete(null); setShowDeleteLessonDialog(false);}} disabled={isDeletingLesson}>Cancelar</Button>
+            <Button onClick={handleDeleteLesson} disabled={isDeletingLesson} variant="destructive">
                 {isDeletingLesson ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Eliminar Lección
-            </AlertDialogAction>
+            </Button>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
@@ -1344,4 +1394,5 @@ export default function NewCoursePage() {
     </div>
   );
 }
+
 

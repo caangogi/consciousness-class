@@ -14,8 +14,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
@@ -961,18 +961,17 @@ export default function NewCoursePage() {
                                                         <Edit className="h-3.5 w-3.5"/>
                                                         <span className="sr-only">Editar módulo</span>
                                                     </Button>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10 opacity-60 hover:opacity-100 focus-visible:ring-offset-secondary/60" 
-                                                            onClick={(e) => { 
-                                                                e.stopPropagation(); 
-                                                                setModuleToDelete(module); 
-                                                            }}
-                                                            disabled={isReorderingModules}
-                                                          >
-                                                            <Trash2 className="h-3.5 w-3.5"/>
-                                                            <span className="sr-only">Eliminar módulo</span>
-                                                        </Button>
-                                                    </AlertDialogTrigger>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10 opacity-60 hover:opacity-100 focus-visible:ring-offset-secondary/60" 
+                                                        onClick={(e) => { 
+                                                            e.stopPropagation(); 
+                                                            setModuleToDelete(module); 
+                                                            setShowDeleteModuleDialog(true);
+                                                        }}
+                                                        disabled={isReorderingModules}
+                                                      >
+                                                        <Trash2 className="h-3.5 w-3.5"/>
+                                                        <span className="sr-only">Eliminar módulo</span>
+                                                    </Button>
                                                 </div>
                                               </div>
                                             <AccordionContent className="pt-0 pb-2 px-2 border-t border-primary/10 ml-0">
@@ -1040,16 +1039,15 @@ export default function NewCoursePage() {
                                                                     <Edit className="h-3 w-3"/>
                                                                     <span className="sr-only">Editar lección</span>
                                                                 </Button>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20" 
-                                                                      onClick={(e) => { 
-                                                                        e.stopPropagation(); 
-                                                                        setLessonToDelete(lesson); 
-                                                                      }}>
-                                                                        <Trash2 className="h-3 w-3"/>
-                                                                        <span className="sr-only">Eliminar lección</span>
-                                                                    </Button>
-                                                                </AlertDialogTrigger>
+                                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 opacity-50 hover:opacity-100 focus-visible:ring-offset-secondary/20" 
+                                                                  onClick={(e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    setLessonToDelete(lesson); 
+                                                                    setShowDeleteLessonDialog(true);
+                                                                  }}>
+                                                                    <Trash2 className="h-3 w-3"/>
+                                                                    <span className="sr-only">Eliminar lección</span>
+                                                                </Button>
                                                             </div>
                                                           </li>
                                                         ))}

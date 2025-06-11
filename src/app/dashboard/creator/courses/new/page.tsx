@@ -27,7 +27,7 @@ import type { UpdateModuleDto } from '@/features/course/infrastructure/dto/updat
 import type { CreateLessonDto } from '@/features/course/infrastructure/dto/create-lesson.dto';
 import type { UpdateLessonDto } from '@/features/course/infrastructure/dto/update-lesson.dto';
 import { type LessonProperties, type LessonContentType } from '@/features/course/domain/entities/lesson.entity';
-import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud, GripVertical, Trash2, Edit } from 'lucide-react';
+import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud, GripVertical, Trash2, Edit, Rocket } from 'lucide-react';
 import { auth, storage } from '@/lib/firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
@@ -239,19 +239,20 @@ export default function NewCoursePage() {
       const data = await response.json();
       
       let fetchedModules: ModuleProperties[] = data.modules || [];
-      // Sort modules based on courseDetails.ordenModulos if available
-      if (courseDetails && courseDetails.ordenModulos && courseDetails.ordenModulos.length > 0) {
-        const orderMap = new Map(courseDetails.ordenModulos.map((id, index) => [id, index]));
+      const currentCourseDetails = courseDetails || (await fetch(`/api/courses/${courseId}`).then(res => res.json()).then(d => d.course)); // Fetch if not in state
+
+      if (currentCourseDetails && currentCourseDetails.ordenModulos && currentCourseDetails.ordenModulos.length > 0) {
+        const orderMap = new Map(currentCourseDetails.ordenModulos.map((id, index) => [id, index]));
         fetchedModules.sort((a, b) => {
           const orderA = orderMap.get(a.id);
           const orderB = orderMap.get(b.id);
           if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
           if (orderA !== undefined) return -1;
           if (orderB !== undefined) return 1;
-          return a.orden - b.orden; // Fallback
+          return a.orden - b.orden; 
         });
       } else {
-        fetchedModules.sort((a, b) => a.orden - b.orden); // Default sort by numerical order
+        fetchedModules.sort((a, b) => a.orden - b.orden); 
       }
       setModules(fetchedModules);
     } catch (error: any) {
@@ -296,7 +297,7 @@ export default function NewCoursePage() {
 
       setLessonsByModule(prev => ({ ...prev, [moduleId]: fetchedLessons }));
     } catch (error: any) {
-      toast({ title: `Error al Cargar Lecciones (Módulo ${module?.name || moduleId})`, description: error.message, variant: "destructive" });
+      toast({ title: `Error al Cargar Lecciones (Módulo ${moduleData?.nombre || moduleId})`, description: error.message, variant: "destructive" });
       setLessonsByModule(prev => ({ ...prev, [moduleId]: [] }));
     } finally {
       setIsLessonLoading(prev => ({ ...prev, [moduleId]: false }));
@@ -387,7 +388,9 @@ export default function NewCoursePage() {
         throw new Error(errorData.details || errorData.error || "Error al crear el módulo.");
       }
       const newModuleData = await response.json();
-      setCourseDetails(prev => prev ? ({ ...prev, ordenModulos: [...(prev.ordenModulos || []), newModuleData.moduleId] }) : null);
+      if (newModuleData.course) { // If backend returns the updated course with new module order
+        setCourseDetails(newModuleData.course);
+      }
       toast({title: "Módulo Creado"});
       moduleForm.reset();
       await fetchModules(createdCourseId); 
@@ -806,7 +809,7 @@ export default function NewCoursePage() {
     const [movedModule] = reorderedModules.splice(source.index, 1);
     reorderedModules.splice(destination.index, 0, movedModule);
 
-    setModules(reorderedModules); // Optimistic update
+    setModules(reorderedModules); 
     setIsReorderingModules(true);
 
     const orderedModuleIds = reorderedModules.map(mod => mod.id);
@@ -823,12 +826,12 @@ export default function NewCoursePage() {
             throw new Error(errorData.details || errorData.error || "Error al reordenar módulos.");
         }
         const updatedCourseData = await response.json();
-        setCourseDetails(updatedCourseData.course); // Update local course details with new order
+        setCourseDetails(updatedCourseData.course); 
         toast({ title: "Módulos Reordenados", description: "El orden de los módulos ha sido actualizado." });
-        // No need to call fetchModules again if backend returns updated course with order
+        await fetchModules(createdCourseId); // Re-fetch to ensure consistency
     } catch (error: any) {
         toast({ title: "Error al Reordenar", description: error.message, variant: "destructive" });
-        setModules(modules); // Revert optimistic update on error
+        await fetchModules(createdCourseId); // Revert by re-fetching original order
     } finally {
         setIsReorderingModules(false);
     }
@@ -917,7 +920,7 @@ export default function NewCoursePage() {
                         <div className="space-y-1 mt-6">
                           <h4 className="text-lg font-semibold mb-2">Módulos del Curso:</h4>
                           <DragDropContext onDragEnd={onDragEndModules}>
-                            <Droppable droppableId="modules-droppable">
+                            <Droppable droppableId="modules-droppable" isDropDisabled={isReorderingModules}>
                               {(provided) => (
                                 <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
                                   <Accordion type="single" collapsible className="w-full" value={expandedModuleId || undefined} onValueChange={(value) => {
@@ -1341,3 +1344,4 @@ export default function NewCoursePage() {
     </div>
   );
 }
+

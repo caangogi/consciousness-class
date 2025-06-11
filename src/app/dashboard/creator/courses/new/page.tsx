@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -188,35 +187,6 @@ export default function NewCoursePage() {
       setCoverImagePreviewUrl(courseDetails.imagenPortadaUrl || null);
       setVideoTrailerUrlInput(courseDetails.videoTrailerUrl || '');
       setSelectedStatus(courseDetails.estado || 'borrador');
-      // Apply saved module order if available
-      if (courseDetails.ordenModulos && courseDetails.ordenModulos.length > 0 && modules.length > 0) {
-        setModules(prevModules => {
-          const currentOrderMap = new Map(prevModules.map((mod, index) => [mod.id, index]));
-          const fetchedOrderMap = new Map(courseDetails.ordenModulos!.map((id, index) => [id, index]));
-          
-          const allModulesMap = new Map(prevModules.map(mod => [mod.id, mod]));
-          const orderedModules: ModuleProperties[] = [];
-          const newModules: ModuleProperties[] = [];
-
-          // Add modules present in courseDetails.ordenModulos in that order
-          courseDetails.ordenModulos!.forEach(id => {
-            if (allModulesMap.has(id)) {
-              orderedModules.push(allModulesMap.get(id)!);
-              allModulesMap.delete(id); // Remove from map to track remaining
-            }
-          });
-          
-          // Add any remaining modules from prevModules (newly created, not yet in backend order)
-          // preserving their relative order from prevModules
-          prevModules.forEach(mod => {
-            if(allModulesMap.has(mod.id)) { // if it's still in the map, it wasn't in courseDetails.ordenModulos
-              newModules.push(mod);
-            }
-          });
-          
-          return [...orderedModules, ...newModules];
-        });
-      }
     }
   }, [courseDetails, formStep1]);
 
@@ -245,24 +215,36 @@ export default function NewCoursePage() {
     }
   }, [currentEditingLesson, showEditLessonDialog, editLessonForm]);
 
-
-  const fetchModules = useCallback(async (courseId: string) => {
+  const fetchCourseStructure = useCallback(async (courseId: string) => {
     if (!courseId) return;
     setIsModuleLoading(true);
     try {
-      const response = await fetch(`/api/courses/${courseId}/modules`);
-      if (!response.ok) throw new Error("Error al cargar módulos.");
-      const data = await response.json();
-      
-      let fetchedModules: ModuleProperties[] = data.modules || [];
-      
-      // Ensure courseDetails is fetched if not already available or to get the latest version
-      const courseDetailsResponse = await fetch(`/api/courses/${courseId}`); // Assuming course has an API endpoint
-      if (!courseDetailsResponse.ok) throw new Error("Error al cargar detalles del curso para ordenamiento.");
+      // Fetch course details first
+      const courseDetailsResponse = await fetch(`/api/courses/${courseId}`);
+      if (!courseDetailsResponse.ok) {
+        const errorData = await courseDetailsResponse.json();
+        throw new Error(errorData.details || errorData.error || "Error al cargar detalles del curso.");
+      }
       const courseData = await courseDetailsResponse.json();
-      const currentCourseData = courseData.course;
+      const currentCourseData: CourseProperties | null = courseData.course;
 
-      if (currentCourseData && currentCourseData.ordenModulos && currentCourseData.ordenModulos.length > 0) {
+      if (currentCourseData) {
+        setCourseDetails(currentCourseData); // Update the state with the latest course details
+      } else {
+        throw new Error("No se encontraron los detalles del curso.");
+      }
+
+      // Fetch modules
+      const modulesResponse = await fetch(`/api/courses/${courseId}/modules`);
+      if (!modulesResponse.ok) {
+        const errorData = await modulesResponse.json();
+        throw new Error(errorData.details || errorData.error || "Error al cargar módulos.");
+      }
+      const modulesData = await modulesResponse.json();
+      let fetchedModules: ModuleProperties[] = modulesData.modules || [];
+
+      // Order modules using the currentCourseData (which is now up-to-date)
+      if (currentCourseData.ordenModulos && currentCourseData.ordenModulos.length > 0) {
         const orderMap = new Map(currentCourseData.ordenModulos.map((id: string, index: number) => [id, index]));
         fetchedModules.sort((a, b) => {
           const orderA = orderMap.get(a.id);
@@ -273,36 +255,27 @@ export default function NewCoursePage() {
           return a.orden - b.orden; 
         });
       } else {
+        // Fallback to numerical order if ordenModulos is not set
         fetchedModules.sort((a, b) => a.orden - b.orden); 
       }
       setModules(fetchedModules);
-      if(currentCourseData) setCourseDetails(currentCourseData);
 
     } catch (error: any) {
-      toast({ title: "Error al Cargar Módulos", description: error.message, variant: "destructive" });
+      toast({ title: "Error al Cargar Estructura", description: error.message, variant: "destructive" });
+      setModules([]); // Clear modules on error
+      setCourseDetails(prev => prev?.id === courseId ? prev : null); // Keep existing details if for same course, else clear.
     } finally {
       setIsModuleLoading(false);
     }
   }, [toast]);
 
+
   useEffect(() => {
-    if (createdCourseId && !courseDetails) { // Fetch initial course details if not present
-        const fetchInitialCourse = async () => {
-            try {
-                const response = await fetch(`/api/courses/${createdCourseId}`);
-                if(!response.ok) throw new Error("No se pudieron cargar los detalles iniciales del curso.");
-                const data = await response.json();
-                setCourseDetails(data.course);
-            } catch (error: any) {
-                toast({title: "Error", description: error.message, variant: "destructive"});
-            }
-        };
-        fetchInitialCourse();
-    }
     if (createdCourseId) {
-      fetchModules(createdCourseId);
+      fetchCourseStructure(createdCourseId);
     }
-  }, [createdCourseId, fetchModules, courseDetails, toast]);
+  }, [createdCourseId, fetchCourseStructure]);
+
 
   const fetchLessonsForModule = useCallback(async (courseId: string, moduleId: string, moduleData?: ModuleProperties) => {
     if (!courseId || !moduleId) return;
@@ -423,13 +396,20 @@ export default function NewCoursePage() {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || "Error al crear el módulo.");
       }
-      const newModuleResponse = await response.json();
-      if (newModuleResponse.module) { 
+      const newModuleResponse = await response.json(); // Assuming this response contains the updated course or at least module
+      
+      // The API for creating a module might return the updated course object,
+      // or just the new module. If it returns the course, use it to setCourseDetails.
+      if (newModuleResponse.course) { // If the API returns the full updated course
+        setCourseDetails(newModuleResponse.course);
+      } else if (newModuleResponse.module && courseDetails) { // If API returns module and we have courseDetails
+         // Optimistically update, then refetch for full consistency
         setCourseDetails(prev => prev ? ({ ...prev, ordenModulos: [...(prev.ordenModulos || []), newModuleResponse.module.id] }) : null);
       }
+
       toast({title: "Módulo Creado"});
       moduleForm.reset();
-      await fetchModules(createdCourseId); 
+      await fetchCourseStructure(createdCourseId); // Re-fetch to ensure full consistency
     } catch (error: any) {
       toast({title: "Error al Añadir Módulo", description: error.message, variant: "destructive"});
     } finally {
@@ -455,10 +435,15 @@ export default function NewCoursePage() {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || "Error al actualizar el módulo.");
       }
+      // Assuming the response for updating a module might also contain the updated module or course.
+      // const updatedData = await response.json();
+      // if (updatedData.course) setCourseDetails(updatedData.course);
+      // else if (updatedData.module) { /* update module in local state or rely on refetch */ }
+
       toast({ title: "Módulo Actualizado" });
       setShowEditModuleDialog(false);
       setCurrentEditingModule(null);
-      await fetchModules(createdCourseId);
+      await fetchCourseStructure(createdCourseId); // Re-fetch for consistency
     } catch (error: any) {
       toast({ title: "Error al Actualizar Módulo", description: error.message, variant: "destructive" });
     } finally {
@@ -481,8 +466,8 @@ export default function NewCoursePage() {
     if (isFileType && lessonContentFile) {
         toast({
             title: "Subida Pendiente",
-            description: `El archivo "${lessonContentFile.name}" se deberá subir cuando edites esta lección después de crearla.`,
-            duration: 6000,
+            description: `Para lecciones nuevas, primero crea la lección y luego edítala para subir el archivo "${lessonContentFile.name}".`,
+            duration: 7000,
         });
     }
 
@@ -493,7 +478,8 @@ export default function NewCoursePage() {
         nombre: values.lessonName,
         contenidoPrincipal: { 
             tipo: values.lessonContentType as LessonContentType,
-            url: null, 
+            // For new lessons, URL is not set here if it's a file type. User must edit to upload.
+            url: (isFileType) ? null : undefined, 
             texto: (values.lessonContentType === 'texto_rico' || values.lessonContentType === 'quiz') ? values.lessonContentText || null : null,
         }, 
         duracionEstimada: values.lessonDuration,
@@ -510,14 +496,16 @@ export default function NewCoursePage() {
       }
       const newLessonData = await response.json();
       
-      setModules(prevModules => prevModules.map(mod => {
-        if (mod.id === moduleId) {
-          return { ...mod, ordenLecciones: [...(mod.ordenLecciones || []), newLessonData.lessonId] };
-        }
-        return mod;
-      }));
+      // Update module's lesson order optimistically or refetch module.
+      // For now, refetching the module's lessons for simplicity and consistency.
+      // const moduleToUpdate = modules.find(m => m.id === moduleId);
+      // if (moduleToUpdate) {
+      //    moduleToUpdate.ordenLecciones.push(newLessonData.lessonId); // This might be complex if order changes elsewhere
+      //    setModules([...modules]); // Trigger re-render. This needs care to not break things.
+      // }
 
-      toast({title: "Lección Creada", description: `Lección "${values.lessonName}" añadida al módulo.`});
+
+      toast({title: "Lección Creada", description: `Lección "${values.lessonName}" añadida. Edítala para subir archivos si es necesario.`});
       lessonForm.reset({ 
         lessonName: '',
         lessonContentType: undefined,
@@ -528,6 +516,8 @@ export default function NewCoursePage() {
       setLessonContentFile(null);
       setSelectedLessonContentType(undefined);
       await fetchLessonsForModule(createdCourseId, moduleId, modules.find(m => m.id === moduleId));
+      // Potentially refetch course structure if lesson creation affects module counts displayed, etc.
+      // await fetchCourseStructure(createdCourseId);
     } catch (error: any) {
       toast({title: "Error al Añadir Lección", description: error.message, variant: "destructive"});
     } finally {
@@ -563,8 +553,11 @@ export default function NewCoursePage() {
         contentText = values.lessonContentText || null;
         downloadURL = null; 
       } else if (isFileType && !lessonContentFile) {
-        if (currentEditingLesson.contenidoPrincipal.tipo !== values.lessonContentType) {
+        // If type changed from text to file, or file type changed, clear existing content if no new file
+        if (currentEditingLesson.contenidoPrincipal.tipo !== values.lessonContentType || 
+            (currentEditingLesson.contenidoPrincipal.tipo === values.lessonContentType && !downloadURL)) {
             downloadURL = null; 
+            contentText = null;
         }
       }
 
@@ -592,7 +585,7 @@ export default function NewCoursePage() {
       }
       toast({ title: "Lección Actualizada" });
       setShowEditLessonDialog(false);
-      setCurrentEditingLesson(null);
+      // setCurrentEditingLesson(null); // Keep it null until dialog fully closes (useEffect does this)
       setLessonContentFile(null);
       await fetchLessonsForModule(createdCourseId, currentEditingLesson.moduleId, modules.find(m => m.id === currentEditingLesson!.moduleId));
     } catch (error: any) {
@@ -622,9 +615,10 @@ export default function NewCoursePage() {
       }
       toast({ title: "Módulo Eliminado", description: `El módulo "${moduleToDelete.nombre}" ha sido eliminado.` });
       
-      setCourseDetails(prev => prev ? ({ ...prev, ordenModulos: prev.ordenModulos?.filter(id => id !== moduleToDelete.id) || [] }) : null);
+      // Update courseDetails's ordenModulos optimistically or refetch
+      // setCourseDetails(prev => prev ? ({ ...prev, ordenModulos: prev.ordenModulos?.filter(id => id !== moduleToDelete.id) || [] }) : null);
       setModuleToDelete(null);
-      await fetchModules(createdCourseId); 
+      await fetchCourseStructure(createdCourseId); // Re-fetch for consistency
       if (expandedModuleId === moduleToDelete.id) { 
         setExpandedModuleId(null);
       }
@@ -655,14 +649,17 @@ export default function NewCoursePage() {
       }
       toast({ title: "Lección Eliminada", description: `La lección "${lessonToDelete.nombre}" ha sido eliminada.` });
       
-      setModules(prevModules => prevModules.map(mod => {
-        if (mod.id === lessonToDelete.moduleId) {
-          return { ...mod, ordenLecciones: mod.ordenLecciones?.filter(id => id !== lessonToDelete.id) || [] };
-        }
-        return mod;
-      }));
+      // Update module's lesson order optimistically or refetch
+      // setModules(prevModules => prevModules.map(mod => {
+      //   if (mod.id === lessonToDelete.moduleId) {
+      //     return { ...mod, ordenLecciones: mod.ordenLecciones?.filter(id => id !== lessonToDelete.id) || [] };
+      //   }
+      //   return mod;
+      // }));
       setLessonToDelete(null);
       await fetchLessonsForModule(createdCourseId, lessonToDelete.moduleId, modules.find(m => m.id === lessonToDelete!.moduleId)); 
+      // If lesson deletion might affect module summary info, consider refetching modules or course structure
+      // await fetchCourseStructure(createdCourseId);
     } catch (error: any) {
       toast({ title: "Error al Eliminar Lección", description: error.message, variant: "destructive" });
     } finally {
@@ -860,28 +857,19 @@ export default function NewCoursePage() {
         if (!response.ok) {
             const errorData = await response.json();
             toast({ title: "Error al Reordenar Módulos", description: errorData.details || errorData.error || "No se pudo actualizar el orden.", variant: "destructive" });
-            // Revert to original order from courseDetails or re-fetch
-            if (courseDetails?.ordenModulos) {
-                const originalOrderMap = new Map(courseDetails.ordenModulos.map((id, index) => [id, index]));
-                 setModules(prev => [...prev].sort((a,b) => (originalOrderMap.get(a.id) ?? Infinity) - (originalOrderMap.get(b.id) ?? Infinity)));
-            } else {
-                await fetchModules(createdCourseId); // Fallback to re-fetch
-            }
+            // Revert UI or refetch
+            await fetchCourseStructure(createdCourseId);
             return;
         }
         const updatedCourseData = await response.json();
         setCourseDetails(updatedCourseData.course); 
         toast({ title: "Módulos Reordenados", description: "El orden de los módulos ha sido actualizado." });
-        // Optimistically updated, but re-fetch can ensure consistency if needed, though might cause a flicker
-        // await fetchModules(createdCourseId); 
+        // No need to call fetchCourseStructure here if setCourseDetails already updated the order source
+        // But modules list might need re-sync if something else changed. For safety, can refetch specific parts.
+        // For simplicity here, we'll let fetchCourseStructure be called if necessary by other operations or rely on setCourseDetails.
     } catch (error: any) {
         toast({ title: "Error al Reordenar", description: error.message, variant: "destructive" });
-        if (courseDetails?.ordenModulos) {
-             const originalOrderMap = new Map(courseDetails.ordenModulos.map((id, index) => [id, index]));
-             setModules(prev => [...prev].sort((a,b) => (originalOrderMap.get(a.id) ?? Infinity) - (originalOrderMap.get(b.id) ?? Infinity)));
-        } else {
-            await fetchModules(createdCourseId);
-        }
+        await fetchCourseStructure(createdCourseId); // Revert/Resync
     } finally {
         setIsReorderingModules(false);
     }
@@ -957,9 +945,9 @@ export default function NewCoursePage() {
                       
                       <Form {...moduleForm}>
                         <form onSubmit={moduleForm.handleSubmit(onAddModule)} className="space-y-4 mb-6 p-4 border rounded-md shadow-sm">
-                          <FormField control={moduleForm.control} name="moduleName" render={({ field }) => (<FormItem className="flex-grow"><FormLabel>Nombre del Nuevo Módulo</FormLabel><FormControl><Input placeholder="Ej: Introducción a..." {...field} disabled={isModuleLoading} /></FormControl><FormMessage /></FormItem>)} />
-                          <FormField control={moduleForm.control} name="moduleDescription" render={({ field }) => (<FormItem className="flex-grow"><FormLabel>Descripción del Módulo (Opcional)</FormLabel><FormControl><Textarea placeholder="Una breve descripción del módulo" {...field} disabled={isModuleLoading} rows={2} /></FormControl><FormMessage /></FormItem>)} />
-                          <Button type="submit" disabled={isModuleLoading || isReorderingModules}>{isModuleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4"/>}Añadir Módulo</Button>
+                          <FormField control={moduleForm.control} name="moduleName" render={({ field }) => (<FormItem className="flex-grow"><FormLabel>Nombre del Nuevo Módulo</FormLabel><FormControl><Input placeholder="Ej: Introducción a..." {...field} disabled={isModuleLoading || isReorderingModules} /></FormControl><FormMessage /></FormItem>)} />
+                          <FormField control={moduleForm.control} name="moduleDescription" render={({ field }) => (<FormItem className="flex-grow"><FormLabel>Descripción del Módulo (Opcional)</FormLabel><FormControl><Textarea placeholder="Una breve descripción del módulo" {...field} disabled={isModuleLoading || isReorderingModules} rows={2} /></FormControl><FormMessage /></FormItem>)} />
+                          <Button type="submit" disabled={isModuleLoading || isReorderingModules}>{isModuleLoading || isReorderingModules ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4"/>}Añadir Módulo</Button>
                         </form>
                       </Form>
 
@@ -1394,5 +1382,4 @@ export default function NewCoursePage() {
     </div>
   );
 }
-
 

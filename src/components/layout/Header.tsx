@@ -2,6 +2,7 @@
 'use client';
 
 import Link from 'next/link';
+import React from 'react'; // Added React import
 import { Logo } from '@/components/shared/Logo';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -39,13 +40,13 @@ export function Header() {
     try {
       await logout();
       toast({ title: "Sesión Cerrada", description: "Has cerrado sesión exitosamente." });
-      router.push('/'); 
+      router.push('/');
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
       toast({ title: "Error", description: "No se pudo cerrar la sesión.", variant: "destructive" });
     }
   };
-  
+
   const getInitials = (name?: string | null) => {
     if (!name) return 'MB';
     const names = name.split(' ');
@@ -146,21 +147,21 @@ export function Header() {
       </>
     );
   }
-  
+
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-[72px] items-center justify-between">
         <Logo useIconOnly={false} />
-        
+
         <nav className="hidden md:flex items-center gap-1 bg-secondary/50 px-2 py-1.5 rounded-full shadow-sm">
           {navLinks.map((link) => (
-            <Button 
-              key={link.label} 
-              variant="ghost" 
-              size="sm" 
-              asChild 
+            <Button
+              key={link.label}
+              variant="ghost"
+              size="sm"
+              asChild
               className={cn(
                 "rounded-full px-4 py-1.5 text-sm",
                 pathname === link.href ? "bg-background text-primary shadow-sm" : "text-foreground/70 hover:text-foreground hover:bg-background/70"
@@ -173,7 +174,7 @@ export function Header() {
 
         <div className="flex items-center gap-2 md:gap-4">
           {renderAuthSection()}
-         
+
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden text-foreground/80 hover:text-foreground">

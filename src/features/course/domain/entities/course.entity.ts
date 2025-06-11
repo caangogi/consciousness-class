@@ -13,21 +13,21 @@ export interface CourseProperties {
   tipoAcceso: CourseAccessType;
   duracionEstimada: string; // e.g., "25 horas de video", "10 semanas"
   imagenPortadaUrl: string | null;
-  dataAiHintImagenPortada?: string | null; // Allow null
+  dataAiHintImagenPortada?: string | null; 
   videoTrailerUrl?: string | null;
-  categoria: string; // Could be an ID to a categories collection later
-  creadorUid: string; // UID of the UserEntity (creator)
+  categoria: string; 
+  creadorUid: string; 
   estado: CourseStatus;
   fechaCreacion: string; // ISO Date string
   fechaActualizacion: string; // ISO Date string
   fechaPublicacion?: string | null; // ISO Date string
-  ratingPromedio?: number; // Calculated or aggregated
+  ratingPromedio?: number; 
   totalEstudiantes?: number; // Calculated or aggregated
-  totalResenas?: number; // Calculated or aggregated
+  totalResenas?: number; 
   requisitos?: string[];
   objetivosAprendizaje?: string[];
   publicoObjetivo?: string;
-  ordenModulos?: string[]; // Array of module IDs to maintain order
+  ordenModulos?: string[]; 
 }
 
 export class CourseEntity {
@@ -107,7 +107,6 @@ export class CourseEntity {
   update(data: Partial<Omit<CourseProperties, 'id' | 'creadorUid' | 'fechaCreacion'>>) {
     const oldStatus = this.estado;
 
-    // Explicitly update fields if they are present in data
     if (data.nombre !== undefined) this.nombre = data.nombre;
     if (data.descripcionCorta !== undefined) this.descripcionCorta = data.descripcionCorta;
     if (data.descripcionLarga !== undefined) this.descripcionLarga = data.descripcionLarga;
@@ -127,14 +126,11 @@ export class CourseEntity {
     if (data.publicoObjetivo !== undefined) this.publicoObjetivo = data.publicoObjetivo;
     if (data.ordenModulos !== undefined) this.ordenModulos = data.ordenModulos;
     
-    // Update timestamp
     this.fechaActualizacion = new Date();
 
-    // Set publication date only if status changes TO 'publicado' from something else
-    // and fechaPublicacion is not already set (or if we want to allow re-publishing to update it)
     if (this.estado === 'publicado' && oldStatus !== 'publicado') {
       this.fechaPublicacion = new Date();
-    } else if (data.fechaPublicacion === null) { // Allow explicitly setting it to null
+    } else if (data.fechaPublicacion === null) { 
         this.fechaPublicacion = null;
     }
   }

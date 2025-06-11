@@ -4,6 +4,8 @@ import type { ICourseRepository } from '@/features/course/domain/repositories/co
 import { CourseEntity, type CourseProperties } from '@/features/course/domain/entities/course.entity';
 import { adminDb } from '@/lib/firebase/admin';
 import type { FirebaseError } from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+
 
 const COURSES_COLLECTION = 'cursos';
 
@@ -62,7 +64,7 @@ export class FirebaseCourseRepository implements ICourseRepository {
         .where('estado', '==', 'publicado')
         .orderBy('fechaPublicacion', 'desc') 
         .get();
-      console.log(`[FirebaseCourseRepository] findAllPublic query found ${snapshot.docs.length} documents.`); // Log añadido
+      console.log(`[FirebaseCourseRepository] findAllPublic query found ${snapshot.docs.length} documents.`); 
       if (snapshot.empty) {
         return [];
       }
@@ -73,6 +75,18 @@ export class FirebaseCourseRepository implements ICourseRepository {
       throw new Error(`Firestore findAllPublic operation for course failed: ${firebaseError.message}`);
     }
   }
-}
 
-    
+  async incrementStudentCount(courseId: string): Promise<void> {
+    try {
+      const courseRef = this.coursesCollection.doc(courseId);
+      await courseRef.update({
+        totalEstudiantes: FieldValue.increment(1)
+      });
+      console.log(`[FirebaseCourseRepository] Incremented student count for course ID: ${courseId}`);
+    } catch (error: any) {
+      const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseCourseRepository] Error incrementing student count for course ID (${courseId}):`, firebaseError.message);
+      throw new Error(`Firestore incrementStudentCount operation for course failed: ${firebaseError.message}`);
+    }
+  }
+}

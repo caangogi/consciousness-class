@@ -4,6 +4,8 @@ import type { IUserRepository } from '@/features/user/domain/repositories/user.r
 import { UserEntity, type UserProperties } from '@/features/user/domain/entities/user.entity';
 import { adminDb } from '@/lib/firebase/admin';
 import type { FirebaseError } from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+
 
 const USERS_COLLECTION = 'usuarios';
 
@@ -67,10 +69,8 @@ export class FirebaseUserRepository implements IUserRepository {
         return null;
       }
 
-      // Ensure `updatedAt` is always set
       const updateData: any = { ...data, updatedAt: new Date().toISOString() };
       
-      // If nombre or apellido are part of 'data', or if they already exist and one is changing, recalculate displayName
       const currentData = userSnap.data() as UserProperties;
       const newNombre = data.nombre !== undefined ? data.nombre : currentData.nombre;
       const newApellido = data.apellido !== undefined ? data.apellido : currentData.apellido;
@@ -79,18 +79,15 @@ export class FirebaseUserRepository implements IUserRepository {
           updateData.displayName = `${newNombre} ${newApellido}`.trim();
       }
       
-      // Explicitly handle photoURL to allow setting it to null
       if (data.photoURL !== undefined) {
         updateData.photoURL = data.photoURL;
       } else if (data.hasOwnProperty('photoURL') && data.photoURL === null) {
-         updateData.photoURL = null; // Ensure null is passed if explicitly provided
+         updateData.photoURL = null; 
       }
-
 
       await userRef.update(updateData);
       const updatedDocSnap = await userRef.get();
       if (!updatedDocSnap.exists) {
-        // Should not happen if update was successful
         console.error(`[FirebaseUserRepository] User document disappeared after update for UID: ${uid}`);
         return null;
       }
@@ -113,5 +110,19 @@ export class FirebaseUserRepository implements IUserRepository {
       throw new Error(`Firestore delete operation failed: ${firebaseError.message}`);
     }
   }
-}
 
+  async addCourseToEnrolled(userId: string, courseId: string): Promise<void> {
+    try {
+        const userRef = this.usersCollection.doc(userId);
+        await userRef.update({
+            cursosInscritos: FieldValue.arrayUnion(courseId),
+            updatedAt: new Date().toISOString()
+        });
+        console.log(`[FirebaseUserRepository] Course ID ${courseId} added to user ${userId}'s enrolled courses.`);
+    } catch (error: any) {
+        const firebaseError = error as FirebaseError;
+        console.error(`[FirebaseUserRepository] Error adding course ${courseId} to user ${userId}:`, firebaseError.message);
+        throw new Error(`Firestore addCourseToEnrolled operation failed: ${firebaseError.message}`);
+    }
+  }
+}

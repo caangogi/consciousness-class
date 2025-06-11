@@ -4,17 +4,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle } from 'lucide-react';
+import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
 import type { LessonProperties } from '@/features/course/domain/entities/lesson.entity';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { auth } from '@/lib/firebase/config';
+
 
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
@@ -25,22 +29,24 @@ interface CourseStructureData {
   modules: ModuleWithLessons[];
 }
 
-// Placeholder data for reviews if API doesn't provide them yet
 const placeholderReviews = [
   { id: 'c1', usuario: { nombre: 'Carlos S.', avatarUrl: 'https://placehold.co/40x40.png?text=CS' }, texto: '¡Excelente curso! Muy bien explicado y con ejemplos prácticos.', rating: 5, fecha: '2024-07-01' },
   { id: 'c2', usuario: { nombre: 'Laura M.', avatarUrl: 'https://placehold.co/40x40.png?text=LM' }, texto: 'Me ayudó mucho a entender GraphQL. Lo recomiendo.', rating: 5, fecha: '2024-06-28' },
 ];
 
-// TODO: Replace with actual user enrollment status
-const isEnrolled = false; 
-
 export default function CourseDetailPage() {
   const params = useParams<{ id: string }>();
   const courseId = params.id;
+  const router = useRouter();
+  const { currentUser, loading: authLoading, refreshUserProfile } = useAuth();
+  const { toast } = useToast();
 
   const [courseData, setCourseData] = useState<CourseStructureData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEnrolling, setIsEnrolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isUserEnrolled = currentUser?.cursosInscritos?.includes(courseId) ?? false;
 
   const fetchCourseData = useCallback(async () => {
     if (!courseId) {
@@ -70,7 +76,42 @@ export default function CourseDetailPage() {
     fetchCourseData();
   }, [fetchCourseData]);
 
-  if (isLoading) {
+  const handleEnroll = async () => {
+    if (!currentUser || !courseId) {
+      toast({ title: "Error", description: "Debes iniciar sesión para inscribirte.", variant: "destructive" });
+      router.push(`/login?redirect=/courses/${courseId}`);
+      return;
+    }
+    setIsEnrolling(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken(true);
+      if (!idToken) throw new Error("No se pudo obtener el token de autenticación.");
+
+      const response = await fetch(`/api/courses/${courseId}/enroll`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Error al inscribirse en el curso.');
+      }
+      
+      toast({ title: "¡Inscripción Exitosa!", description: `Te has inscrito correctamente en "${courseData?.course.nombre}".` });
+      await refreshUserProfile(); // Refresh user profile to get updated cursosInscritos
+      // No need to manually set isUserEnrolled, AuthContext update will trigger re-render
+    } catch (err: any) {
+      toast({ title: "Error de Inscripción", description: err.message, variant: "destructive" });
+      console.error("Error enrolling in course:", err);
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
+  if (isLoading || authLoading) {
     return (
       <div className="bg-secondary/30">
         <div className="bg-primary py-12 md:py-20">
@@ -144,19 +185,18 @@ export default function CourseDetailPage() {
 
   const { course, modules } = courseData;
 
-  // Placeholder data for creator if not fully provided by API
   const creatorDisplay = {
     id: course.creadorUid,
-    nombre: `Creator ${course.creadorUid.substring(0, 6)}`, // Placeholder
+    nombre: `Creator ${course.creadorUid.substring(0, 6)}`, 
     avatarUrl: `https://placehold.co/80x80.png?text=${course.creadorUid.substring(0,2).toUpperCase()}`,
     bio: 'Información del creador no disponible en esta vista.',
   };
 
   const totalLessons = modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
+  const firstLessonId = modules[0]?.lessons[0]?.id || 'start';
 
   return (
     <div className="bg-secondary/30">
-      {/* Hero Section */}
       <div className="bg-primary text-primary-foreground py-12 md:py-20">
         <div className="container mx-auto px-4 md:px-6 grid md:grid-cols-2 gap-8 items-center">
           <div>
@@ -194,13 +234,20 @@ export default function CourseDetailPage() {
             />
             <CardContent className="p-6">
               <p className="text-3xl font-bold text-primary mb-4">${course.precio.toFixed(2)}</p>
-              {isEnrolled ? (
+              {!currentUser ? (
+                  <Button size="lg" className="w-full" asChild>
+                      <Link href={`/login?redirect=/courses/${courseId}`}>
+                          <LogIn className="mr-2 h-5 w-5" /> Iniciar Sesión para Inscribirse
+                      </Link>
+                  </Button>
+              ) : isUserEnrolled ? (
                  <Button size="lg" className="w-full" asChild>
-                    <Link href={`/learn/${course.id}/${modules[0]?.lessons[0]?.id || 'start'}`}>Ir al Curso</Link>
+                    <Link href={`/learn/${course.id}/${firstLessonId}`}>Ir al Curso</Link>
                   </Button>
               ) : (
-                <Button size="lg" className="w-full">
-                  Comprar Curso
+                <Button size="lg" className="w-full" onClick={handleEnroll} disabled={isEnrolling}>
+                  {isEnrolling ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+                  {isEnrolling ? 'Inscribiendo...' : 'Inscribirse Ahora'}
                 </Button>
               )}
               <p className="text-xs text-muted-foreground mt-3 text-center">Acceso de por vida. Certificado de finalización.</p>
@@ -209,10 +256,8 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* Main Content Area */}
       <div className="container mx-auto px-4 md:px-6 py-12">
         <div className="grid lg:grid-cols-3 gap-12">
-          {/* Left Column: Course Details & Curriculum */}
           <div className="lg:col-span-2">
             <Card className="mb-8 shadow-lg">
               <CardHeader>
@@ -260,7 +305,6 @@ export default function CourseDetailPage() {
               </CardContent>
             </Card>
             
-            {/* Reviews Section (using placeholder data) */}
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="text-2xl font-headline">Valoraciones y Reseñas</CardTitle>
@@ -300,10 +344,8 @@ export default function CourseDetailPage() {
                  {placeholderReviews.length === 0 && <p className="text-muted-foreground text-sm">Aún no hay reseñas para este curso. ¡Sé el primero!</p>}
               </CardContent>
             </Card>
-
           </div>
 
-          {/* Right Column: Creator & Materials */}
           <div className="lg:col-span-1 space-y-8">
             <Card className="shadow-lg">
               <CardHeader>
@@ -322,15 +364,14 @@ export default function CourseDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Materials - Placeholder for now, or use if part of course entity */}
-            {course.requisitos && course.requisitos.length > 0 && ( // Example: using requisitos as a placeholder for downloadable materials
+            {course.requisitos && course.requisitos.length > 0 && ( 
               <Card className="shadow-lg">
                 <CardHeader>
                   <CardTitle className="text-xl font-headline">Materiales Adicionales</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2">
-                    {course.requisitos.slice(0,2).map((material, index) => ( // Show max 2 for demo
+                    {course.requisitos.slice(0,2).map((material, index) => ( 
                       <li key={index}>
                         <Button variant="link" asChild className="p-0 h-auto text-primary hover:underline flex items-center">
                           <Link href="#" download>
@@ -350,4 +391,3 @@ export default function CourseDetailPage() {
     </div>
   );
 }
-      

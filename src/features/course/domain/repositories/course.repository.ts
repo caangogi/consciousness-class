@@ -6,10 +6,9 @@ export interface ICourseRepository {
   save(course: CourseEntity): Promise<void>;
   findById(id: string): Promise<CourseEntity | null>;
   findAllByCreator(creatorUid: string): Promise<CourseEntity[]>;
-  findAllPublic(): Promise<CourseEntity[]>; // New method
+  findAllPublic(): Promise<CourseEntity[]>; 
+  incrementStudentCount(courseId: string): Promise<void>; // For enrollment
   // update(id: string, data: Partial<Omit<CourseProperties, 'id' | 'creadorUid' | 'fechaCreacion'>>): Promise<CourseEntity | null>;
   // delete(id: string): Promise<void>;
   // findAll(filters?: any): Promise<CourseEntity[]>; // With pagination/filters
 }
-
-    

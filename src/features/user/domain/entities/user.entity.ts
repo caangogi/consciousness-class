@@ -9,12 +9,12 @@ export interface UserProperties {
   apellido: string;
   displayName: string;
   role: UserRole;
-  photoURL: string | null; // Made non-optional in props, defaults to null
+  photoURL: string | null; 
   createdAt: string; // ISO Date string
-  updatedAt: string | null; // ISO Date string, defaults to null
+  updatedAt: string | null; // ISO Date string
   referralCodeGenerated: string;
   referredBy: string | null; // UID of the referrer
-  cursosComprados: string[]; // Array of course IDs
+  cursosInscritos: string[]; // Array of course IDs
   referidosExitosos: number;
   balanceCredito: number;
 }
@@ -31,7 +31,7 @@ export class UserEntity {
   updatedAt: Date | null;
   referralCodeGenerated: string;
   referredBy: string | null;
-  cursosComprados: string[];
+  cursosInscritos: string[];
   referidosExitosos: number;
   balanceCredito: number;
 
@@ -47,14 +47,12 @@ export class UserEntity {
     this.updatedAt = props.updatedAt ? new Date(props.updatedAt) : null;
     this.referralCodeGenerated = props.referralCodeGenerated;
     this.referredBy = props.referredBy === undefined ? null : props.referredBy;
-    this.cursosComprados = props.cursosComprados || [];
+    this.cursosInscritos = props.cursosInscritos || [];
     this.referidosExitosos = props.referidosExitosos || 0;
     this.balanceCredito = props.balanceCredito || 0;
   }
 
   static create(
-    // Input properties for creating a new user.
-    // Most are direct, some have defaults applied by this method.
     inputProps: {
       uid: string;
       email: string;
@@ -63,9 +61,8 @@ export class UserEntity {
       role?: UserRole;
       photoURL?: string | null;
       referredBy?: string | null;
-      // Allow overriding generated code, or specific values for these if needed during creation
       referralCodeGenerated?: string; 
-      cursosComprados?: string[];
+      cursosInscritos?: string[];
       referidosExitosos?: number;
       balanceCredito?: number;
     }
@@ -88,10 +85,10 @@ export class UserEntity {
       role: inputProps.role || 'student',
       photoURL: inputProps.photoURL === undefined ? null : inputProps.photoURL,
       createdAt: now,
-      updatedAt: now, // Set updatedAt to now on creation
+      updatedAt: now, 
       referralCodeGenerated: generatedReferralCode,
       referredBy: inputProps.referredBy === undefined ? null : inputProps.referredBy,
-      cursosComprados: inputProps.cursosComprados || [],
+      cursosInscritos: inputProps.cursosInscritos || [],
       referidosExitosos: inputProps.referidosExitosos || 0,
       balanceCredito: inputProps.balanceCredito || 0,
     };
@@ -122,7 +119,7 @@ export class UserEntity {
       updatedAt: this.updatedAt ? this.updatedAt.toISOString() : null,
       referralCodeGenerated: this.referralCodeGenerated,
       referredBy: this.referredBy,
-      cursosComprados: this.cursosComprados,
+      cursosInscritos: this.cursosInscritos,
       referidosExitosos: this.referidosExitosos,
       balanceCredito: this.balanceCredito,
     };

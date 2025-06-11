@@ -8,5 +8,5 @@ export interface IUserRepository {
   findByEmail(email: string): Promise<UserEntity | null>;
   update(uid: string, data: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt'>>): Promise<UserEntity | null>;
   delete(uid: string): Promise<void>;
-  // getAll? (consider pagination for superadmin)
+  addCourseToEnrolled(userId: string, courseId: string): Promise<void>; // For enrollment
 }

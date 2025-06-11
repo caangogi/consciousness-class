@@ -10,17 +10,15 @@ import { Skeleton } from '@/components/ui/skeleton'; // For loading state
 
 type UserRole = 'student' | 'creator' | 'superadmin' | null;
 
-// Extended UserProfile interface to include all fields from Firestore document
 export interface UserProfile extends FirebaseUser {
   role?: UserRole;
   nombre?: string;
   apellido?: string;
-  // photoURL is already part of FirebaseUser, but we might override it from Firestore
-  createdAt?: string; // ISO Date string
-  updatedAt?: string | null; // ISO Date string
+  createdAt?: string; 
+  updatedAt?: string | null; 
   referralCodeGenerated?: string;
-  referredBy?: string | null; // UID of the referrer
-  cursosComprados?: string[]; // Array of course IDs
+  referredBy?: string | null; 
+  cursosInscritos?: string[]; // Array of course IDs
   referidosExitosos?: number;
   balanceCredito?: number;
 }
@@ -30,7 +28,7 @@ interface AuthContextType {
   userRole: UserRole;
   loading: boolean;
   logout: () => Promise<void>;
-  refreshUserProfile: () => Promise<void>; // New function
+  refreshUserProfile: () => Promise<void>; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,7 +54,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (user) {
       const userDocRef = doc(db, 'usuarios', user.uid);
       const userDocSnap = await getDoc(userDocRef);
-      let fetchedRole: UserRole = 'student'; // Default role
+      let fetchedRole: UserRole = 'student'; 
       let userProfileData: Partial<UserProfile> = {};
 
       if (userDocSnap.exists()) {
@@ -65,25 +63,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
         userProfileData = {
           nombre: data.nombre,
           apellido: data.apellido,
-          photoURL: data.photoURL, // Prefer Firestore photoURL if available
+          photoURL: data.photoURL, 
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
           referralCodeGenerated: data.referralCodeGenerated,
           referredBy: data.referredBy,
-          cursosComprados: data.cursosComprados,
+          cursosInscritos: data.cursosInscritos || [], // Ensure cursosInscritos is fetched
           referidosExitosos: data.referidosExitosos,
           balanceCredito: data.balanceCredito,
         };
       }
       
-      // Combine Firebase Auth user data with Firestore data
-      // Ensure that displayName and photoURL from Firebase Auth are used as fallbacks
-      // if not present or explicitly different in Firestore.
       const combinedUser: UserProfile = {
-        ...user, // Base FirebaseUser properties (uid, email, emailVerified, etc.)
+        ...user, 
         displayName: userProfileData.nombre && userProfileData.apellido ? `${userProfileData.nombre} ${userProfileData.apellido}` : user.displayName,
-        photoURL: userProfileData.photoURL !== undefined ? userProfileData.photoURL : user.photoURL, // Prioritize Firestore, fallback to Auth
-        ...userProfileData, // Other Firestore fields
+        photoURL: userProfileData.photoURL !== undefined ? userProfileData.photoURL : user.photoURL, 
+        ...userProfileData, 
         role: fetchedRole,
       };
       
@@ -110,11 +105,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true);
     try {
       await auth.signOut();
-      // onAuthStateChanged will handle setting currentUser to null
     } catch (error) {
       console.error("Error signing out: ", error);
     }
-    // setLoading will be handled by onAuthStateChanged
   };
 
   const refreshUserProfile = useCallback(async () => {

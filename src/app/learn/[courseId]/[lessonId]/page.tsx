@@ -150,7 +150,8 @@ export default function LessonPage() {
 
  useEffect(() => {
     if (flatLessons.length > 0 && completedLessons.size >= 0) { 
-      setCourseProgress(Math.round((completedLessons.size / flatLessons.length) * 100));
+      const newProgress = flatLessons.length > 0 ? Math.round((completedLessons.size / flatLessons.length) * 100) : 0;
+      setCourseProgress(newProgress);
     } else {
       setCourseProgress(0);
     }
@@ -180,11 +181,9 @@ export default function LessonPage() {
       }
       const updatedProgressData: UserCourseProgressProperties = await response.json();
       setCompletedLessons(new Set(updatedProgressData.lessonIdsCompletadas));
-      if (flatLessons.length > 0) {
-        setCourseProgress(Math.round((new Set(updatedProgressData.lessonIdsCompletadas).size / flatLessons.length) * 100));
-      } else {
-        setCourseProgress(0);
-      }
+      
+      const newProgress = flatLessons.length > 0 ? Math.round((new Set(updatedProgressData.lessonIdsCompletadas).size / flatLessons.length) * 100) : 0;
+      setCourseProgress(newProgress);
 
       toast({
         title: "Progreso Actualizado",
@@ -513,3 +512,5 @@ export default function LessonPage() {
     </div>
   );
 }
+
+    

@@ -276,7 +276,7 @@ export default function LessonPage() {
               <ul className="space-y-px py-1">
                 {moduleItem.lessons.map((lesson) => (
                   <li key={lesson.id}>
-                    <Link href={`/learn/${params.courseId}/${lesson.id}`} passHref>
+                    <Link href={`/learn/${params.courseId}/${lesson.id}`} passHref legacyBehavior>
                       <a
                         onClick={onLessonClick}
                         className={`flex items-center w-full justify-start text-left h-auto py-2.5 px-3 text-xs group

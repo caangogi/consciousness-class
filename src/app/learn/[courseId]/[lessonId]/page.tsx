@@ -64,8 +64,9 @@ export default function LessonPage() {
   const { toast } = useToast();
 
   const [courseStructure, setCourseStructure] = useState<CourseStructureData | null>(null);
-  const [isInitialCourseLoad, setIsInitialCourseLoad] = useState(true); // Nuevo estado
-  const [isLoadingLessonContent, setIsLoadingLessonContent] = useState(false); // Nuevo estado para contenido lección
+  const [isInitialCourseLoad, setIsInitialCourseLoad] = useState(true);
+  const [isLoadingLessonContent, setIsLoadingLessonContent] = useState(false);
+  const [isTogglingCompletion, setIsTogglingCompletion] = useState(false); // Definición del estado
 
   // const [isLoadingProgress, setIsLoadingProgress] = useState(true); // Comentado para simplificación
   const [error, setError] = useState<string | null>(null);
@@ -82,52 +83,80 @@ export default function LessonPage() {
 
   const fetchCourseStructureData = useCallback(async () => {
     if (!params.courseId) return;
-    // setIsLoadingLessonContent(true); // Se activa al cambiar lección, no aquí necesariamente
-    if (!courseStructure) { // Solo loading inicial de toda la estructura
-        setIsInitialCourseLoad(true);
+
+    if (isInitialCourseLoad) { // Solo loading inicial de toda la estructura
+        setIsInitialCourseLoad(true); // Asegurarse de que se setea a true solo al inicio si es la primera carga
     }
     setError(null);
     
-    await new Promise(resolve => setTimeout(resolve, 50)); // Simulate API delay
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 50)); 
 
     try {
       const courseId = params.courseId;
-      const lessonId = params.lessonId || "lesson_placeholder_1_unique";
+      const currentLessonIdInUrl = params.lessonId || "lesson_sim_1";
 
-      const lesson1Id = lessonId;
-      const lesson2Id = lessonId === "lesson_placeholder_2_unique" ? "lesson_placeholder_alt_unique" : "lesson_placeholder_2_unique";
+      // Create unique lesson IDs for placeholder data
+      const lesson1Id = currentLessonIdInUrl;
+      const lesson2Id = currentLessonIdInUrl === "lesson_sim_2" ? "lesson_sim_2_alt" : "lesson_sim_2";
+      const lesson3Id = currentLessonIdInUrl === "lesson_sim_3" ? "lesson_sim_3_alt" : "lesson_sim_3";
+
 
       const lessonsForModule: LessonProperties[] = [
         { 
             id: lesson1Id, 
-            moduleId: "mod1_simulated_unique", 
+            moduleId: "mod1_simulated", 
             courseId: courseId, 
             nombre: `Lección Actual (${lesson1Id})`, 
             duracionEstimada: "10m", esVistaPrevia: false, orden: 1, 
             fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(), 
-            contenidoPrincipal: { tipo: 'texto_rico', texto: `<p>Contenido simulado para la lección: ${lesson1Id}.</p>`} 
+            contenidoPrincipal: { tipo: 'texto_rico', texto: `<p>Contenido simulado para la lección: <strong>${lesson1Id}</strong>.</p><p>Este es un ejemplo de cómo se vería el contenido de una lección.</p>`} 
         },
         {
             id: lesson2Id,
-            moduleId: "mod1_simulated_unique",
+            moduleId: "mod1_simulated",
             courseId: courseId,
-            nombre: `Siguiente Lección (${lesson2Id})`,
-            duracionEstimada: "5m", esVistaPrevia: false, orden: 2, 
+            nombre: `Lección de Video (${lesson2Id})`,
+            duracionEstimada: "15m", esVistaPrevia: true, orden: 2, 
             fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(), 
-            contenidoPrincipal: { tipo: 'video', url: 'https://placehold.co/1920x1080.mp4'}
+            contenidoPrincipal: { tipo: 'video', url: 'https://www.w3schools.com/html/mov_bbb.mp4'} // Placeholder video
+        },
+        {
+            id: lesson3Id,
+            moduleId: "mod1_simulated",
+            courseId: courseId,
+            nombre: `Lección PDF (${lesson3Id})`,
+            duracionEstimada: "5 págs", esVistaPrevia: false, orden: 3,
+            fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(),
+            contenidoPrincipal: { tipo: 'documento_pdf', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' } // Placeholder PDF
         }
-      ];
-      lessonsForModule.sort((a, b) => a.orden - b.orden);
+      ].filter(lesson => lesson.id); // Ensure no undefined IDs slip through if logic changes
+
+      // Ensure all lessons have truly unique IDs, even if params.lessonId matches one of the static ones
+      const finalLessons: LessonProperties[] = [];
+      const usedIds = new Set<string>();
+      lessonsForModule.forEach(l => {
+          let uniqueId = l.id;
+          let counter = 0;
+          while(usedIds.has(uniqueId)) {
+              counter++;
+              uniqueId = `${l.id}_v${counter}`;
+          }
+          usedIds.add(uniqueId);
+          finalLessons.push({...l, id: uniqueId, nombre: l.nombre.replace(l.id, uniqueId) }); // Update name if ID changed
+      });
+      
+      finalLessons.sort((a, b) => a.orden - b.orden);
         
       const finalPlaceholderModule: ModuleWithLessons = {
           ...placeholderModuleBase,
-          id: "mod1_simulated_unique",
+          id: "mod1_simulated",
           courseId: courseId,
           orden: 1,
           fechaCreacion: new Date().toISOString(),
           fechaActualizacion: new Date().toISOString(),
-          lessons: lessonsForModule,
-          ordenLecciones: lessonsForModule.map(l => l.id),
+          lessons: finalLessons,
+          ordenLecciones: finalLessons.map(l => l.id),
       };
       
       const finalPlaceholderCourse: CourseProperties = {
@@ -144,29 +173,26 @@ export default function LessonPage() {
       setError("Error simulado al cargar estructura: " + err.message);
       console.error("[SIMPLIFICADO] Error al generar estructura placeholder:", err);
     } finally {
-      if (isInitialCourseLoad) setIsInitialCourseLoad(false); // Se completa la carga inicial
-      // setIsLoadingLessonContent(false); // Se completa la carga de contenido (simulada)
+      if (isInitialCourseLoad) setIsInitialCourseLoad(false); 
     }
-  }, [params.courseId, params.lessonId, courseStructure, isInitialCourseLoad]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.courseId, params.lessonId, isInitialCourseLoad]); // courseStructure quitado para evitar bucle con la simulación
 
 
   const fetchUserProgress = useCallback(async () => {
     if (!currentUser || !params.courseId) {
-        // setIsLoadingProgress(false); // Comentado para simplificación
         return;
     }
-    // setIsLoadingProgress(true); // Comentado
     await new Promise(resolve => setTimeout(resolve, 50));
     setCompletedLessons(new Set()); 
-    // setIsLoadingProgress(false); // Comentado
   }, [currentUser, params.courseId]);
 
 
   useEffect(() => {
     if (params.courseId) {
-        setIsLoadingLessonContent(true); // Indicar que el contenido de la lección está cargando/cambiando
+        setIsLoadingLessonContent(true); 
         fetchCourseStructureData().finally(() => {
-             setIsLoadingLessonContent(false); // Contenido de lección (simulado) cargado
+             setIsLoadingLessonContent(false); 
         });
     }
   }, [params.courseId, params.lessonId, fetchCourseStructureData]);
@@ -191,18 +217,29 @@ export default function LessonPage() {
     const allLessons: LessonProperties[] = [];
     let foundModule: ModuleWithLessons | null = null;
     let foundLesson: LessonProperties | null = null;
+    let lessonIdToFind = params.lessonId;
 
+    // Prioritize finding the lesson based on the current params.lessonId
     for (const mod of courseStructure.modules) {
       for (const less of mod.lessons) {
-        allLessons.push(less);
-        if (less.id === params.lessonId) {
+        allLessons.push(less); // Collect all lessons for flatLessons list
+        if (less.id === lessonIdToFind) {
           foundModule = mod;
           foundLesson = less;
         }
       }
     }
     
-    allLessons.sort((a,b) => {
+    // If not found by ID, and it's the initial load, try to pick the first lesson of the first module
+    if (!foundLesson && allLessons.length > 0) {
+        console.warn(`Lesson with ID ${lessonIdToFind} not found. Defaulting to first available lesson.`)
+        foundLesson = allLessons[0];
+        foundModule = courseStructure.modules.find(m => m.id === foundLesson!.moduleId) || null;
+        // Optionally, redirect to the first lesson's URL if params.lessonId was invalid/missing
+        // router.replace(`/learn/${params.courseId}/${foundLesson.id}`, { scroll: false });
+    }
+    
+    allLessons.sort((a,b) => { // Ensure flatLessons is always sorted correctly
         const moduleA = courseStructure.modules.find(m => m.id === a.moduleId);
         const moduleB = courseStructure.modules.find(m => m.id === b.moduleId);
         if (moduleA && moduleB && moduleA.orden !== moduleB.orden) {
@@ -216,15 +253,14 @@ export default function LessonPage() {
     setCurrentLesson(foundLesson);
 
     if (foundLesson) {
-      const currentIndex = allLessons.findIndex(l => l.id === foundLesson.id);
+      const currentIndex = allLessons.findIndex(l => l.id === foundLesson!.id);
       setPrevLesson(currentIndex > 0 ? allLessons[currentIndex - 1] : null);
       setNextLesson(currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null);
     } else {
-      console.warn(`Lesson with ID ${params.lessonId} not found in course structure.`);
       setPrevLesson(null);
       setNextLesson(null);
     }
-  }, [courseStructure, params.lessonId]);
+  }, [courseStructure, params.lessonId, router, params.courseId]);
 
 
  useEffect(() => {
@@ -242,6 +278,9 @@ export default function LessonPage() {
     
     setIsTogglingCompletion(true);
     try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       const newCompletedLessons = new Set(completedLessons);
       if (newCompletedLessons.has(currentLesson.id)) {
         newCompletedLessons.delete(currentLesson.id);
@@ -268,7 +307,7 @@ export default function LessonPage() {
   const isCurrentLessonCompleted = currentLesson ? completedLessons.has(currentLesson.id) : false;
 
   const renderLessonContentPlayer = () => {
-    if (isLoadingLessonContent) { // Usar el nuevo estado para el esqueleto del reproductor
+    if (isLoadingLessonContent) {
         return <Skeleton className="aspect-video w-full rounded-lg" />;
     }
     if (!currentLesson || !currentLesson.contenidoPrincipal) {
@@ -370,7 +409,7 @@ export default function LessonPage() {
     </ScrollArea>
   );
 
-  if (isInitialCourseLoad) { // Mostrar esqueleto de página completa solo en la carga inicial
+  if (isInitialCourseLoad) { 
     return (
       <div className="flex h-screen md:h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden">
         <div className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col p-0"> 
@@ -408,7 +447,7 @@ export default function LessonPage() {
     );
   }
 
-  if (error && !courseStructure) { // Error solo si no hay estructura de curso
+  if (error && !courseStructure) { 
     return (
         <div className="container mx-auto py-12 px-4 md:px-6 text-center min-h-screen flex items-center justify-center">
             <Card className="max-w-md mx-auto shadow-lg p-6 rounded-xl bg-card">
@@ -436,7 +475,7 @@ export default function LessonPage() {
     );
   }
 
-  if (!courseStructure || (!currentLesson && !isInitialCourseLoad && !isLoadingLessonContent) ) { // Si no hay lección DESPUÉS de carga inicial y no se está cargando contenido
+  if (!courseStructure || (!currentLesson && !isInitialCourseLoad && !isLoadingLessonContent) ) { 
     return (
       <div className="container py-8 text-center min-h-screen flex items-center justify-center">
         <Card className="max-w-md mx-auto shadow-lg p-6 rounded-xl bg-card">
@@ -585,4 +624,6 @@ export default function LessonPage() {
     </div>
   );
 }
+    
+
     

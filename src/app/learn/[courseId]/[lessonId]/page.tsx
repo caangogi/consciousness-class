@@ -54,39 +54,35 @@ export default function LessonPage() {
   const [isLoadingLessonContent, setIsLoadingLessonContent] = useState(false);
   const [courseLoadError, setCourseLoadError] = useState<string | null>(null);
 
-  const fetchCourseStructureData = useCallback(async (courseId: string) => {
-    if (!courseId) return;
-    
-    // No establecer isLoadingLessonContent aquí, se maneja al cambiar de lección
-    if (isInitialCourseLoad) {
-        setCourseLoadError(null);
-    }
-
+  const fetchCourseStructureData = useCallback(async (courseIdToFetch: string) => {
+    if (!courseIdToFetch) return;
+    // No establecemos isLoadingLessonContent aquí, se maneja al cambiar de lección
+    // No establecemos el error aquí directamente, se maneja en el efecto principal de carga
+    console.log(`[LessonPage] Fetching course structure for ${courseIdToFetch}`);
     try {
-      const response = await fetch(`/api/learn/course-structure/${courseId}`);
+      const response = await fetch(`/api/learn/course-structure/${courseIdToFetch}`);
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("[LessonPage] API error fetching course structure:", errorData);
         throw new Error(errorData.details || errorData.error || 'Error al cargar la estructura del curso');
       }
       const data: CourseStructureData = await response.json();
+      console.log("[LessonPage] Course structure data received:", data); // Log para depuración
       setCourseStructure(data);
-      
-      if (isInitialCourseLoad) {
-        setIsInitialCourseLoad(false);
-      }
-
+      setCourseLoadError(null); // Limpiar error si la carga es exitosa
     } catch (err: any) {
-      console.error("Error fetching course structure:", err);
+      console.error("[LessonPage] Error fetching course structure:", err);
       setCourseLoadError(err.message);
-      setIsInitialCourseLoad(false); // Terminar carga inicial incluso con error
+      setCourseStructure(null); // Asegurar que la estructura se limpie en caso de error
     }
-  }, [isInitialCourseLoad]); // isInitialCourseLoad se mantiene para la primera carga
+  }, []); // No necesita dependencias que cambien frecuentemente
 
-  const fetchUserProgress = useCallback(async (courseId: string) => {
-    if (!currentUser || !courseId) return;
+  const fetchUserProgress = useCallback(async (courseIdToFetch: string) => {
+    if (!currentUser || !courseIdToFetch) return;
+    console.log(`[LessonPage] Fetching user progress for ${courseIdToFetch}`);
     try {
       const idToken = await auth.currentUser?.getIdToken(true);
-      const response = await fetch(`/api/learn/progress/${courseId}`, {
+      const response = await fetch(`/api/learn/progress/${courseIdToFetch}`, {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
       if (!response.ok) {
@@ -96,29 +92,45 @@ export default function LessonPage() {
       const data = await response.json();
       setCompletedLessons(new Set(data.completedLessonIds || []));
     } catch (err: any) {
-      console.error("Error fetching user progress:", err);
+      console.error("[LessonPage] Error fetching user progress:", err);
       toast({ title: "Error al Cargar Progreso", description: err.message, variant: "destructive" });
     }
   }, [currentUser, toast]);
 
   useEffect(() => {
     if (params.courseId) {
+      setIsInitialCourseLoad(true); // Marcar que estamos comenzando una carga inicial (o recarga de curso)
+      setCourseLoadError(null);     // Limpiar errores de carga anteriores
+      setCourseStructure(null);     // Limpiar estructura anterior para forzar estado de carga
+      setCurrentLesson(null);       // Limpiar lección actual
+      
       fetchCourseStructureData(params.courseId);
-      fetchUserProgress(params.courseId);
+      if (currentUser) { // Solo buscar progreso si hay usuario
+          fetchUserProgress(params.courseId);
+      }
     }
-  }, [params.courseId, fetchCourseStructureData, fetchUserProgress]);
+  }, [params.courseId, currentUser, fetchCourseStructureData, fetchUserProgress]); // currentUser es dependencia para el progreso
+
+  // Efecto para actualizar isInitialCourseLoad una vez que la estructura o un error de carga están presentes
+  useEffect(() => {
+    if (courseStructure !== null || courseLoadError !== null) {
+      setIsInitialCourseLoad(false);
+    }
+  }, [courseStructure, courseLoadError]);
+
 
   useEffect(() => {
-    if (!courseStructure || !params.lessonId) {
-      setCurrentLesson(null); // Asegura que no haya lección si no hay estructura o lessonId
+    if (isInitialCourseLoad || !courseStructure || !params.lessonId) {
+      // Si es carga inicial, o no hay estructura o lessonId, no podemos determinar la lección actual.
+      // setCurrentLesson(null); // Ya se limpia en el efecto de params.courseId
       return;
     }
 
-    setIsLoadingLessonContent(true); // Iniciar carga de contenido de lección
+    setIsLoadingLessonContent(true);
 
     let lessonsArray: LessonProperties[] = [];
-    let foundCurrentLesson: LessonProperties | null = null;
     let foundCurrentModule: ModuleWithLessons | null = null;
+    let foundCurrentLesson: LessonProperties | null = null;
 
     for (const moduleItem of courseStructure.modules) {
       for (const lesson of moduleItem.lessons) {
@@ -131,8 +143,8 @@ export default function LessonPage() {
     }
     
     setFlatLessons(lessonsArray);
-    setCurrentLesson(foundCurrentLesson);
     setCurrentModule(foundCurrentModule);
+    setCurrentLesson(foundCurrentLesson);
 
     if (foundCurrentLesson) {
       const currentIndex = lessonsArray.findIndex(l => l.id === foundCurrentLesson.id);
@@ -141,16 +153,17 @@ export default function LessonPage() {
     } else {
       setPrevLesson(null);
       setNextLesson(null);
-      if (!isInitialCourseLoad) { // Solo mostrar advertencia si no es la carga inicial
-        console.warn(`Lesson with ID ${params.lessonId} not found in loaded course structure.`);
-         toast({
+      // El toast solo se muestra si NO es la carga inicial y hay un params.lessonId
+      // Y si courseStructure ya está cargado (y no es null).
+      if (!isInitialCourseLoad && params.lessonId && courseStructure) { 
+        toast({
             title: "Lección no Encontrada",
-            description: `No se pudo encontrar la lección con ID ${params.lessonId}.`,
+            description: `No se pudo encontrar la lección con ID ${params.lessonId}. Es posible que el enlace sea incorrecto o la lección no exista en este curso.`,
             variant: "destructive"
         });
       }
     }
-    setIsLoadingLessonContent(false); // Finalizar carga de contenido de lección
+    setIsLoadingLessonContent(false);
   }, [courseStructure, params.lessonId, isInitialCourseLoad, toast]);
 
 
@@ -178,7 +191,6 @@ export default function LessonPage() {
       }
       
       const updatedProgressData = await response.json();
-      // Actualizar estado local de lecciones completadas basado en la respuesta
       setCompletedLessons(prev => {
         const newSet = new Set(prev);
         if (updatedProgressData.lessonIdsCompletadas.includes(currentLesson.id)) {
@@ -206,9 +218,15 @@ export default function LessonPage() {
   const courseProgress = flatLessons.length > 0 ? Math.round((completedLessons.size / flatLessons.length) * 100) : 0;
 
   const renderLessonContentPlayer = () => {
-    if (isLoadingLessonContent || !currentLesson) {
-      return <Skeleton className="aspect-video w-full rounded-lg shadow-inner" />;
+    if (isLoadingLessonContent) { // Usar el estado específico para el contenido de la lección
+        return <Skeleton className="aspect-video w-full rounded-lg shadow-inner" />;
     }
+    if (!currentLesson) {
+      // Esto puede ocurrir brevemente mientras se carga la lección o si la lección no se encuentra
+      // El toast de "Lección no encontrada" ya debería haberse mostrado si es persistente
+      return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground flex items-center justify-center h-full">Selecciona una lección para comenzar o cargando...</div>;
+    }
+
     const { tipo, url, texto } = currentLesson.contenidoPrincipal;
     switch (tipo) {
       case 'video':
@@ -227,7 +245,7 @@ export default function LessonPage() {
 
   const CourseNavigationSidebar = ({ onLessonClick }: { onLessonClick?: () => void }) => {
     if (!courseStructure) {
-      return ( // Esqueleto para la barra lateral mientras carga la estructura del curso
+      return (
         <div className="p-4 space-y-3">
           <Skeleton className="h-6 w-3/4 mb-1" />
           <Skeleton className="h-3 w-1/2 mb-2" />
@@ -265,7 +283,7 @@ export default function LessonPage() {
                     <li key={lesson.id}>
                       <Link
                           href={`/learn/${params.courseId}/${lesson.id}`}
-                          onClick={onLessonClick} // Para cerrar el sheet en móvil
+                          onClick={onLessonClick}
                           className={`flex items-center w-full justify-start text-left h-auto py-2.5 px-3 text-xs group
                           ${lesson.id === currentLesson?.id ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/80 hover:bg-primary/5 hover:text-primary/90'}
                           ${completedLessons.has(lesson.id) && lesson.id !== currentLesson?.id ? 'text-muted-foreground/70 line-through' : ''}`}
@@ -285,7 +303,7 @@ export default function LessonPage() {
     );
   };
 
-  if (isInitialCourseLoad) {
+  if (isInitialCourseLoad) { // Sigue mostrando el esqueleto de página completa durante la carga inicial
     return (
       <div className="flex h-screen md:h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden">
         <aside className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col p-4 space-y-3">
@@ -334,16 +352,18 @@ export default function LessonPage() {
     );
   }
 
-  if (!courseStructure || !currentLesson) {
-    // This case should ideally be covered by isInitialCourseLoad or courseLoadError,
-    // but as a fallback if data is missing without an error state:
+  if (!courseStructure ) { // Si no hay estructura después de la carga inicial, es un problema
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-muted-foreground">Preparando lección...</p>
+        <p className="ml-4 text-muted-foreground">Cargando datos del curso...</p>
       </div>
     );
   }
+  // Si currentLesson es null DESPUÉS de que isInitialCourseLoad es false y courseStructure está cargado,
+  // significa que la lección específica no se encontró (el toast ya se habrá mostrado).
+  // Podemos mostrar un mensaje más específico aquí, o dejar que el renderLessonContentPlayer maneje el estado vacío.
+
 
   return (
     <div className="flex h-screen md:h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden">
@@ -354,8 +374,8 @@ export default function LessonPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="md:hidden flex items-center justify-between p-3 border-b bg-card sticky top-0 z-20">
            <div className="flex-1 min-w-0">
-             <h1 className="text-md font-semibold truncate" title={currentLesson.nombre}>{currentLesson.nombre}</h1>
-             <p className="text-xs text-muted-foreground truncate" title={courseStructure.course.nombre}>{courseStructure.course.nombre}</p>
+             <h1 className="text-md font-semibold truncate" title={currentLesson?.nombre || 'Cargando lección...'}>{currentLesson?.nombre || 'Cargando lección...'}</h1>
+             <p className="text-xs text-muted-foreground truncate" title={courseStructure?.course.nombre}>{courseStructure?.course.nombre}</p>
            </div>
           <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
             <SheetTrigger asChild>
@@ -370,10 +390,10 @@ export default function LessonPage() {
         <ScrollArea className="flex-1 bg-secondary/30">
           <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-8">
             <div className="mb-4 hidden md:block">
-                 <h1 className="text-2xl font-bold font-headline mb-1">{currentLesson.nombre}</h1>
-                 <p className="text-sm text-muted-foreground">Del curso: {courseStructure.course.nombre}</p>
+                 <h1 className="text-2xl font-bold font-headline mb-1">{currentLesson?.nombre || <Skeleton className="h-8 w-3/4" />}</h1>
+                 <p className="text-sm text-muted-foreground">Del curso: {courseStructure?.course.nombre || <Skeleton className="h-4 w-1/2" />}</p>
             </div>
-            <div key={currentLesson.id} className="mb-6 min-h-[250px] md:min-h-[400px] lg:min-h-[500px] flex">
+            <div key={currentLesson?.id || 'content-player-area'} className="mb-6 min-h-[250px] md:min-h-[400px] lg:min-h-[500px] flex">
               {renderLessonContentPlayer()}
             </div>
 
@@ -400,7 +420,7 @@ export default function LessonPage() {
                 onClick={toggleLessonComplete}
                 variant={isCurrentLessonCompleted ? "secondary" : "default"}
                 className={`w-full md:w-auto min-w-[200px] ${isCurrentLessonCompleted ? 'bg-green-100 hover:bg-green-200 text-green-700 border border-green-300' : ''}`}
-                disabled={isTogglingCompletion || !currentUser || isLoadingLessonContent}
+                disabled={isTogglingCompletion || !currentUser || isLoadingLessonContent || !currentLesson}
               >
                 {isTogglingCompletion ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="h-4 w-4 mr-2" />}
                 {isTogglingCompletion ? 'Actualizando...' : (isCurrentLessonCompleted ? 'Lección Completada' : 'Marcar como Completada')}
@@ -414,7 +434,7 @@ export default function LessonPage() {
                 <TabsTrigger value="q&a" className="text-xs sm:text-sm"><HelpCircle className="h-4 w-4 mr-1 md:mr-2" />Preguntas</TabsTrigger>
                 <TabsTrigger value="comments" className="text-xs sm:text-sm"><MessageSquare className="h-4 w-4 mr-1 md:mr-2" />Comentarios</TabsTrigger>
               </TabsList>
-              <TabsContent value="description"><Card><CardContent className="p-4 md:p-6 text-sm text-foreground/80"><p>{currentLesson.descripcionBreve || "Descripción no disponible."}</p></CardContent></Card></TabsContent>
+              <TabsContent value="description"><Card><CardContent className="p-4 md:p-6 text-sm text-foreground/80"><p>{currentLesson?.descripcionBreve || "Descripción no disponible."}</p></CardContent></Card></TabsContent>
               <TabsContent value="materials"><Card><CardContent className="p-4 md:p-6 text-sm text-muted-foreground">No hay materiales adicionales para esta lección.</CardContent></Card></TabsContent>
               <TabsContent value="q&a"><Card><CardHeader className="pb-4"><CardTitle className="text-lg">Preguntas</CardTitle></CardHeader><CardContent className="p-4 md:p-6"><Textarea placeholder="Escribe tu pregunta..." className="mb-3 text-sm" /><Button size="sm">Enviar</Button></CardContent></Card></TabsContent>
               <TabsContent value="comments"><Card><CardHeader className="pb-4"><CardTitle className="text-lg">Comentarios</CardTitle></CardHeader><CardContent className="p-4 md:p-6"><Textarea placeholder="Escribe tu comentario..." className="mb-3 text-sm" /><Button size="sm">Publicar</Button></CardContent></Card></TabsContent>

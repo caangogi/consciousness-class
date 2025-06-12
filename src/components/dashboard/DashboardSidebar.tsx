@@ -52,8 +52,8 @@ export const navItems: NavItem[] = [
   
   // Creator specific
   { href: '/dashboard/creator', label: 'Panel Creator', icon: LayoutDashboard, roles: ['creator'] },
+  { href: '/dashboard/creator/courses', label: 'Gestionar Cursos', icon: BookOpen, roles: ['creator'] }, // Changed icon from Edit3 to BookOpen for consistency
   { href: '/dashboard/creator/courses/new', label: 'Crear Nuevo Curso', icon: PlusCircle, roles: ['creator'] },
-  { href: '/dashboard/creator/courses', label: 'Gestionar Cursos', icon: Edit3, roles: ['creator'] },
   // { href: '/dashboard/creator/lessons', label: 'Gestionar Lecciones', icon: Palette, roles: ['creator'] }, // Maybe combine with course management
   { href: '/dashboard/creator/stats', label: 'Estadísticas', icon: BarChart2, roles: ['creator'] },
   { href: '/dashboard/creator/referral-config', label: 'Config. Referidos', icon: Settings, roles: ['creator'] },
@@ -140,7 +140,7 @@ export function DashboardSidebar() {
               href={item.href}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10',
-                (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)) ) && 'bg-primary/10 text-primary font-semibold'
+                (pathname === item.href || (item.href !== '/dashboard' && item.href !== '/dashboard/creator' && item.href !== '/dashboard/student' && item.href !== '/dashboard/superadmin' && pathname.startsWith(item.href)) ) && 'bg-primary/10 text-primary font-semibold'
               )}
             >
               <item.icon className="h-4 w-4" />

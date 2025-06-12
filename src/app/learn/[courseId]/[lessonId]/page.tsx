@@ -19,8 +19,6 @@ import type { LessonProperties } from '@/features/course/domain/entities/lesson.
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-// import { auth } from '@/lib/firebase/config'; // No se usa en modo simplificado
-// import type { UserCourseProgressProperties } from '@/features/progress/domain/entities/user-course-progress.entity';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 interface ModuleWithLessons extends ModuleProperties {
@@ -37,7 +35,7 @@ const lessonCommentsPlaceholder = [
   { id: 'c2', user: { name: 'Bob Builder', avatar: 'https://placehold.co/40x40.png?text=BB' }, text: '¿Podrías dar un ejemplo de cómo aplicar esto en un proyecto real con autenticación?', date: 'Hace 1 día' },
 ];
 
-// Placeholder data (simulated)
+// SIMPLIFIED DATA FOR DEMONSTRATION
 const placeholderCourseBase: Omit<CourseProperties, 'id' | 'ordenModulos' | 'fechaCreacion' | 'fechaActualizacion'> = {
     nombre: "Curso de Prueba (Simplificado)",
     descripcionCorta: "Descripción corta del curso simplificado.",
@@ -55,7 +53,7 @@ const placeholderCourseBase: Omit<CourseProperties, 'id' | 'ordenModulos' | 'fec
 const placeholderModuleBase: Omit<ModuleProperties, 'id' | 'courseId' | 'orden' | 'fechaCreacion' | 'fechaActualizacion' | 'ordenLecciones' | 'lessons'> = {
     nombre: "Módulo Simulado Único",
 };
-
+// END SIMPLIFIED DATA
 
 export default function LessonPage() {
   const params = useParams<{ courseId: string; lessonId: string }>();
@@ -66,11 +64,7 @@ export default function LessonPage() {
   const [courseStructure, setCourseStructure] = useState<CourseStructureData | null>(null);
   const [isInitialCourseLoad, setIsInitialCourseLoad] = useState(true);
   const [isLoadingLessonContent, setIsLoadingLessonContent] = useState(false);
-  const [isTogglingCompletion, setIsTogglingCompletion] = useState(false); // Definición del estado
-
-  // const [isLoadingProgress, setIsLoadingProgress] = useState(true); // Comentado para simplificación
-  const [error, setError] = useState<string | null>(null);
-  
+  const [isTogglingCompletion, setIsTogglingCompletion] = useState(false);
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
   const [currentModule, setCurrentModule] = useState<ModuleWithLessons | null>(null);
   const [currentLesson, setCurrentLesson] = useState<LessonProperties | null>(null);
@@ -78,177 +72,131 @@ export default function LessonPage() {
   const [nextLesson, setNextLesson] = useState<LessonProperties | null>(null);
   const [flatLessons, setFlatLessons] = useState<LessonProperties[]>([]);
   const [courseProgress, setCourseProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-
 
   const fetchCourseStructureData = useCallback(async () => {
     if (!params.courseId) return;
-
-    if (isInitialCourseLoad) { // Solo loading inicial de toda la estructura
-        setIsInitialCourseLoad(true); // Asegurarse de que se setea a true solo al inicio si es la primera carga
-    }
     setError(null);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 50)); 
+    await new Promise(resolve => setTimeout(resolve, 50)); // Simulate API delay
 
     try {
       const courseId = params.courseId;
       const currentLessonIdInUrl = params.lessonId || "lesson_sim_1";
 
-      // Create unique lesson IDs for placeholder data
-      const lesson1Id = currentLessonIdInUrl;
-      const lesson2Id = currentLessonIdInUrl === "lesson_sim_2" ? "lesson_sim_2_alt" : "lesson_sim_2";
-      const lesson3Id = currentLessonIdInUrl === "lesson_sim_3" ? "lesson_sim_3_alt" : "lesson_sim_3";
-
-
+      // Helper to ensure unique IDs, even if base names are similar
+      const createUniqueLessonId = (baseId: string, suffix: string | number) => `${baseId}_${suffix}`;
+      
       const lessonsForModule: LessonProperties[] = [
-        { 
-            id: lesson1Id, 
-            moduleId: "mod1_simulated", 
-            courseId: courseId, 
-            nombre: `Lección Actual (${lesson1Id})`, 
-            duracionEstimada: "10m", esVistaPrevia: false, orden: 1, 
-            fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(), 
-            contenidoPrincipal: { tipo: 'texto_rico', texto: `<p>Contenido simulado para la lección: <strong>${lesson1Id}</strong>.</p><p>Este es un ejemplo de cómo se vería el contenido de una lección.</p>`} 
+        {
+            id: createUniqueLessonId(currentLessonIdInUrl, "actual"), // Ensure the "current" lesson ID is truly unique
+            moduleId: "mod1_simulated", courseId, nombre: `Lección Actual (${currentLessonIdInUrl})`,
+            duracionEstimada: "10m", esVistaPrevia: false, orden: 1,
+            fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(),
+            contenidoPrincipal: { tipo: 'texto_rico', texto: `<p>Contenido simulado para la lección: <strong>${currentLessonIdInUrl}</strong>.</p><p>Este es un ejemplo de cómo se vería el contenido de una lección.</p>` }
         },
         {
-            id: lesson2Id,
-            moduleId: "mod1_simulated",
-            courseId: courseId,
-            nombre: `Lección de Video (${lesson2Id})`,
-            duracionEstimada: "15m", esVistaPrevia: true, orden: 2, 
-            fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(), 
-            contenidoPrincipal: { tipo: 'video', url: 'https://www.w3schools.com/html/mov_bbb.mp4'} // Placeholder video
+            id: createUniqueLessonId("lesson_video", "2"),
+            moduleId: "mod1_simulated", courseId, nombre: `Lección de Video (video_2)`,
+            duracionEstimada: "15m", esVistaPrevia: true, orden: 2,
+            fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(),
+            contenidoPrincipal: { tipo: 'video', url: 'https://www.w3schools.com/html/mov_bbb.mp4'}
         },
         {
-            id: lesson3Id,
-            moduleId: "mod1_simulated",
-            courseId: courseId,
-            nombre: `Lección PDF (${lesson3Id})`,
+            id: createUniqueLessonId("lesson_pdf", "3"),
+            moduleId: "mod1_simulated", courseId, nombre: `Lección PDF (pdf_3)`,
             duracionEstimada: "5 págs", esVistaPrevia: false, orden: 3,
             fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(),
-            contenidoPrincipal: { tipo: 'documento_pdf', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' } // Placeholder PDF
+            contenidoPrincipal: { tipo: 'documento_pdf', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' }
         }
-      ].filter(lesson => lesson.id); // Ensure no undefined IDs slip through if logic changes
+      ];
+      lessonsForModule.sort((a, b) => a.orden - b.orden);
 
-      // Ensure all lessons have truly unique IDs, even if params.lessonId matches one of the static ones
-      const finalLessons: LessonProperties[] = [];
-      const usedIds = new Set<string>();
-      lessonsForModule.forEach(l => {
-          let uniqueId = l.id;
-          let counter = 0;
-          while(usedIds.has(uniqueId)) {
-              counter++;
-              uniqueId = `${l.id}_v${counter}`;
-          }
-          usedIds.add(uniqueId);
-          finalLessons.push({...l, id: uniqueId, nombre: l.nombre.replace(l.id, uniqueId) }); // Update name if ID changed
-      });
-      
-      finalLessons.sort((a, b) => a.orden - b.orden);
-        
       const finalPlaceholderModule: ModuleWithLessons = {
-          ...placeholderModuleBase,
-          id: "mod1_simulated",
-          courseId: courseId,
-          orden: 1,
-          fechaCreacion: new Date().toISOString(),
-          fechaActualizacion: new Date().toISOString(),
-          lessons: finalLessons,
-          ordenLecciones: finalLessons.map(l => l.id),
+          ...placeholderModuleBase, id: "mod1_simulated", courseId, orden: 1,
+          fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(),
+          lessons: lessonsForModule, ordenLecciones: lessonsForModule.map(l => l.id),
       };
-      
-      const finalPlaceholderCourse: CourseProperties = {
-          ...placeholderCourseBase,
-          id: courseId,
-          ordenModulos: [finalPlaceholderModule.id],
-          fechaCreacion: new Date().toISOString(),
-          fechaActualizacion: new Date().toISOString(),
-      };
-        
-      setCourseStructure({ course: finalPlaceholderCourse, modules: [finalPlaceholderModule] });
 
+      const finalPlaceholderCourse: CourseProperties = {
+          ...placeholderCourseBase, id: courseId, ordenModulos: [finalPlaceholderModule.id],
+          fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(),
+      };
+      setCourseStructure({ course: finalPlaceholderCourse, modules: [finalPlaceholderModule] });
     } catch (err: any) {
       setError("Error simulado al cargar estructura: " + err.message);
-      console.error("[SIMPLIFICADO] Error al generar estructura placeholder:", err);
     } finally {
-      if (isInitialCourseLoad) setIsInitialCourseLoad(false); 
+      if (isInitialCourseLoad) {
+        setIsInitialCourseLoad(false);
+      }
+      setIsLoadingLessonContent(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.courseId, params.lessonId, isInitialCourseLoad]); // courseStructure quitado para evitar bucle con la simulación
-
+  }, [params.courseId, params.lessonId, isInitialCourseLoad]); // Removed router, courseStructure
 
   const fetchUserProgress = useCallback(async () => {
-    if (!currentUser || !params.courseId) {
-        return;
-    }
+    if (!currentUser || !params.courseId) return;
     await new Promise(resolve => setTimeout(resolve, 50));
-    setCompletedLessons(new Set()); 
+    setCompletedLessons(new Set());
   }, [currentUser, params.courseId]);
-
 
   useEffect(() => {
     if (params.courseId) {
-        setIsLoadingLessonContent(true); 
-        fetchCourseStructureData().finally(() => {
-             setIsLoadingLessonContent(false); 
-        });
+      setIsLoadingLessonContent(true);
+      fetchCourseStructureData();
     }
-  }, [params.courseId, params.lessonId, fetchCourseStructureData]);
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.courseId, params.lessonId]); // fetchCourseStructureData is memoized, should not cause loop if its deps are stable
 
   useEffect(() => {
-    if (currentUser && courseStructure) { 
+    if (currentUser && courseStructure) {
       fetchUserProgress();
     }
-  }, [currentUser, courseStructure, fetchUserProgress]);
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, courseStructure]); // fetchUserProgress is memoized
 
   useEffect(() => {
     if (!courseStructure || !params.lessonId) {
-        setCurrentLesson(null); 
-        setPrevLesson(null);
-        setNextLesson(null);
-        setFlatLessons([]);
-        return;
+      setCurrentLesson(null); setPrevLesson(null); setNextLesson(null); setFlatLessons([]);
+      return;
     }
-    
+
     const allLessons: LessonProperties[] = [];
     let foundModule: ModuleWithLessons | null = null;
     let foundLesson: LessonProperties | null = null;
-    let lessonIdToFind = params.lessonId;
+    const lessonIdToFind = params.lessonId; // Lesson ID from URL is primary target
 
-    // Prioritize finding the lesson based on the current params.lessonId
-    for (const mod of courseStructure.modules) {
-      for (const less of mod.lessons) {
-        allLessons.push(less); // Collect all lessons for flatLessons list
-        if (less.id === lessonIdToFind) {
-          foundModule = mod;
-          foundLesson = less;
-        }
-      }
-    }
+    // In simulation, courseStructure.modules[0].lessons should contain the current lesson based on currentLessonIdInUrl
+    // We need to ensure the 'id' in the placeholder matches params.lessonId logic
+    let targetLessonInPlaceholder: LessonProperties | undefined;
     
-    // If not found by ID, and it's the initial load, try to pick the first lesson of the first module
-    if (!foundLesson && allLessons.length > 0) {
-        console.warn(`Lesson with ID ${lessonIdToFind} not found. Defaulting to first available lesson.`)
+    for (const mod of courseStructure.modules) {
+        mod.lessons.forEach(less => {
+            allLessons.push(less);
+            // Try to find based on naming convention if IDs mismatch due to creation logic
+            if (less.nombre.includes(`(${lessonIdToFind})`)) {
+                targetLessonInPlaceholder = less;
+            }
+        });
+    }
+
+    if (targetLessonInPlaceholder) {
+        foundLesson = targetLessonInPlaceholder;
+        foundModule = courseStructure.modules.find(m => m.id === foundLesson!.moduleId) || null;
+    } else if (allLessons.length > 0) {
+        // Fallback if the naming convention match fails, use first lesson
+        console.warn(`Could not precisely match lesson ${lessonIdToFind} in placeholder by name. Using first lesson.`);
         foundLesson = allLessons[0];
         foundModule = courseStructure.modules.find(m => m.id === foundLesson!.moduleId) || null;
-        // Optionally, redirect to the first lesson's URL if params.lessonId was invalid/missing
-        // router.replace(`/learn/${params.courseId}/${foundLesson.id}`, { scroll: false });
     }
-    
-    allLessons.sort((a,b) => { // Ensure flatLessons is always sorted correctly
+
+
+    allLessons.sort((a,b) => {
         const moduleA = courseStructure.modules.find(m => m.id === a.moduleId);
         const moduleB = courseStructure.modules.find(m => m.id === b.moduleId);
-        if (moduleA && moduleB && moduleA.orden !== moduleB.orden) {
-            return moduleA.orden - moduleB.orden;
-        }
+        if (moduleA && moduleB && moduleA.orden !== moduleB.orden) return moduleA.orden - moduleB.orden;
         return a.orden - b.orden;
     });
     setFlatLessons(allLessons);
-
     setCurrentModule(foundModule);
     setCurrentLesson(foundLesson);
 
@@ -257,14 +205,12 @@ export default function LessonPage() {
       setPrevLesson(currentIndex > 0 ? allLessons[currentIndex - 1] : null);
       setNextLesson(currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null);
     } else {
-      setPrevLesson(null);
-      setNextLesson(null);
+      setPrevLesson(null); setNextLesson(null);
     }
-  }, [courseStructure, params.lessonId, router, params.courseId]);
+  }, [courseStructure, params.lessonId, params.courseId]); // Removed router
 
-
- useEffect(() => {
-    if (flatLessons.length > 0 && completedLessons.size >= 0) { 
+  useEffect(() => {
+    if (flatLessons.length > 0 && completedLessons.size >= 0) {
       const newProgress = flatLessons.length > 0 ? Math.round((completedLessons.size / flatLessons.length) * 100) : 0;
       setCourseProgress(newProgress);
     } else {
@@ -272,38 +218,28 @@ export default function LessonPage() {
     }
   }, [completedLessons, flatLessons]);
 
-
   const toggleLessonComplete = async () => {
     if (!currentUser || !currentLesson || !params.courseId || flatLessons.length === 0) return;
-    
     setIsTogglingCompletion(true);
     try {
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 300));
-
       const newCompletedLessons = new Set(completedLessons);
-      if (newCompletedLessons.has(currentLesson.id)) {
-        newCompletedLessons.delete(currentLesson.id);
-      } else {
-        newCompletedLessons.add(currentLesson.id);
-      }
+      if (newCompletedLessons.has(currentLesson.id)) newCompletedLessons.delete(currentLesson.id);
+      else newCompletedLessons.add(currentLesson.id);
       setCompletedLessons(newCompletedLessons);
       const newProgressPercentage = flatLessons.length > 0 ? Math.round((newCompletedLessons.size / flatLessons.length) * 100) : 0;
       setCourseProgress(newProgressPercentage);
-
       toast({
         title: "Progreso Actualizado (Simulado)",
         description: `Lección "${currentLesson.nombre}" marcada como ${newCompletedLessons.has(currentLesson.id) ? 'completada' : 'no completada'}.`
       });
-
     } catch (err: any) {
       toast({ title: "Error al Actualizar Progreso", description: err.message, variant: "destructive" });
-      console.error("Error toggling lesson completion:", err);
     } finally {
       setIsTogglingCompletion(false);
     }
   };
-  
+
   const isCurrentLessonCompleted = currentLesson ? completedLessons.has(currentLesson.id) : false;
 
   const renderLessonContentPlayer = () => {
@@ -329,7 +265,7 @@ export default function LessonPage() {
                 <video controls src={url} className="w-full h-full"><track kind="captions" /></video>
             </div>
         );
-      case 'pdf': 
+      case 'pdf':
       case 'documento_pdf':
         if (!url) return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground flex items-center justify-center h-full">URL del PDF no disponible.</div>;
         return (
@@ -348,7 +284,7 @@ export default function LessonPage() {
       case 'texto_rico':
         if (!texto) return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground flex items-center justify-center h-full">Contenido de texto no disponible.</div>;
         return (
-          <Card className="h-full overflow-y-auto"> 
+          <Card className="h-full overflow-y-auto">
             <CardContent className="p-6 prose max-w-none" dangerouslySetInnerHTML={{ __html: texto }} />
           </Card>
         );
@@ -364,7 +300,7 @@ export default function LessonPage() {
         return <div className="p-6 bg-card rounded-lg shadow-md flex items-center justify-center h-full">Contenido de la lección ({tipo}) no soportado o no disponible.</div>;
     }
   };
-  
+
   const CourseNavigationSidebar = ({ onLessonClick }: { onLessonClick: () => void }) => (
     <ScrollArea className="h-full">
       <div className="p-4 sticky top-0 bg-card z-10 border-b">
@@ -409,17 +345,17 @@ export default function LessonPage() {
     </ScrollArea>
   );
 
-  if (isInitialCourseLoad) { 
+  if (isInitialCourseLoad) {
     return (
       <div className="flex h-screen md:h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden">
-        <div className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col p-0"> 
-            <div className="p-4 border-b"> 
+        <div className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col p-0">
+            <div className="p-4 border-b">
                 <Skeleton className="h-5 w-3/4 mb-2" />
                 <Skeleton className="h-2 w-full mb-1" />
                 <Skeleton className="h-2 w-5/6 mb-2" />
             </div>
-            <div className="p-2 space-y-2 flex-1"> 
-                {[...Array(3)].map((_, i) => ( 
+            <div className="p-2 space-y-2 flex-1">
+                {[...Array(3)].map((_, i) => (
                     <div key={i} className="space-y-1">
                         <Skeleton className="h-8 w-full" />
                         <Skeleton className="h-7 w-5/6 ml-3" />
@@ -439,7 +375,7 @@ export default function LessonPage() {
                 <Skeleton className="aspect-video w-full rounded-lg" />
                 <div className="flex justify-between items-center mt-4">
                     <Skeleton className="h-10 w-28 rounded-md" />
-                    <Skeleton className="h-10 w-40 rounded-md" /> 
+                    <Skeleton className="h-10 w-40 rounded-md" />
                 </div>
             </div>
         </div>
@@ -447,7 +383,7 @@ export default function LessonPage() {
     );
   }
 
-  if (error && !courseStructure) { 
+  if (error && !courseStructure) {
     return (
         <div className="container mx-auto py-12 px-4 md:px-6 text-center min-h-screen flex items-center justify-center">
             <Card className="max-w-md mx-auto shadow-lg p-6 rounded-xl bg-card">
@@ -475,7 +411,7 @@ export default function LessonPage() {
     );
   }
 
-  if (!courseStructure || (!currentLesson && !isInitialCourseLoad && !isLoadingLessonContent) ) { 
+  if (!courseStructure || (!currentLesson && !isInitialCourseLoad && !isLoadingLessonContent) ) {
     return (
       <div className="container py-8 text-center min-h-screen flex items-center justify-center">
         <Card className="max-w-md mx-auto shadow-lg p-6 rounded-xl bg-card">
@@ -500,16 +436,17 @@ export default function LessonPage() {
       </div>
     );
   }
-  
+
   return (
-    <div className="flex h-screen md:h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden"> 
-      <aside className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col"> 
-        <CourseNavigationSidebar onLessonClick={() => {}} /> 
+    <div className="flex h-screen md:h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden">
+      <aside className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col">
+        {/* Solo mostrar la barra lateral si courseStructure está cargado, para evitar errores */}
+        {courseStructure && <CourseNavigationSidebar onLessonClick={() => {}} />}
       </aside>
 
-      <div className="flex-1 flex flex-col overflow-hidden"> 
+      <div className="flex-1 flex flex-col overflow-hidden">
         <header className="md:hidden flex items-center justify-between p-3 border-b bg-card sticky top-0 z-20">
-           <div className="flex-1 min-w-0"> 
+           <div className="flex-1 min-w-0">
              <h1 className="text-md font-semibold truncate" title={currentLesson?.nombre || "Cargando..."}>{currentLesson?.nombre || "Cargando..."}</h1>
              <p className="text-xs text-muted-foreground truncate" title={courseStructure?.course.nombre || "..."}>{courseStructure?.course.nombre || "..."}</p>
            </div>
@@ -519,34 +456,37 @@ export default function LessonPage() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] p-0 flex flex-col"> 
-              <CourseNavigationSidebar onLessonClick={() => setIsMobileNavOpen(false)} />
+            <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
+              {courseStructure && <CourseNavigationSidebar onLessonClick={() => setIsMobileNavOpen(false)} />}
             </SheetContent>
           </Sheet>
         </header>
 
-        <ScrollArea className="flex-1 bg-secondary/30"> 
+        <ScrollArea className="flex-1 bg-secondary/30">
+          {/* Este div es el contenedor principal del área de contenido derecha. NO debe tener una key que cambie con la lección */}
           <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-8">
-            <div className="mb-6 md:hidden"> 
-                {/* Info de lección ya está en el header móvil */}
+            {/* Título de la lección (si no está en header móvil, o para desktop) */}
+            <div className="mb-4 hidden md:block">
+                 <h1 className="text-2xl font-bold font-headline mb-1">{currentLesson?.nombre || <Skeleton className="h-8 w-3/4" />}</h1>
+                 <p className="text-sm text-muted-foreground">Del curso: {courseStructure?.course.nombre || <Skeleton className="h-4 w-1/2" />}</p>
             </div>
-            
-             <div key={currentLesson?.id || 'content-player-area'} className="mb-6 min-h-[250px] md:min-h-[400px] lg:min-h-[500px] flex"> 
+
+             <div key={currentLesson?.id || 'content-player-area'} className="mb-6 min-h-[250px] md:min-h-[400px] lg:min-h-[500px] flex">
               {renderLessonContentPlayer()}
             </div>
 
             <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 py-4 border-t">
               <div className="flex gap-2 w-full md:w-auto">
-                <Button 
-                    variant="outline" 
+                <Button
+                    variant="outline"
                     className="flex-1 md:flex-none"
                     onClick={() => prevLesson && router.push(`/learn/${params.courseId}/${prevLesson.id}`)}
                     disabled={!prevLesson || isLoadingLessonContent}
                   >
                     <ChevronLeft className="h-4 w-4 mr-2" /> Anterior
                   </Button>
-                <Button 
-                    variant="default" 
+                <Button
+                    variant="default"
                     className="flex-1 md:flex-none"
                     onClick={() => nextLesson && router.push(`/learn/${params.courseId}/${nextLesson.id}`)}
                     disabled={!nextLesson || isLoadingLessonContent}
@@ -554,7 +494,7 @@ export default function LessonPage() {
                     Siguiente <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
               </div>
-              <Button 
+              <Button
                 onClick={toggleLessonComplete}
                 variant={isCurrentLessonCompleted ? "secondary" : "default"}
                 className={`w-full md:w-auto min-w-[200px] ${isCurrentLessonCompleted ? 'bg-green-100 hover:bg-green-200 text-green-700 border border-green-300' : ''}`}
@@ -624,6 +564,4 @@ export default function LessonPage() {
     </div>
   );
 }
-    
-
     

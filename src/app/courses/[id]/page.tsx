@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn, CreditCard, ShoppingCart } from 'lucide-react';
+import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn, ShoppingCart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/config';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
+import { motion } from 'framer-motion';
 
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
@@ -34,7 +35,6 @@ const placeholderReviews = [
   { id: 'c2', usuario: { nombre: 'Laura M.', avatarUrl: 'https://placehold.co/40x40.png?text=LM' }, texto: 'Me ayudó mucho a entender GraphQL. Lo recomiendo.', rating: 5, fecha: '2024-06-28' },
 ];
 
-// Initialize Stripe.js
 let stripePromise: Promise<Stripe | null> | null = null;
 const getStripe = () => {
   if (!stripePromise) {
@@ -42,7 +42,6 @@ const getStripe = () => {
       stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
     } else {
       console.error("Stripe publishable key is not set in environment variables.");
-      // Return a promise that resolves to null or handles the error appropriately
       stripePromise = Promise.resolve(null);
     }
   }
@@ -74,7 +73,6 @@ export default function CourseDetailPage() {
         variant: 'default',
         duration: 5000,
       });
-      // Clean the URL parameter
       router.replace(`/courses/${courseId}`, { scroll: false });
     }
   }, [searchParams, courseId, router, toast]);
@@ -193,50 +191,47 @@ export default function CourseDetailPage() {
     }
   };
 
-  const handleEnrollOrPurchase = () => {
-    if (!courseData) return;
-    if (courseData.course.precio > 0) {
-        handlePaidCheckout();
-    } else {
-        handleFreeEnrollment();
-    }
-  };
-
-
   if (isLoading || authLoading) {
     return (
-      <div className="bg-secondary/30">
-        <div className="bg-primary py-12 md:py-20">
-          <div className="container mx-auto px-4 md:px-6 grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <Skeleton className="h-6 w-24 mb-2" />
-              <Skeleton className="h-10 w-3/4 mb-3" />
-              <Skeleton className="h-6 w-full mb-4" />
-              <div className="flex items-center space-x-4 mb-6">
-                <Skeleton className="h-8 w-8 rounded-full mr-2" /> <Skeleton className="h-4 w-32" />
+      <div className="bg-secondary/30 min-h-screen">
+        <div className="bg-primary/80 py-16 md:py-24">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="grid lg:grid-cols-3 gap-8 items-start">
+              <div className="lg:col-span-2 space-y-4">
+                <Skeleton className="h-6 w-32 rounded-md" /> {/* Badge */}
+                <Skeleton className="h-12 w-3/4 rounded-md" /> {/* Title */}
+                <Skeleton className="h-20 w-full rounded-md" /> {/* Short Description */}
+                <div className="flex items-center space-x-4">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <Skeleton className="h-5 w-40 rounded-md" />
+                </div>
+                <div className="flex flex-wrap gap-x-6 gap-y-3 items-center text-sm">
+                  <Skeleton className="h-5 w-20 rounded-md" />
+                  <Skeleton className="h-5 w-24 rounded-md" />
+                  <Skeleton className="h-5 w-28 rounded-md" />
+                </div>
               </div>
-              <div className="flex items-center space-x-4"><Skeleton className="h-4 w-20" /> <Skeleton className="h-4 w-24" /> <Skeleton className="h-4 w-32" /></div>
+              <div className="lg:col-span-1">
+                <Card className="shadow-xl rounded-lg">
+                  <Skeleton className="w-full aspect-video rounded-t-lg" />
+                  <CardContent className="p-6 space-y-4">
+                    <Skeleton className="h-10 w-1/2 rounded-md" />
+                    <Skeleton className="h-12 w-full rounded-md" />
+                    <Skeleton className="h-4 w-3/4 mx-auto rounded-md" />
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-            <Card className="overflow-hidden shadow-2xl">
-                <Skeleton className="w-full aspect-video" />
-                <CardContent className="p-6 space-y-3">
-                    <Skeleton className="h-10 w-1/3" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-4 w-3/4 mx-auto" />
-                </CardContent>
-            </Card>
           </div>
         </div>
         <div className="container mx-auto px-4 md:px-6 py-12">
           <div className="grid lg:grid-cols-3 gap-12">
             <div className="lg:col-span-2 space-y-8">
-                <Card><CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
-                <Card><CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
-                <Card><CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
+              <Card className="shadow-lg rounded-lg"><CardHeader><Skeleton className="h-8 w-1/2 rounded-md" /></CardHeader><CardContent><Skeleton className="h-32 w-full rounded-md" /></CardContent></Card>
+              <Card className="shadow-lg rounded-lg"><CardHeader><Skeleton className="h-8 w-1/2 rounded-md" /></CardHeader><CardContent><Skeleton className="h-40 w-full rounded-md" /></CardContent></Card>
             </div>
             <div className="lg:col-span-1 space-y-8">
-                 <Card><CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader><CardContent className="text-center space-y-2"><Skeleton className="h-20 w-20 rounded-full mx-auto"/><Skeleton className="h-5 w-1/2 mx-auto"/><Skeleton className="h-12 w-full"/><Skeleton className="h-9 w-3/4 mx-auto"/></CardContent></Card>
-                 <Card><CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent></Card>
+              <Card className="shadow-lg rounded-lg"><CardHeader><Skeleton className="h-6 w-3/4 rounded-md" /></CardHeader><CardContent className="text-center space-y-3"><Skeleton className="h-20 w-20 rounded-full mx-auto"/><Skeleton className="h-5 w-1/2 mx-auto rounded-md"/><Skeleton className="h-12 w-full rounded-md"/></CardContent></Card>
             </div>
           </div>
         </div>
@@ -246,23 +241,24 @@ export default function CourseDetailPage() {
 
   if (error) {
     return (
-        <div className="container mx-auto py-12 px-4 md:px-6 text-center">
-            <Card className="max-w-md mx-auto shadow-lg">
-                <CardHeader>
-                    <CardTitle className="text-2xl text-destructive flex items-center justify-center gap-2">
-                        <AlertTriangle className="h-8 w-8" /> Error al Cargar
-                    </CardTitle>
+        <div className="container mx-auto py-12 px-4 md:px-6 text-center min-h-[60vh] flex items-center justify-center">
+            <Card className="max-w-md mx-auto shadow-lg p-6 rounded-xl">
+                <CardHeader className="p-0 mb-4">
+                    <div className="mx-auto p-3 bg-destructive/10 rounded-full w-fit">
+                        <AlertTriangle className="h-12 w-12 text-destructive" />
+                    </div>
+                    <CardTitle className="text-2xl text-destructive mt-4">Error al Cargar el Curso</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground mb-4">No pudimos cargar los detalles del curso.</p>
-                    <p className="text-sm text-destructive-foreground bg-destructive/10 p-3 rounded-md">{error}</p>
+                <CardContent className="p-0">
+                    <p className="text-muted-foreground mb-4">No pudimos cargar los detalles de este curso.</p>
+                    <p className="text-sm text-destructive-foreground bg-destructive/10 p-3 rounded-md border border-destructive/30">{error}</p>
                 </CardContent>
-                <CardFooter className="flex flex-col gap-3">
-                     <Button onClick={fetchCourseData} variant="default" disabled={isLoading}>
+                <CardFooter className="p-0 mt-6 flex flex-col gap-3">
+                     <Button onClick={fetchCourseData} variant="default" disabled={isLoading} className="w-full">
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                         Intentar de Nuevo
                     </Button>
-                    <Button variant="outline" asChild>
+                    <Button variant="outline" asChild className="w-full">
                         <Link href="/courses">Volver a Cursos</Link>
                     </Button>
                 </CardFooter>
@@ -272,27 +268,29 @@ export default function CourseDetailPage() {
   }
 
   if (!courseData) {
-    return <div className="container py-8 text-center">No se encontraron datos para este curso.</div>;
+    return <div className="container py-12 text-center">No se encontraron datos para este curso.</div>;
   }
 
   const { course, modules } = courseData;
+  const totalLessons = modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
+  const firstLessonId = modules[0]?.lessons[0]?.id || 'start'; // Placeholder, consider redirect to course if no lessons
+  const isCourseFree = course.precio <= 0;
 
   const creatorDisplay = {
     id: course.creadorUid,
-    nombre: `Creator ${course.creadorUid.substring(0, 6)}`, 
+    nombre: `Creator ${course.creadorUid.substring(0, 6)}`, // Placeholder, fetch real name if available
     avatarUrl: `https://placehold.co/80x80.png?text=${course.creadorUid.substring(0,2).toUpperCase()}`,
-    bio: 'Información del creador no disponible en esta vista.',
+    dataAiHint: "instructor avatar",
+    bio: 'Instructor apasionado con experiencia en la industria.', // Placeholder bio
   };
-
-  const totalLessons = modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
-  const firstLessonId = modules[0]?.lessons[0]?.id || 'start';
-  const isCourseFree = course.precio <= 0;
 
   const renderActionButton = () => {
     const processing = isProcessingEnrollment || isProcessingPayment;
+    const commonButtonClasses = "w-full text-base py-6 rounded-lg shadow-md hover:shadow-lg transition-shadow";
+
     if (!currentUser) {
         return (
-            <Button size="lg" className="w-full" asChild>
+            <Button size="lg" className={commonButtonClasses} asChild>
                 <Link href={`/login?redirect=/courses/${courseId}`}>
                     <LogIn className="mr-2 h-5 w-5" /> Iniciar Sesión para Acceder
                 </Link>
@@ -301,208 +299,242 @@ export default function CourseDetailPage() {
     }
     if (isUserEnrolled) {
         return (
-            <Button size="lg" className="w-full" asChild>
+            <Button size="lg" className={commonButtonClasses} asChild>
                <Link href={`/learn/${course.id}/${firstLessonId}`}>Ir al Curso</Link>
             </Button>
         );
     }
     if (isCourseFree) {
         return (
-            <Button size="lg" className="w-full" onClick={handleFreeEnrollment} disabled={processing}>
+            <Button size="lg" className={commonButtonClasses} onClick={handleFreeEnrollment} disabled={processing}>
                 {processing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5"/>}
                 {processing ? 'Inscribiendo...' : 'Inscribirse Gratis'}
             </Button>
         );
     }
     return (
-        <Button size="lg" className="w-full" onClick={handlePaidCheckout} disabled={processing}>
+        <Button size="lg" className={commonButtonClasses} onClick={handlePaidCheckout} disabled={processing}>
              {processing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ShoppingCart className="mr-2 h-5 w-5"/>}
-             {processing ? 'Procesando...' : `Comprar Ahora por ${course.precio.toFixed(2)} €`}
+             {processing ? 'Procesando...' : `Comprar por ${course.precio.toFixed(2)} €`}
         </Button>
     );
   };
 
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { duration: 0.5 } },
+  };
+
 
   return (
-    <div className="bg-secondary/30">
-      <div className="bg-primary text-primary-foreground py-12 md:py-20">
-        <div className="container mx-auto px-4 md:px-6 grid md:grid-cols-2 gap-8 items-center">
-          <div>
-            <Badge variant="secondary" className="mb-2 bg-accent text-accent-foreground">{modules.length} Módulos</Badge>
-            <h1 className="text-3xl md:text-4xl font-bold font-headline mb-3">{course.nombre}</h1>
-            <p className="text-lg text-primary-foreground/90 mb-4">{course.descripcionCorta}</p>
-            <div className="flex items-center space-x-4 mb-6 text-sm">
-              <div className="flex items-center">
-                <Avatar className="h-8 w-8 mr-2 border-2 border-accent">
-                  <AvatarImage src={creatorDisplay.avatarUrl} alt={creatorDisplay.nombre} data-ai-hint="instructor avatar" />
+    <motion.div 
+      className="bg-secondary/30 min-h-screen"
+      initial="hidden"
+      animate="visible"
+      variants={{ visible: { transition: { staggerChildren: 0.1 }}}}
+    >
+      {/* Hero Section */}
+      <motion.div 
+        className="bg-gradient-to-br from-primary via-primary/90 to-blue-600 text-primary-foreground py-16 md:py-24 shadow-inner"
+        variants={itemVariants}
+      >
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="grid lg:grid-cols-3 gap-8 md:gap-12 items-start">
+            <motion.div className="lg:col-span-2 space-y-4" variants={itemVariants}>
+              <Badge variant="secondary" className="mb-2 bg-accent text-accent-foreground shadow-sm text-sm px-3 py-1">
+                {course.categoria}
+              </Badge>
+              <h1 className="text-4xl md:text-5xl font-bold font-headline leading-tight">{course.nombre}</h1>
+              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">{course.descripcionCorta}</p>
+              
+              <div className="flex items-center space-x-4 pt-2">
+                <Avatar className="h-12 w-12 border-2 border-accent shadow-md">
+                  <AvatarImage src={creatorDisplay.avatarUrl} alt={creatorDisplay.nombre} data-ai-hint={creatorDisplay.dataAiHint} />
                   <AvatarFallback>{creatorDisplay.nombre.substring(0,2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <span>Creado por <Link href={`/creators/${creatorDisplay.id}`} className="font-semibold hover:underline">{creatorDisplay.nombre}</Link></span>
+                <div>
+                  <p className="text-sm">Creado por</p>
+                  <Link href={`/creators/${creatorDisplay.id}`} className="font-semibold hover:underline text-lg">{creatorDisplay.nombre}</Link>
+                </div>
               </div>
-              <div className="flex items-center">
-                <Star className="h-4 w-4 mr-1 text-accent fill-accent" />
-                <span>{course.ratingPromedio?.toFixed(1) || 'N/A'} ({course.totalResenas || 0} reseñas)</span>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4 text-sm">
-                <div className="flex items-center gap-1.5"><Users className="h-4 w-4" /> {course.totalEstudiantes || 0} estudiantes</div>
-                <div className="flex items-center gap-1.5"><Clock className="h-4 w-4" /> {course.duracionEstimada}</div>
-                {course.fechaActualizacion && <div className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4" /> Última actualización: {new Date(course.fechaActualizacion).toLocaleDateString()}</div>}
-            </div>
-          </div>
-          <Card className="overflow-hidden shadow-2xl">
-            <Image
-              src={course.imagenPortadaUrl || 'https://placehold.co/1200x675.png'}
-              alt={`Portada del curso ${course.nombre}`}
-              width={1200}
-              height={675}
-              className="w-full aspect-video object-cover"
-              data-ai-hint={course.dataAiHintImagenPortada || 'course detail cover'}
-              priority
-            />
-            <CardContent className="p-6">
-              <p className="text-3xl font-bold text-primary mb-4">
-                  {isCourseFree ? 'Gratis' : `${course.precio.toFixed(2)} €`}
-              </p>
-              {renderActionButton()}
-              <p className="text-xs text-muted-foreground mt-3 text-center">Acceso de por vida. Certificado de finalización.</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
 
+              <div className="flex flex-wrap gap-x-6 gap-y-3 items-center text-sm pt-3 text-primary-foreground/90">
+                {course.ratingPromedio !== undefined && (
+                  <div className="flex items-center gap-1.5">
+                    <Star className="h-5 w-5 text-accent fill-accent" />
+                    <span>{course.ratingPromedio.toFixed(1)} ({course.totalResenas || 0} reseñas)</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5"><Users className="h-5 w-5" /> {course.totalEstudiantes || 0} estudiantes</div>
+                <div className="flex items-center gap-1.5"><Clock className="h-5 w-5" /> {course.duracionEstimada}</div>
+              </div>
+            </motion.div>
+
+            <motion.div className="lg:col-span-1 sticky top-24" variants={itemVariants}> {/* Added sticky top for desktop action card */}
+              <Card className="shadow-xl rounded-xl overflow-hidden bg-background text-foreground">
+                <motion.div 
+                  className="relative aspect-video w-full overflow-hidden"
+                  whileHover={{ scale: 1.03 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <Image
+                    src={course.imagenPortadaUrl || 'https://placehold.co/1200x675.png'}
+                    alt={`Portada del curso ${course.nombre}`}
+                    layout="fill"
+                    objectFit="cover"
+                    className="transition-transform duration-500 ease-in-out"
+                    data-ai-hint={course.dataAiHintImagenPortada || 'course detail cover'}
+                    priority
+                  />
+                </motion.div>
+                <CardContent className="p-6 space-y-4">
+                  <p className="text-4xl font-bold text-primary">
+                      {isCourseFree ? 'Gratis' : `${course.precio.toFixed(2)} €`}
+                  </p>
+                  {renderActionButton()}
+                  <p className="text-xs text-muted-foreground text-center">Garantía de 30 días. Acceso de por vida.</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Main Content Area */}
       <div className="container mx-auto px-4 md:px-6 py-12">
         <div className="grid lg:grid-cols-3 gap-12">
-          <div className="lg:col-span-2">
-            <Card className="mb-8 shadow-lg">
+          <motion.div className="lg:col-span-2 space-y-10" variants={itemVariants}>
+            <Card className="shadow-lg rounded-xl">
               <CardHeader>
-                <CardTitle className="text-2xl font-headline">Descripción del Curso</CardTitle>
+                <CardTitle className="text-2xl md:text-3xl font-headline">Descripción del Curso</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="prose max-w-none text-foreground/80" dangerouslySetInnerHTML={{ __html: course.descripcionLarga }} />
               </CardContent>
             </Card>
 
-            <Card className="mb-8 shadow-lg">
+            <Card className="shadow-lg rounded-xl">
               <CardHeader>
-                <CardTitle className="text-2xl font-headline">Contenido del Curso</CardTitle>
-                <CardDescription>{modules.length} módulos &bull; {totalLessons} lecciones &bull; {course.duracionEstimada} total</CardDescription>
+                <CardTitle className="text-2xl md:text-3xl font-headline">Contenido del Curso</CardTitle>
+                <CardDescription className="text-base">{modules.length} módulos &bull; {totalLessons} lecciones &bull; {course.duracionEstimada} en total</CardDescription>
               </CardHeader>
               <CardContent>
                 <Accordion type="single" collapsible className="w-full" defaultValue={modules[0]?.id ? `module-${modules[0].id}` : undefined}>
-                  {modules.map((moduleItem) => (
-                    <AccordionItem value={`module-${moduleItem.id}`} key={moduleItem.id}>
-                      <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                        <div className="flex justify-between w-full items-center pr-2">
-                           <span>{moduleItem.orden}. {moduleItem.nombre}</span>
-                           <span className="text-sm text-muted-foreground font-normal">{moduleItem.lessons.length} lecciones</span>
+                  {modules.map((moduleItem, index) => (
+                    <AccordionItem value={`module-${moduleItem.id}`} key={moduleItem.id} className="border-b last:border-b-0">
+                      <AccordionTrigger className="text-lg hover:no-underline py-4 px-1 group">
+                        <div className="flex justify-between w-full items-center">
+                           <span className="font-semibold text-foreground/90 group-hover:text-primary transition-colors">{moduleItem.orden}. {moduleItem.nombre}</span>
+                           <span className="text-sm text-muted-foreground font-normal mr-2">{moduleItem.lessons.length} lecciones</span>
                         </div>
                       </AccordionTrigger>
-                      <AccordionContent>
-                        <ul className="space-y-2 pt-2">
+                      <AccordionContent className="bg-secondary/30 rounded-b-md">
+                        <ul className="space-y-1 p-3">
                           {moduleItem.lessons.map((leccion) => (
-                            <li key={leccion.id} className="flex justify-between items-center p-3 rounded-md hover:bg-secondary/50 transition-colors">
+                            <li key={leccion.id} className="flex justify-between items-center p-3 rounded-md hover:bg-background/50 transition-colors text-sm">
                               <div className="flex items-center">
-                                {leccion.contenidoPrincipal.tipo === 'video' ? <PlayCircle className="h-5 w-5 mr-3 text-primary" /> : <FileText className="h-5 w-5 mr-3 text-primary" />}
-                                <span className="text-foreground/90">{leccion.nombre}</span>
-                                {leccion.esVistaPrevia && <Badge variant="outline" className="ml-2 border-accent text-accent">Vista Previa</Badge>}
+                                {leccion.contenidoPrincipal.tipo === 'video' ? <PlayCircle className="h-5 w-5 mr-3 text-primary/80" /> : <FileText className="h-5 w-5 mr-3 text-primary/80" />}
+                                <span className="text-foreground/80">{leccion.nombre}</span>
+                                {leccion.esVistaPrevia && <Badge variant="outline" className="ml-2 border-accent text-accent text-xs px-1.5 py-0.5">Vista Previa</Badge>}
                               </div>
-                              <span className="text-sm text-muted-foreground">{leccion.duracionEstimada}</span>
+                              <span className="text-muted-foreground">{leccion.duracionEstimada}</span>
                             </li>
                           ))}
                         </ul>
-                        {moduleItem.lessons.length === 0 && <p className="text-sm text-muted-foreground p-3">Este módulo aún no tiene lecciones.</p>}
+                        {moduleItem.lessons.length === 0 && <p className="text-sm text-muted-foreground p-4">Este módulo aún no tiene lecciones.</p>}
                       </AccordionContent>
                     </AccordionItem>
                   ))}
                 </Accordion>
-                 {modules.length === 0 && <p className="text-muted-foreground text-center py-4">Este curso aún no tiene módulos definidos.</p>}
+                 {modules.length === 0 && <p className="text-muted-foreground text-center py-6">Este curso aún no tiene módulos definidos.</p>}
               </CardContent>
             </Card>
             
-            <Card className="shadow-lg">
+            <Card className="shadow-lg rounded-xl">
               <CardHeader>
-                <CardTitle className="text-2xl font-headline">Valoraciones y Reseñas</CardTitle>
+                <CardTitle className="text-2xl md:text-3xl font-headline">Valoraciones y Reseñas</CardTitle>
                 <div className="flex items-center mt-2">
-                  <Star className="h-6 w-6 text-accent fill-accent mr-1" />
-                  <span className="text-2xl font-bold mr-1">{course.ratingPromedio?.toFixed(1) || 'N/A'}</span>
-                  <span className="text-muted-foreground">({course.totalResenas || 0} reseñas)</span>
+                  <Star className="h-7 w-7 text-accent fill-accent mr-1.5" />
+                  <span className="text-3xl font-bold mr-2">{course.ratingPromedio?.toFixed(1) || 'N/A'}</span>
+                  <span className="text-muted-foreground text-base">({course.totalResenas || 0} reseñas)</span>
                 </div>
               </CardHeader>
               <CardContent>
-                <Button variant="outline" className="mb-6">
+                <Button variant="outline" className="mb-6 shadow-sm">
                   <Edit3 className="mr-2 h-4 w-4" /> Escribir una reseña
                 </Button>
                 <div className="space-y-6">
                   {placeholderReviews.map(comment => (
-                    <div key={comment.id} className="flex gap-4">
-                      <Avatar>
+                    <div key={comment.id} className="flex gap-4 p-4 border rounded-lg bg-secondary/30 shadow-sm">
+                      <Avatar className="h-11 w-11">
                         <AvatarImage src={comment.usuario.avatarUrl} alt={comment.usuario.nombre} data-ai-hint="user avatar review"/>
                         <AvatarFallback>{comment.usuario.nombre.substring(0,1)}</AvatarFallback>
                       </Avatar>
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold">{comment.usuario.nombre}</span>
+                          <span className="font-semibold text-md">{comment.usuario.nombre}</span>
                           <div className="flex">
                             {[...Array(5)].map((_, i) => (
-                              <Star key={i} className={`h-4 w-4 ${i < comment.rating ? 'text-accent fill-accent' : 'text-muted-foreground/50'}`} />
+                              <Star key={i} className={`h-4 w-4 ${i < comment.rating ? 'text-accent fill-accent' : 'text-muted-foreground/30'}`} />
                             ))}
                           </div>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-1">{comment.fecha}</p>
-                        <p className="text-foreground/80">{comment.texto}</p>
+                        <p className="text-xs text-muted-foreground mb-1.5">{comment.fecha}</p>
+                        <p className="text-foreground/80 text-sm">{comment.texto}</p>
                       </div>
                     </div>
                   ))}
                 </div>
-                {placeholderReviews.length > 0 && <Button variant="link" className="mt-6 text-primary">Ver todas las reseñas</Button>}
-                 {placeholderReviews.length === 0 && <p className="text-muted-foreground text-sm">Aún no hay reseñas para este curso. ¡Sé el primero!</p>}
+                {placeholderReviews.length > 0 && <Button variant="link" className="mt-6 text-primary px-0">Ver todas las reseñas</Button>}
+                 {placeholderReviews.length === 0 && <p className="text-muted-foreground text-sm py-4">Aún no hay reseñas para este curso. ¡Sé el primero!</p>}
               </CardContent>
             </Card>
-          </div>
+          </motion.div>
 
-          <div className="lg:col-span-1 space-y-8">
-            <Card className="shadow-lg">
+          <motion.div className="lg:col-span-1 space-y-10" variants={itemVariants}>
+            <Card className="shadow-lg rounded-xl sticky top-24"> {/* Made "Sobre el Creator" card sticky as well */}
               <CardHeader>
                 <CardTitle className="text-xl font-headline">Sobre el Creator</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <Avatar className="h-20 w-20 mx-auto mb-3 border-4 border-primary">
-                  <AvatarImage src={creatorDisplay.avatarUrl} alt={creatorDisplay.nombre} data-ai-hint="instructor portrait detail"/>
+                <Avatar className="h-24 w-24 mx-auto mb-4 border-4 border-primary shadow-md">
+                  <AvatarImage src={creatorDisplay.avatarUrl} alt={creatorDisplay.nombre} data-ai-hint={creatorDisplay.dataAiHint}/>
                   <AvatarFallback>{creatorDisplay.nombre.substring(0,2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <h3 className="text-lg font-semibold text-primary">{creatorDisplay.nombre}</h3>
-                <p className="text-sm text-muted-foreground mt-2 mb-4">{creatorDisplay.bio}</p>
-                <Button variant="outline" asChild>
+                <h3 className="text-xl font-semibold text-primary mb-1">{creatorDisplay.nombre}</h3>
+                <p className="text-sm text-muted-foreground mt-2 mb-4 px-2">{creatorDisplay.bio}</p>
+                <Button variant="outline" asChild className="w-full shadow-sm">
                   <Link href={`/creators/${creatorDisplay.id}`}>Ver Perfil del Creator</Link>
                 </Button>
               </CardContent>
             </Card>
 
             {course.requisitos && course.requisitos.length > 0 && ( 
-              <Card className="shadow-lg">
+              <Card className="shadow-lg rounded-xl">
                 <CardHeader>
                   <CardTitle className="text-xl font-headline">Materiales Adicionales</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2">
-                    {course.requisitos.slice(0,2).map((material, index) => ( 
+                  <ul className="space-y-2.5">
+                    {course.requisitos.map((material, index) => ( 
                       <li key={index}>
-                        <Button variant="link" asChild className="p-0 h-auto text-primary hover:underline flex items-center">
+                        <Button variant="link" asChild className="p-0 h-auto text-primary hover:underline flex items-center text-sm">
                           <Link href="#" download>
-                            <Download className="h-4 w-4 mr-2" /> {material} (Ej: Guía PDF)
+                            <Download className="h-4 w-4 mr-2 shrink-0" /> {material} (Ej: Guía PDF)
                           </Link>
                         </Button>
                       </li>
                     ))}
-                    {course.requisitos.length === 0 && <p className="text-sm text-muted-foreground">No hay materiales adicionales especificados.</p>}
                   </ul>
+                   {course.requisitos.length === 0 && <p className="text-sm text-muted-foreground">No hay materiales adicionales especificados.</p>}
                 </CardContent>
               </Card>
             )}
-          </div>
+          </motion.div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
+
+    

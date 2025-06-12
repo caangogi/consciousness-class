@@ -90,17 +90,18 @@ export default function LessonPage() {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        if (response.status !== 404) {
+        if (response.status !== 404) { // Don't throw error for 404, just means no progress yet
             throw new Error(errorData.details || errorData.error || 'Failed to fetch user progress');
         }
-        setCompletedLessons(new Set());
+        setCompletedLessons(new Set()); // No progress found, initialize as empty
         return;
       }
       const data: { completedLessonIds: string[] } = await response.json();
       setCompletedLessons(new Set(data.completedLessonIds || []));
     } catch (err: any) {
+      // Log as warning because it might be normal (e.g., new user, no progress yet)
       console.warn("Error fetching user progress (might be normal if no progress yet):", err.message);
-      setCompletedLessons(new Set());
+      setCompletedLessons(new Set()); // Ensure completedLessons is an empty set on error
     } finally {
       setIsLoadingProgress(false);
     }
@@ -111,10 +112,10 @@ export default function LessonPage() {
   }, [fetchCourseStructureData]);
 
   useEffect(() => {
-    if (currentUser && courseStructure) {
+    if (currentUser && courseStructure) { // Only fetch progress if course structure is loaded
       fetchUserProgress();
     }
-  }, [currentUser, courseStructure, fetchUserProgress]);
+  }, [currentUser, courseStructure, fetchUserProgress]); // Added courseStructure to dependency array
 
   useEffect(() => {
     if (!courseStructure || !params.lessonId) return;
@@ -143,20 +144,20 @@ export default function LessonPage() {
       setNextLesson(currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null);
     } else {
       console.warn(`Lesson with ID ${params.lessonId} not found in course structure.`);
+      // Optionally set an error state here if the lesson is critical and not found
       setPrevLesson(null);
       setNextLesson(null);
-      // Consider redirecting or showing an error if lesson isn't found
-      // For now, it will show "Lesson not found or course not valid" later
     }
   }, [courseStructure, params.lessonId]);
 
-  useEffect(() => {
-    if (flatLessons.length > 0 && completedLessons.size >= 0) {
+ useEffect(() => {
+    if (flatLessons.length > 0 && completedLessons.size >= 0) { // Ensure completedLessons is initialized
       setCourseProgress(Math.round((completedLessons.size / flatLessons.length) * 100));
     } else {
       setCourseProgress(0);
     }
   }, [completedLessons, flatLessons]);
+
 
   const toggleLessonComplete = async () => {
     if (!currentUser || !currentLesson || !params.courseId || flatLessons.length === 0) return;
@@ -181,7 +182,13 @@ export default function LessonPage() {
       }
       const updatedProgressData: UserCourseProgressProperties = await response.json();
       setCompletedLessons(new Set(updatedProgressData.lessonIdsCompletadas));
-      setCourseProgress(updatedProgressData.porcentajeCompletado); // Update progress from response
+      // Update courseProgress directly from the API response if possible, or recalculate
+      if (flatLessons.length > 0) {
+        setCourseProgress(Math.round((new Set(updatedProgressData.lessonIdsCompletadas).size / flatLessons.length) * 100));
+      } else {
+        setCourseProgress(0);
+      }
+
       toast({
         title: "Progreso Actualizado",
         description: `Lección "${currentLesson.nombre}" marcada como ${new Set(updatedProgressData.lessonIdsCompletadas).has(currentLesson.id) ? 'completada' : 'no completada'}.`
@@ -205,6 +212,7 @@ export default function LessonPage() {
     switch (tipo) {
       case 'video':
         if (!url) return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground flex items-center justify-center h-full">URL del video no disponible.</div>;
+        // Check for common video platform embed URLs
         if (url.includes('youtube.com/embed') || url.includes('player.vimeo.com/video')) {
              return (
                 <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-xl">
@@ -212,16 +220,17 @@ export default function LessonPage() {
                 </div>
             );
         }
+        // Fallback for direct video URLs
         return (
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-xl">
                 <video controls src={url} className="w-full h-full"><track kind="captions" /></video>
             </div>
         );
-      case 'pdf':
+      case 'pdf': // Handle both 'pdf' and 'documento_pdf' for flexibility
       case 'documento_pdf':
         if (!url) return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground flex items-center justify-center h-full">URL del PDF no disponible.</div>;
         return (
-          <div className="h-[60vh] md:h-[calc(100vh-280px)] bg-muted rounded-lg shadow-inner">
+          <div className="h-[60vh] md:h-[calc(100vh-280px)] bg-muted rounded-lg shadow-inner"> {/* Adjusted height */}
             <iframe src={url} width="100%" height="100%" className="border-0 rounded-lg" title={currentLesson.nombre}/>
           </div>
         );
@@ -236,12 +245,13 @@ export default function LessonPage() {
       case 'texto_rico':
         if (!texto) return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground flex items-center justify-center h-full">Contenido de texto no disponible.</div>;
         return (
-          <Card className="h-full overflow-y-auto">
+          <Card className="h-full overflow-y-auto"> {/* Allow scrolling for long rich text */}
             <CardContent className="p-6 prose max-w-none" dangerouslySetInnerHTML={{ __html: texto }} />
           </Card>
         );
       case 'quiz':
          if (!texto) return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground flex items-center justify-center h-full">Contenido del quiz no disponible.</div>;
+         // Placeholder for quiz rendering - ideally this would parse 'texto' if it's JSON
          return (
           <Card className="h-full overflow-y-auto">
             <CardHeader><CardTitle>Quiz: {currentLesson.nombre}</CardTitle></CardHeader>
@@ -272,16 +282,16 @@ export default function LessonPage() {
               <ul className="space-y-px py-1">
                 {moduleItem.lessons.map((lesson) => (
                   <li key={lesson.id}>
-                    <Link href={`/learn/${params.courseId}/${lesson.id}`} passHref legacyBehavior>
-                      <a onClick={onLessonClick}
-                        className={`flex items-center w-full justify-start text-left h-auto py-2.5 px-3 text-xs group
-                          ${lesson.id === currentLesson?.id ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/80 hover:bg-primary/5 hover:text-primary/90'}
-                          ${completedLessons.has(lesson.id) && lesson.id !== currentLesson?.id ? 'text-muted-foreground/70 line-through' : ''}`}
-                      >
-                        {lesson.contenidoPrincipal.tipo === 'video' ? <PlayCircle className="h-4 w-4 mr-2.5 shrink-0 opacity-70 group-hover:opacity-100" /> : <FileText className="h-4 w-4 mr-2.5 shrink-0 opacity-70 group-hover:opacity-100" />}
-                        <span className="flex-grow truncate mr-2">{lesson.nombre}</span>
-                        {completedLessons.has(lesson.id) && <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />}
-                      </a>
+                    <Link
+                      href={`/learn/${params.courseId}/${lesson.id}`}
+                      onClick={onLessonClick}
+                      className={`flex items-center w-full justify-start text-left h-auto py-2.5 px-3 text-xs group
+                        ${lesson.id === currentLesson?.id ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/80 hover:bg-primary/5 hover:text-primary/90'}
+                        ${completedLessons.has(lesson.id) && lesson.id !== currentLesson?.id ? 'text-muted-foreground/70 line-through' : ''}`}
+                    >
+                      {lesson.contenidoPrincipal.tipo === 'video' ? <PlayCircle className="h-4 w-4 mr-2.5 shrink-0 opacity-70 group-hover:opacity-100" /> : <FileText className="h-4 w-4 mr-2.5 shrink-0 opacity-70 group-hover:opacity-100" />}
+                      <span className="flex-grow truncate mr-2">{lesson.nombre}</span>
+                      {completedLessons.has(lesson.id) && <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />}
                     </Link>
                   </li>
                 ))}
@@ -298,14 +308,14 @@ export default function LessonPage() {
     return (
       <div className="flex h-screen md:h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden">
         {/* Desktop Skeleton */}
-        <div className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col p-0">
-            <div className="p-4 border-b">
+        <div className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col p-0"> {/* Changed p-4 to p-0 */}
+            <div className="p-4 border-b"> {/* Header part of sidebar */}
                 <Skeleton className="h-5 w-3/4 mb-2" />
                 <Skeleton className="h-2 w-full mb-1" />
                 <Skeleton className="h-2 w-5/6 mb-2" />
             </div>
-            <div className="p-2 space-y-2 flex-1">
-                {[...Array(3)].map((_, i) => (
+            <div className="p-2 space-y-2 flex-1"> {/* Content part of sidebar */}
+                {[...Array(3)].map((_, i) => ( // Simulate module accordions
                     <div key={i} className="space-y-1">
                         <Skeleton className="h-8 w-full" />
                         <Skeleton className="h-7 w-5/6 ml-3" />
@@ -326,7 +336,7 @@ export default function LessonPage() {
                 <Skeleton className="aspect-video w-full rounded-lg" />
                 <div className="flex justify-between items-center mt-4">
                     <Skeleton className="h-10 w-28 rounded-md" />
-                    <Skeleton className="h-10 w-40 rounded-md" />
+                    <Skeleton className="h-10 w-40 rounded-md" /> {/* Increased width for Mark as Complete */}
                 </div>
             </div>
         </div>
@@ -363,6 +373,7 @@ export default function LessonPage() {
   }
 
   if (!courseStructure || !currentLesson || !currentModule) {
+    // This can happen if the lessonId in URL is invalid or course structure is not found
     return (
       <div className="container py-8 text-center min-h-screen flex items-center justify-center">
         <Card className="max-w-md mx-auto shadow-lg p-6 rounded-xl bg-card">
@@ -389,17 +400,17 @@ export default function LessonPage() {
   }
   
   return (
-    <div className="flex h-screen md:h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden">
+    <div className="flex h-screen md:h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden"> {/* Main container height */}
       {/* Desktop Sidebar */}
-      <aside className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col">
-        <CourseNavigationSidebar onLessonClick={() => {}} />
+      <aside className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col"> {/* Fixed width */}
+        <CourseNavigationSidebar onLessonClick={() => {}} /> {/* onLessonClick does nothing on desktop for now */}
       </aside>
 
       {/* Mobile Navigation (Sheet) & Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden"> {/* Takes remaining space */}
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-3 border-b bg-card sticky top-0 z-20">
-           <div className="flex-1 min-w-0">
+           <div className="flex-1 min-w-0"> {/* Allow text to truncate */}
              <h1 className="text-md font-semibold truncate" title={currentLesson.nombre}>{currentLesson.nombre}</h1>
              <p className="text-xs text-muted-foreground truncate" title={courseStructure.course.nombre}>{courseStructure.course.nombre}</p>
            </div>
@@ -409,14 +420,14 @@ export default function LessonPage() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
+            <SheetContent side="left" className="w-[280px] p-0 flex flex-col"> {/* Explicit width for sheet */}
               <CourseNavigationSidebar onLessonClick={() => setIsMobileNavOpen(false)} />
             </SheetContent>
           </Sheet>
         </header>
 
         {/* Main Content Area */}
-        <ScrollArea className="flex-1 bg-secondary/30">
+        <ScrollArea className="flex-1 bg-secondary/30"> {/* Allows content to scroll */}
           <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-8">
             <div className="mb-6 md:hidden"> {/* Lesson title for desktop, if needed, or remove if redundant with header */}
                 <h1 className="text-2xl font-bold font-headline mb-1 hidden md:block">{currentLesson.nombre}</h1>
@@ -435,14 +446,14 @@ export default function LessonPage() {
                       <ChevronLeft className="h-4 w-4 mr-2" /> Anterior
                     </Link>
                   </Button>
-                ) : <div className="flex-1 md:flex-none"></div>}
+                ) : <div className="flex-1 md:flex-none"></div> /* Placeholder to maintain layout */}
                 {nextLesson ? (
                   <Button variant="default" asChild className="flex-1 md:flex-none">
                     <Link href={`/learn/${params.courseId}/${nextLesson.id}`}>
                       Siguiente <ChevronRight className="h-4 w-4 ml-2" />
                     </Link>
                   </Button>
-                ) : <div className="flex-1 md:flex-none"></div>}
+                ) : <div className="flex-1 md:flex-none"></div> /* Placeholder */}
               </div>
               <Button 
                 onClick={toggleLessonComplete}

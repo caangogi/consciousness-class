@@ -19,7 +19,7 @@ import type { LessonProperties } from '@/features/course/domain/entities/lesson.
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { auth } from '@/lib/firebase/config';
+// import { auth } from '@/lib/firebase/config'; // No se usa en modo simplificado
 // import type { UserCourseProgressProperties } from '@/features/progress/domain/entities/user-course-progress.entity';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
@@ -37,6 +37,26 @@ const lessonCommentsPlaceholder = [
   { id: 'c2', user: { name: 'Bob Builder', avatar: 'https://placehold.co/40x40.png?text=BB' }, text: '¿Podrías dar un ejemplo de cómo aplicar esto en un proyecto real con autenticación?', date: 'Hace 1 día' },
 ];
 
+// Placeholder data (simulated)
+const placeholderCourseBase: Omit<CourseProperties, 'id' | 'ordenModulos' | 'fechaCreacion' | 'fechaActualizacion'> = {
+    nombre: "Curso de Prueba (Simplificado)",
+    descripcionCorta: "Descripción corta del curso simplificado.",
+    descripcionLarga: "<p>Descripción larga y detallada del curso simplificado.</p>",
+    precio: 0,
+    tipoAcceso: 'unico',
+    duracionEstimada: "1h",
+    categoria: "Test",
+    creadorUid: "testUser",
+    estado: 'publicado',
+    imagenPortadaUrl: 'https://placehold.co/600x400.png',
+    dataAiHintImagenPortada: 'course example',
+};
+
+const placeholderModuleBase: Omit<ModuleProperties, 'id' | 'courseId' | 'orden' | 'fechaCreacion' | 'fechaActualizacion' | 'ordenLecciones' | 'lessons'> = {
+    nombre: "Módulo Simulado Único",
+};
+
+
 export default function LessonPage() {
   const params = useParams<{ courseId: string; lessonId: string }>();
   const router = useRouter();
@@ -44,9 +64,10 @@ export default function LessonPage() {
   const { toast } = useToast();
 
   const [courseStructure, setCourseStructure] = useState<CourseStructureData | null>(null);
-  const [isLoadingCourse, setIsLoadingCourse] = useState(true);
-  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
-  const [isTogglingCompletion, setIsTogglingCompletion] = useState(false);
+  const [isInitialCourseLoad, setIsInitialCourseLoad] = useState(true); // Nuevo estado
+  const [isLoadingLessonContent, setIsLoadingLessonContent] = useState(false); // Nuevo estado para contenido lección
+
+  // const [isLoadingProgress, setIsLoadingProgress] = useState(true); // Comentado para simplificación
   const [error, setError] = useState<string | null>(null);
   
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
@@ -59,129 +80,96 @@ export default function LessonPage() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
 
-  // SIMPLIFIED DATA FETCHING FOR DEBUGGING NAVIGATION
   const fetchCourseStructureData = useCallback(async () => {
     if (!params.courseId) return;
-    setIsLoadingCourse(true);
+    // setIsLoadingLessonContent(true); // Se activa al cambiar lección, no aquí necesariamente
+    if (!courseStructure) { // Solo loading inicial de toda la estructura
+        setIsInitialCourseLoad(true);
+    }
     setError(null);
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 50)); // Simulate API delay
 
     try {
-        const placeholderCourse: CourseProperties = {
-            id: params.courseId,
-            nombre: "Curso de Prueba (Simplificado)",
-            descripcionCorta: "Descripción corta del curso simplificado.",
-            descripcionLarga: "<p>Descripción larga y detallada del curso simplificado.</p>",
-            precio: 0,
-            tipoAcceso: 'unico',
-            duracionEstimada: "1h",
-            categoria: "Test",
-            creadorUid: "testUser",
-            estado: 'publicado',
-            fechaCreacion: new Date().toISOString(),
-            fechaActualizacion: new Date().toISOString(),
-            imagenPortadaUrl: 'https://placehold.co/600x400.png',
-            dataAiHintImagenPortada: 'course example',
-            ordenModulos: ["mod1_simulated_module_xyz"],
-        };
+      const courseId = params.courseId;
+      const lessonId = params.lessonId || "lesson_placeholder_1_unique";
 
-        const lessonsForModule: LessonProperties[] = [];
-        const currentLessonIdInParams = params.lessonId || "sim_placeholder_lesson_001";
-        
-        // Add the "current" lesson. If params.lessonId is not defined, use a default.
-        lessonsForModule.push({ 
-            id: currentLessonIdInParams, 
-            moduleId: "mod1_simulated_module_xyz", 
-            courseId: params.courseId, 
-            nombre: `Lección Actual (${currentLessonIdInParams})`, 
-            duracionEstimada: "10m", 
-            esVistaPrevia: false, 
-            orden: 1, 
-            fechaCreacion: new Date().toISOString(), 
-            fechaActualizacion: new Date().toISOString(), 
-            contenidoPrincipal: { tipo: 'texto_rico', texto: `<p>Contenido simulado para la lección: ${currentLessonIdInParams}.</p>`} 
-        });
+      const lesson1Id = lessonId;
+      const lesson2Id = lessonId === "lesson_placeholder_2_unique" ? "lesson_placeholder_alt_unique" : "lesson_placeholder_2_unique";
 
-        // Add a second, distinct lesson. Ensure its ID is different from currentLessonIdInParams.
-        const secondLessonStaticId = "sim_placeholder_lesson_002";
-        if (currentLessonIdInParams !== secondLessonStaticId) {
-            lessonsForModule.push({
-                id: secondLessonStaticId,
-                moduleId: "mod1_simulated_module_xyz",
-                courseId: params.courseId,
-                nombre: "Siguiente Lección (Simulada)",
-                duracionEstimada: "5m", 
-                esVistaPrevia: false, 
-                orden: 2, 
-                fechaCreacion: new Date().toISOString(), 
-                fechaActualizacion: new Date().toISOString(), 
-                contenidoPrincipal: { tipo: 'texto_rico', texto: '<p>Contenido para la segunda lección simulada.</p>'}
-            });
-        } else {
-            // If params.lessonId happens to be "sim_placeholder_lesson_002", create a different ID for this 'next' lesson
-             lessonsForModule.push({
-                id: "sim_placeholder_lesson_003_alt", // A different unique ID
-                moduleId: "mod1_simulated_module_xyz",
-                courseId: params.courseId,
-                nombre: "Siguiente Lección (Simulada Alternativa)",
-                duracionEstimada: "7m", 
-                esVistaPrevia: false, 
-                orden: 2, 
-                fechaCreacion: new Date().toISOString(), 
-                fechaActualizacion: new Date().toISOString(), 
-                contenidoPrincipal: { tipo: 'texto_rico', texto: '<p>Contenido para la lección simulada alternativa.</p>'}
-            });
+      const lessonsForModule: LessonProperties[] = [
+        { 
+            id: lesson1Id, 
+            moduleId: "mod1_simulated_unique", 
+            courseId: courseId, 
+            nombre: `Lección Actual (${lesson1Id})`, 
+            duracionEstimada: "10m", esVistaPrevia: false, orden: 1, 
+            fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(), 
+            contenidoPrincipal: { tipo: 'texto_rico', texto: `<p>Contenido simulado para la lección: ${lesson1Id}.</p>`} 
+        },
+        {
+            id: lesson2Id,
+            moduleId: "mod1_simulated_unique",
+            courseId: courseId,
+            nombre: `Siguiente Lección (${lesson2Id})`,
+            duracionEstimada: "5m", esVistaPrevia: false, orden: 2, 
+            fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(), 
+            contenidoPrincipal: { tipo: 'video', url: 'https://placehold.co/1920x1080.mp4'}
         }
+      ];
+      lessonsForModule.sort((a, b) => a.orden - b.orden);
         
-        // Ensure lessons are sorted by order for flatLessons consistency
-        lessonsForModule.sort((a, b) => a.orden - b.orden);
+      const finalPlaceholderModule: ModuleWithLessons = {
+          ...placeholderModuleBase,
+          id: "mod1_simulated_unique",
+          courseId: courseId,
+          orden: 1,
+          fechaCreacion: new Date().toISOString(),
+          fechaActualizacion: new Date().toISOString(),
+          lessons: lessonsForModule,
+          ordenLecciones: lessonsForModule.map(l => l.id),
+      };
+      
+      const finalPlaceholderCourse: CourseProperties = {
+          ...placeholderCourseBase,
+          id: courseId,
+          ordenModulos: [finalPlaceholderModule.id],
+          fechaCreacion: new Date().toISOString(),
+          fechaActualizacion: new Date().toISOString(),
+      };
         
-        const placeholderModule: ModuleWithLessons = {
-            id: "mod1_simulated_module_xyz",
-            courseId: params.courseId,
-            nombre: "Módulo Simulado Único",
-            orden: 1,
-            fechaCreacion: new Date().toISOString(),
-            fechaActualizacion: new Date().toISOString(),
-            lessons: lessonsForModule,
-            ordenLecciones: lessonsForModule.map(l => l.id),
-        };
-        
-        setCourseStructure({ course: placeholderCourse, modules: [placeholderModule] });
+      setCourseStructure({ course: finalPlaceholderCourse, modules: [finalPlaceholderModule] });
 
     } catch (err: any) {
       setError("Error simulado al cargar estructura: " + err.message);
       console.error("[SIMPLIFICADO] Error al generar estructura placeholder:", err);
     } finally {
-      setIsLoadingCourse(false);
+      if (isInitialCourseLoad) setIsInitialCourseLoad(false); // Se completa la carga inicial
+      // setIsLoadingLessonContent(false); // Se completa la carga de contenido (simulada)
     }
-  }, [params.courseId, params.lessonId]);
+  }, [params.courseId, params.lessonId, courseStructure, isInitialCourseLoad]);
 
 
   const fetchUserProgress = useCallback(async () => {
-    // This function is currently not making real API calls due to simplification.
-    // If re-enabled, ensure it correctly handles auth and API responses.
     if (!currentUser || !params.courseId) {
-        setIsLoadingProgress(false);
+        // setIsLoadingProgress(false); // Comentado para simplificación
         return;
     }
-    setIsLoadingProgress(true);
-    // Simulate API delay
+    // setIsLoadingProgress(true); // Comentado
     await new Promise(resolve => setTimeout(resolve, 50));
-    // console.log("[SIMPLIFICADO] fetchUserProgress INICIADO (simulación)");
-    
-    setCompletedLessons(new Set()); // Simular progreso vacío
-    setIsLoadingProgress(false);
+    setCompletedLessons(new Set()); 
+    // setIsLoadingProgress(false); // Comentado
   }, [currentUser, params.courseId]);
-  // END SIMPLIFIED DATA FETCHING
+
 
   useEffect(() => {
     if (params.courseId) {
-        fetchCourseStructureData();
+        setIsLoadingLessonContent(true); // Indicar que el contenido de la lección está cargando/cambiando
+        fetchCourseStructureData().finally(() => {
+             setIsLoadingLessonContent(false); // Contenido de lección (simulado) cargado
+        });
     }
-  }, [params.courseId, fetchCourseStructureData]); // fetchCourseStructureData is stable, params.courseId triggers reload of structure
+  }, [params.courseId, params.lessonId, fetchCourseStructureData]);
 
 
   useEffect(() => {
@@ -193,7 +181,7 @@ export default function LessonPage() {
 
   useEffect(() => {
     if (!courseStructure || !params.lessonId) {
-        setCurrentLesson(null); // Clear current lesson if structure or lessonId is missing
+        setCurrentLesson(null); 
         setPrevLesson(null);
         setNextLesson(null);
         setFlatLessons([]);
@@ -206,36 +194,33 @@ export default function LessonPage() {
 
     for (const mod of courseStructure.modules) {
       for (const less of mod.lessons) {
-        allLessons.push(less); // Build flat list
+        allLessons.push(less);
         if (less.id === params.lessonId) {
           foundModule = mod;
           foundLesson = less;
         }
       }
     }
-    // Sort flatLessons based on module order then lesson order (if multi-module)
-    // For single module as in placeholder, module order is fixed.
-    // Lessons within module already sorted by 'orden' from placeholder generation.
-    setFlatLessons(allLessons.sort((a,b) => {
+    
+    allLessons.sort((a,b) => {
         const moduleA = courseStructure.modules.find(m => m.id === a.moduleId);
         const moduleB = courseStructure.modules.find(m => m.id === b.moduleId);
         if (moduleA && moduleB && moduleA.orden !== moduleB.orden) {
             return moduleA.orden - moduleB.orden;
         }
         return a.orden - b.orden;
-    }));
+    });
+    setFlatLessons(allLessons);
 
     setCurrentModule(foundModule);
     setCurrentLesson(foundLesson);
 
     if (foundLesson) {
-      // Re-calculate prev/next based on the now potentially sorted flatLessons
-      const sortedFlatLessons = allLessons; // flatLessons state might not be updated yet
-      const currentIndex = sortedFlatLessons.findIndex(l => l.id === foundLesson.id);
-      setPrevLesson(currentIndex > 0 ? sortedFlatLessons[currentIndex - 1] : null);
-      setNextLesson(currentIndex < sortedFlatLessons.length - 1 ? sortedFlatLessons[currentIndex + 1] : null);
+      const currentIndex = allLessons.findIndex(l => l.id === foundLesson.id);
+      setPrevLesson(currentIndex > 0 ? allLessons[currentIndex - 1] : null);
+      setNextLesson(currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null);
     } else {
-      console.warn(`Lesson with ID ${params.lessonId} not found in course structure. This might be okay during initial load or if course structure changed.`);
+      console.warn(`Lesson with ID ${params.lessonId} not found in course structure.`);
       setPrevLesson(null);
       setNextLesson(null);
     }
@@ -257,17 +242,6 @@ export default function LessonPage() {
     
     setIsTogglingCompletion(true);
     try {
-      // const idToken = await auth.currentUser?.getIdToken();
-      // if (!idToken) throw new Error("User not authenticated");
-      // --- API CALL COMMENTED OUT FOR SIMPLIFICATION ---
-      // const response = await fetch(`/api/learn/progress/${params.courseId}/${currentLesson.id}`, { /* ... */ });
-      // if (!response.ok) { /* ... */ }
-      // const updatedProgressData: UserCourseProgressProperties = await response.json();
-      // setCompletedLessons(new Set(updatedProgressData.lessonIdsCompletadas));
-      // const newProgress = flatLessons.length > 0 ? Math.round((new Set(updatedProgressData.lessonIdsCompletadas).size / flatLessons.length) * 100) : 0;
-      // setCourseProgress(newProgress);
-
-      // --- SIMULATION OF PROGRESS UPDATE ---
       const newCompletedLessons = new Set(completedLessons);
       if (newCompletedLessons.has(currentLesson.id)) {
         newCompletedLessons.delete(currentLesson.id);
@@ -275,10 +249,8 @@ export default function LessonPage() {
         newCompletedLessons.add(currentLesson.id);
       }
       setCompletedLessons(newCompletedLessons);
-      // Recalculate progress based on the new set
       const newProgressPercentage = flatLessons.length > 0 ? Math.round((newCompletedLessons.size / flatLessons.length) * 100) : 0;
       setCourseProgress(newProgressPercentage);
-      // --- END SIMULATION ---
 
       toast({
         title: "Progreso Actualizado (Simulado)",
@@ -296,11 +268,11 @@ export default function LessonPage() {
   const isCurrentLessonCompleted = currentLesson ? completedLessons.has(currentLesson.id) : false;
 
   const renderLessonContentPlayer = () => {
-    if (isLoadingCourse && !currentLesson) {
+    if (isLoadingLessonContent) { // Usar el nuevo estado para el esqueleto del reproductor
         return <Skeleton className="aspect-video w-full rounded-lg" />;
     }
     if (!currentLesson || !currentLesson.contenidoPrincipal) {
-        return <div className="p-6 bg-card rounded-lg shadow-md flex items-center justify-center text-muted-foreground h-full min-h-[300px] md:min-h-[400px] lg:min-h-[500px]">Contenido de lección no disponible (modo simplificado).</div>;
+        return <div className="p-6 bg-card rounded-lg shadow-md flex items-center justify-center text-muted-foreground h-full min-h-[300px] md:min-h-[400px] lg:min-h-[500px]">Selecciona una lección para ver su contenido.</div>;
     }
     const { tipo, url, texto } = currentLesson.contenidoPrincipal;
     switch (tipo) {
@@ -391,14 +363,14 @@ export default function LessonPage() {
             </AccordionContent>
           </AccordionItem>
         ))}
-         {(!courseStructure || courseStructure.modules.length === 0) && !isLoadingCourse &&
+         {(!courseStructure || courseStructure.modules.length === 0) && !isInitialCourseLoad &&
             <p className="p-4 text-sm text-muted-foreground text-center">Este curso no tiene módulos definidos (modo simplificado).</p>
          }
       </Accordion>
     </ScrollArea>
   );
 
-  if (isLoadingCourse || (isLoadingProgress && !courseStructure) ) {
+  if (isInitialCourseLoad) { // Mostrar esqueleto de página completa solo en la carga inicial
     return (
       <div className="flex h-screen md:h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden">
         <div className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col p-0"> 
@@ -436,7 +408,7 @@ export default function LessonPage() {
     );
   }
 
-  if (error && !courseStructure) {
+  if (error && !courseStructure) { // Error solo si no hay estructura de curso
     return (
         <div className="container mx-auto py-12 px-4 md:px-6 text-center min-h-screen flex items-center justify-center">
             <Card className="max-w-md mx-auto shadow-lg p-6 rounded-xl bg-card">
@@ -451,8 +423,8 @@ export default function LessonPage() {
                     <p className="text-sm text-destructive-foreground bg-destructive/10 p-3 rounded-md border border-destructive/30">{error}</p>
                 </CardContent>
                 <CardFooter className="p-0 mt-6 flex flex-col gap-3">
-                     <Button onClick={() => { fetchCourseStructureData(); if (currentUser) fetchUserProgress(); }} variant="default" disabled={isLoadingCourse || isLoadingProgress} className="w-full">
-                        {(isLoadingCourse || isLoadingProgress) ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                     <Button onClick={() => { fetchCourseStructureData(); if (currentUser) fetchUserProgress(); }} variant="default" disabled={isInitialCourseLoad || isLoadingLessonContent} className="w-full">
+                        {(isInitialCourseLoad || isLoadingLessonContent) ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                         Intentar de Nuevo
                     </Button>
                     <Button variant="outline" asChild className="w-full">
@@ -464,7 +436,7 @@ export default function LessonPage() {
     );
   }
 
-  if (!courseStructure || (!currentLesson && !isLoadingCourse) ) {
+  if (!courseStructure || (!currentLesson && !isInitialCourseLoad && !isLoadingLessonContent) ) { // Si no hay lección DESPUÉS de carga inicial y no se está cargando contenido
     return (
       <div className="container py-8 text-center min-h-screen flex items-center justify-center">
         <Card className="max-w-md mx-auto shadow-lg p-6 rounded-xl bg-card">
@@ -517,11 +489,10 @@ export default function LessonPage() {
         <ScrollArea className="flex-1 bg-secondary/30"> 
           <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-8">
             <div className="mb-6 md:hidden"> 
-                <h1 className="text-2xl font-bold font-headline mb-1 hidden md:block">{currentLesson?.nombre}</h1>
-                <p className="text-sm text-muted-foreground hidden md:block">Módulo: {currentModule?.nombre} &bull; Duración: {currentLesson?.duracionEstimada}</p>
+                {/* Info de lección ya está en el header móvil */}
             </div>
             
-            <div className="mb-6 min-h-[250px] md:min-h-[400px] lg:min-h-[500px] flex"> 
+             <div key={currentLesson?.id || 'content-player-area'} className="mb-6 min-h-[250px] md:min-h-[400px] lg:min-h-[500px] flex"> 
               {renderLessonContentPlayer()}
             </div>
 
@@ -531,7 +502,7 @@ export default function LessonPage() {
                     variant="outline" 
                     className="flex-1 md:flex-none"
                     onClick={() => prevLesson && router.push(`/learn/${params.courseId}/${prevLesson.id}`)}
-                    disabled={!prevLesson}
+                    disabled={!prevLesson || isLoadingLessonContent}
                   >
                     <ChevronLeft className="h-4 w-4 mr-2" /> Anterior
                   </Button>
@@ -539,7 +510,7 @@ export default function LessonPage() {
                     variant="default" 
                     className="flex-1 md:flex-none"
                     onClick={() => nextLesson && router.push(`/learn/${params.courseId}/${nextLesson.id}`)}
-                    disabled={!nextLesson}
+                    disabled={!nextLesson || isLoadingLessonContent}
                   >
                     Siguiente <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -548,7 +519,7 @@ export default function LessonPage() {
                 onClick={toggleLessonComplete}
                 variant={isCurrentLessonCompleted ? "secondary" : "default"}
                 className={`w-full md:w-auto min-w-[200px] ${isCurrentLessonCompleted ? 'bg-green-100 hover:bg-green-200 text-green-700 border border-green-300' : ''}`}
-                disabled={isTogglingCompletion || !currentUser}
+                disabled={isTogglingCompletion || !currentUser || isLoadingLessonContent}
               >
                 {isTogglingCompletion ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="h-4 w-4 mr-2" />}
                 {isTogglingCompletion ? 'Actualizando...' : (isCurrentLessonCompleted ? 'Lección Completada' : 'Marcar como Completada')}

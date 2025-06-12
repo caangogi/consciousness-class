@@ -3,33 +3,73 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'; // Added CardFooter
-import { CheckCircle, Home, BookOpen } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { CheckCircle, Home, BookOpen, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
+import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
+import type { LessonProperties } from '@/features/course/domain/entities/lesson.entity';
+
+interface ModuleWithLessons extends ModuleProperties {
+  lessons: LessonProperties[];
+}
+
+interface CourseStructureData {
+  course: CourseProperties;
+  modules: ModuleWithLessons[];
+}
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const courseId = searchParams.get('courseId');
-  const [isLoading, setIsLoading] = useState(true); // For potential future session verification
+  
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [isLoadingCourseData, setIsLoadingCourseData] = useState(false);
+  const [firstLessonId, setFirstLessonId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // TODO: In a real scenario, you would verify the session_id with your backend
-  // to confirm the payment and then grant access to the course.
-  // For now, we just display a success message.
+  const fetchCourseDataForLink = useCallback(async () => {
+    if (!courseId) return;
+    setIsLoadingCourseData(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/learn/course-structure/${courseId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Error al cargar datos del curso para el enlace.');
+      }
+      const data: CourseStructureData = await response.json();
+      if (data.modules && data.modules.length > 0 && data.modules[0].lessons && data.modules[0].lessons.length > 0) {
+        setFirstLessonId(data.modules[0].lessons[0].id);
+      } else {
+        console.warn(`Curso ${courseId} no tiene lecciones, no se puede generar enlace directo a la primera lección.`);
+        setFirstLessonId(null); // No hay lecciones
+      }
+    } catch (err: any) {
+      setError(err.message);
+      console.error("Error fetching course data for success page link:", err);
+      setFirstLessonId(null); // Error, no se puede generar enlace
+    } finally {
+      setIsLoadingCourseData(false);
+    }
+  }, [courseId]);
 
   useEffect(() => {
     if (sessionId && courseId) {
       console.log('Payment success for session:', sessionId, 'and course:', courseId);
       // Here you might trigger a backend call to verify session and enroll user
       // For now, we assume success based on reaching this page with session_id
-      setIsLoading(false); 
+      setIsLoadingSession(false);
+      fetchCourseDataForLink(); // Fetch course data to get the first lesson ID
     } else {
       // Handle missing parameters, though Stripe should always provide session_id
       console.warn('Payment success page reached without session_id or courseId.');
-      setIsLoading(false); // Or redirect to an error page
+      setIsLoadingSession(false);
+      setError("Faltan parámetros para confirmar la compra.");
     }
-  }, [sessionId, courseId]);
+  }, [sessionId, courseId, fetchCourseDataForLink]);
 
 
   return (
@@ -45,9 +85,11 @@ export default function PaymentSuccessPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isLoading ? (
-             <p className="text-muted-foreground">Verificando tu compra...</p>
-          ) : (
+          {isLoadingSession ? (
+             <p className="text-muted-foreground flex items-center justify-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verificando tu compra...</p>
+          ) : error ? (
+            <p className="text-destructive">{error}</p>
+          ): (
             <>
                 <p className="text-muted-foreground">
                 Recibirás un correo electrónico de confirmación en breve. 
@@ -62,12 +104,24 @@ export default function PaymentSuccessPage() {
           )}
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center">
-           {courseId && !isLoading && (
-             <Button asChild>
-                <Link href={`/learn/${courseId}/start`}> {/* Assuming 'start' or first lesson ID */}
-                  <BookOpen className="mr-2 h-4 w-4"/> Ir al Curso
-                </Link>
-              </Button>
+           {courseId && !isLoadingSession && !error && (
+             isLoadingCourseData ? (
+                <Button disabled>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando curso...
+                </Button>
+             ) : firstLessonId ? (
+                <Button asChild>
+                    <Link href={`/learn/${courseId}/${firstLessonId}`}>
+                    <BookOpen className="mr-2 h-4 w-4"/> Ir al Curso
+                    </Link>
+                </Button>
+             ) : (
+                <Button asChild>
+                    <Link href={`/courses/${courseId}`}>
+                    <BookOpen className="mr-2 h-4 w-4"/> Ver Detalles del Curso
+                    </Link>
+                </Button>
+             )
            )}
           <Button variant="outline" asChild>
             <Link href="/dashboard">

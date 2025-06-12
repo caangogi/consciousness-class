@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/config';
-import type { UserCourseProgressProperties } from '@/features/progress/domain/entities/user-course-progress.entity';
+// import type { UserCourseProgressProperties } from '@/features/progress/domain/entities/user-course-progress.entity';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 interface ModuleWithLessons extends ModuleProperties {
@@ -44,8 +44,8 @@ export default function LessonPage() {
   const { toast } = useToast();
 
   const [courseStructure, setCourseStructure] = useState<CourseStructureData | null>(null);
-  const [isLoadingCourse, setIsLoadingCourse] = useState(true); // Mantenemos para la estructura inicial
-  const [isLoadingProgress, setIsLoadingProgress] = useState(true); // Mantenemos para la estructura inicial
+  const [isLoadingCourse, setIsLoadingCourse] = useState(true);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
   const [isTogglingCompletion, setIsTogglingCompletion] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -58,25 +58,22 @@ export default function LessonPage() {
   const [courseProgress, setCourseProgress] = useState(0);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
-  // --- INICIO DE SIMPLIFICACIÓN TEMPORAL ---
+
+  // SIMPLIFIED DATA FETCHING FOR DEBUGGING NAVIGATION
   const fetchCourseStructureData = useCallback(async () => {
     if (!params.courseId) return;
     setIsLoadingCourse(true);
     setError(null);
-    console.log("[SIMPLIFICADO] fetchCourseStructureData INICIADO (pero no se ejecutará fetch real)");
-    // Simulación de carga de datos
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 50));
+
     try {
-        // COMENTADO: const response = await fetch(`/api/learn/course-structure/${params.courseId}`);
-        // COMENTADO: if (!response.ok) { /* ... */ }
-        // COMENTADO: const data: CourseStructureData = await response.json();
-        // COMENTADO: setCourseStructure(data);
-        
-        // Simulación de datos para que la UI no se rompa completamente
         const placeholderCourse: CourseProperties = {
             id: params.courseId,
             nombre: "Curso de Prueba (Simplificado)",
-            descripcionCorta: "Desc",
-            descripcionLarga: "<p>Desc Larga</p>",
+            descripcionCorta: "Descripción corta del curso simplificado.",
+            descripcionLarga: "<p>Descripción larga y detallada del curso simplificado.</p>",
             precio: 0,
             tipoAcceso: 'unico',
             duracionEstimada: "1h",
@@ -86,131 +83,163 @@ export default function LessonPage() {
             fechaCreacion: new Date().toISOString(),
             fechaActualizacion: new Date().toISOString(),
             imagenPortadaUrl: 'https://placehold.co/600x400.png',
+            dataAiHintImagenPortada: 'course example',
+            ordenModulos: ["mod1_simulated_module_xyz"],
         };
+
+        const lessonsForModule: LessonProperties[] = [];
+        const currentLessonIdInParams = params.lessonId || "sim_placeholder_lesson_001";
+        
+        // Add the "current" lesson. If params.lessonId is not defined, use a default.
+        lessonsForModule.push({ 
+            id: currentLessonIdInParams, 
+            moduleId: "mod1_simulated_module_xyz", 
+            courseId: params.courseId, 
+            nombre: `Lección Actual (${currentLessonIdInParams})`, 
+            duracionEstimada: "10m", 
+            esVistaPrevia: false, 
+            orden: 1, 
+            fechaCreacion: new Date().toISOString(), 
+            fechaActualizacion: new Date().toISOString(), 
+            contenidoPrincipal: { tipo: 'texto_rico', texto: `<p>Contenido simulado para la lección: ${currentLessonIdInParams}.</p>`} 
+        });
+
+        // Add a second, distinct lesson. Ensure its ID is different from currentLessonIdInParams.
+        const secondLessonStaticId = "sim_placeholder_lesson_002";
+        if (currentLessonIdInParams !== secondLessonStaticId) {
+            lessonsForModule.push({
+                id: secondLessonStaticId,
+                moduleId: "mod1_simulated_module_xyz",
+                courseId: params.courseId,
+                nombre: "Siguiente Lección (Simulada)",
+                duracionEstimada: "5m", 
+                esVistaPrevia: false, 
+                orden: 2, 
+                fechaCreacion: new Date().toISOString(), 
+                fechaActualizacion: new Date().toISOString(), 
+                contenidoPrincipal: { tipo: 'texto_rico', texto: '<p>Contenido para la segunda lección simulada.</p>'}
+            });
+        } else {
+            // If params.lessonId happens to be "sim_placeholder_lesson_002", create a different ID for this 'next' lesson
+             lessonsForModule.push({
+                id: "sim_placeholder_lesson_003_alt", // A different unique ID
+                moduleId: "mod1_simulated_module_xyz",
+                courseId: params.courseId,
+                nombre: "Siguiente Lección (Simulada Alternativa)",
+                duracionEstimada: "7m", 
+                esVistaPrevia: false, 
+                orden: 2, 
+                fechaCreacion: new Date().toISOString(), 
+                fechaActualizacion: new Date().toISOString(), 
+                contenidoPrincipal: { tipo: 'texto_rico', texto: '<p>Contenido para la lección simulada alternativa.</p>'}
+            });
+        }
+        
+        // Ensure lessons are sorted by order for flatLessons consistency
+        lessonsForModule.sort((a, b) => a.orden - b.orden);
+        
         const placeholderModule: ModuleWithLessons = {
-            id: "mod1", courseId: params.courseId, nombre: "Modulo 1 (Simp.)", orden: 1, 
-            fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(),
-            lessons: [
-                { id: params.lessonId || "lesson1", moduleId: "mod1", courseId: params.courseId, nombre: `Lección Actual Placeholder (${params.lessonId})`, duracionEstimada: "10m", esVistaPrevia: false, orden: 1, fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(), contenidoPrincipal: { tipo: 'texto_rico', texto: '<p>Contenido simplificado.</p>'} },
-                { id: "lesson2", moduleId: "mod1", courseId: params.courseId, nombre: "Lección 2 (Simp.)", duracionEstimada: "5m", esVistaPrevia: false, orden: 2, fechaCreacion: new Date().toISOString(), fechaActualizacion: new Date().toISOString(), contenidoPrincipal: { tipo: 'texto_rico', texto: '<p>Otra lección.</p>'} }
-            ]
+            id: "mod1_simulated_module_xyz",
+            courseId: params.courseId,
+            nombre: "Módulo Simulado Único",
+            orden: 1,
+            fechaCreacion: new Date().toISOString(),
+            fechaActualizacion: new Date().toISOString(),
+            lessons: lessonsForModule,
+            ordenLecciones: lessonsForModule.map(l => l.id),
         };
+        
         setCourseStructure({ course: placeholderCourse, modules: [placeholderModule] });
-        console.log("[SIMPLIFICADO] Estructura de curso placeholder establecida.");
 
     } catch (err: any) {
-      //setError(err.message);
-      console.error("[SIMPLIFICADO] Error simulado o en placeholder:", err);
+      setError("Error simulado al cargar estructura: " + err.message);
+      console.error("[SIMPLIFICADO] Error al generar estructura placeholder:", err);
     } finally {
       setIsLoadingCourse(false);
     }
   }, [params.courseId, params.lessonId]);
 
+
   const fetchUserProgress = useCallback(async () => {
-    if (!currentUser || !params.courseId) return;
+    // This function is currently not making real API calls due to simplification.
+    // If re-enabled, ensure it correctly handles auth and API responses.
+    if (!currentUser || !params.courseId) {
+        setIsLoadingProgress(false);
+        return;
+    }
     setIsLoadingProgress(true);
-    console.log("[SIMPLIFICADO] fetchUserProgress INICIADO (pero no se ejecutará fetch real)");
-    // COMENTADO: try { /* ... fetch real ... */ } catch (err: any) { /* ... */ }
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 50));
+    // console.log("[SIMPLIFICADO] fetchUserProgress INICIADO (simulación)");
+    
     setCompletedLessons(new Set()); // Simular progreso vacío
     setIsLoadingProgress(false);
   }, [currentUser, params.courseId]);
+  // END SIMPLIFIED DATA FETCHING
 
   useEffect(() => {
-    console.log("[SIMPLIFICADO] useEffect principal disparado. params.lessonId:", params.lessonId);
-    // COMENTADO: fetchCourseStructureData(); // Se carga una vez
-  }, [fetchCourseStructureData, params.lessonId]); // params.lessonId añadido para re-evaluar si la estructura depende de él
-
- useEffect(() => {
-    // Se llama una vez al cargar los datos del curso y progreso
     if (params.courseId) {
         fetchCourseStructureData();
     }
-  }, [params.courseId, fetchCourseStructureData]);
+  }, [params.courseId, fetchCourseStructureData]); // fetchCourseStructureData is stable, params.courseId triggers reload of structure
 
 
   useEffect(() => {
     if (currentUser && courseStructure) { 
-      // COMENTADO: fetchUserProgress();
-      console.log("[SIMPLIFICADO] fetchUserProgress no se llamará en modo simplificado (después de cargar estructura).");
-      setIsLoadingProgress(false); // Aseguramos que el loading de progreso termine
-      setCompletedLessons(new Set()); // Progreso vacío por defecto
+      fetchUserProgress();
     }
   }, [currentUser, courseStructure, fetchUserProgress]);
 
 
   useEffect(() => {
-    console.log("[SIMPLIFICADO] useEffect de params.lessonId. Actual params.lessonId:", params.lessonId);
     if (!courseStructure || !params.lessonId) {
-        console.log("[SIMPLIFICADO] No hay courseStructure o params.lessonId, retornando.");
-        // Para que no se rompa la UI, establecemos un currentLesson placeholder si hay params.lessonId
-        if (params.lessonId && courseStructure?.modules[0]?.lessons) {
-             const foundL = courseStructure.modules[0].lessons.find(l => l.id === params.lessonId) || 
-                            courseStructure.modules[0].lessons[0]; // fallback a la primera
-             if (foundL) {
-                setCurrentLesson(foundL);
-                setCurrentModule(courseStructure.modules[0]);
-
-                const allLessonsSimp = courseStructure.modules.flatMap(m => m.lessons);
-                setFlatLessons(allLessonsSimp);
-                const currentIndex = allLessonsSimp.findIndex(l => l.id === foundL.id);
-                setPrevLesson(currentIndex > 0 ? allLessonsSimp[currentIndex - 1] : null);
-                setNextLesson(currentIndex < allLessonsSimp.length - 1 ? allLessonsSimp[currentIndex + 1] : null);
-             }
-        }
+        setCurrentLesson(null); // Clear current lesson if structure or lessonId is missing
+        setPrevLesson(null);
+        setNextLesson(null);
+        setFlatLessons([]);
         return;
     }
     
-    // --- LÓGICA DE ESTABLECIMIENTO DE LECCIÓN ACTUAL COMENTADA ---
-    // const allLessons: LessonProperties[] = [];
-    // let foundModule: ModuleWithLessons | null = null;
-    // let foundLesson: LessonProperties | null = null;
+    const allLessons: LessonProperties[] = [];
+    let foundModule: ModuleWithLessons | null = null;
+    let foundLesson: LessonProperties | null = null;
 
-    // for (const mod of courseStructure.modules) {
-    //   for (const less of mod.lessons) {
-    //     allLessons.push(less);
-    //     if (less.id === params.lessonId) {
-    //       foundModule = mod;
-    //       foundLesson = less;
-    //     }
-    //   }
-    // }
-
-    // setFlatLessons(allLessons);
-    // setCurrentModule(foundModule);
-    // setCurrentLesson(foundLesson);
-
-    // if (foundLesson) {
-    //   const currentIndex = allLessons.findIndex(l => l.id === foundLesson.id);
-    //   setPrevLesson(currentIndex > 0 ? allLessons[currentIndex - 1] : null);
-    //   setNextLesson(currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null);
-    // } else {
-    //   console.warn(`[SIMPLIFICADO] Lesson with ID ${params.lessonId} not found in course structure.`);
-    //   setPrevLesson(null);
-    //   setNextLesson(null);
-    // }
-    // --- FIN LÓGICA DE ESTABLECIMIENTO DE LECCIÓN ACTUAL COMENTADA ---
-
-    // Usar los datos simulados si existen
-    if (courseStructure?.modules[0]?.lessons) {
-        const lessonSimulado = courseStructure.modules[0].lessons.find(l => l.id === params.lessonId);
-        if (lessonSimulado) {
-            setCurrentLesson(lessonSimulado);
-            setCurrentModule(courseStructure.modules[0]);
-            const allLessonsSimp = courseStructure.modules.flatMap(m => m.lessons);
-            setFlatLessons(allLessonsSimp);
-            const currentIndex = allLessonsSimp.findIndex(l => l.id === lessonSimulado.id);
-            setPrevLesson(currentIndex > 0 ? allLessonsSimp[currentIndex - 1] : null);
-            setNextLesson(currentIndex < allLessonsSimp.length - 1 ? allLessonsSimp[currentIndex + 1] : null);
-            console.log("[SIMPLIFICADO] Lección actual establecida desde datos simulados:", lessonSimulado?.nombre);
-        } else {
-            console.warn("[SIMPLIFICADO] Lección simulada no encontrada para ID:", params.lessonId);
-            setCurrentLesson(null); // O una lección por defecto si es necesario
+    for (const mod of courseStructure.modules) {
+      for (const less of mod.lessons) {
+        allLessons.push(less); // Build flat list
+        if (less.id === params.lessonId) {
+          foundModule = mod;
+          foundLesson = less;
         }
+      }
     }
+    // Sort flatLessons based on module order then lesson order (if multi-module)
+    // For single module as in placeholder, module order is fixed.
+    // Lessons within module already sorted by 'orden' from placeholder generation.
+    setFlatLessons(allLessons.sort((a,b) => {
+        const moduleA = courseStructure.modules.find(m => m.id === a.moduleId);
+        const moduleB = courseStructure.modules.find(m => m.id === b.moduleId);
+        if (moduleA && moduleB && moduleA.orden !== moduleB.orden) {
+            return moduleA.orden - moduleB.orden;
+        }
+        return a.orden - b.orden;
+    }));
 
+    setCurrentModule(foundModule);
+    setCurrentLesson(foundLesson);
 
+    if (foundLesson) {
+      // Re-calculate prev/next based on the now potentially sorted flatLessons
+      const sortedFlatLessons = allLessons; // flatLessons state might not be updated yet
+      const currentIndex = sortedFlatLessons.findIndex(l => l.id === foundLesson.id);
+      setPrevLesson(currentIndex > 0 ? sortedFlatLessons[currentIndex - 1] : null);
+      setNextLesson(currentIndex < sortedFlatLessons.length - 1 ? sortedFlatLessons[currentIndex + 1] : null);
+    } else {
+      console.warn(`Lesson with ID ${params.lessonId} not found in course structure. This might be okay during initial load or if course structure changed.`);
+      setPrevLesson(null);
+      setNextLesson(null);
+    }
   }, [courseStructure, params.lessonId]);
-  // --- FIN DE SIMPLIFICACIÓN TEMPORAL (LÓGICA DE DATOS) ---
 
 
  useEffect(() => {
@@ -228,30 +257,17 @@ export default function LessonPage() {
     
     setIsTogglingCompletion(true);
     try {
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) throw new Error("User not authenticated");
-
-      // --- LLAMADA A API COMENTADA TEMPORALMENTE ---
-      // const response = await fetch(`/api/learn/progress/${params.courseId}/${currentLesson.id}`, {
-      //   method: 'POST',
-      //   headers: { 
-      //     'Authorization': `Bearer ${idToken}`,
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({ totalLessonsInCourse: flatLessons.length })
-      // });
-
-      // if (!response.ok) {
-      //   const errorData = await response.json();
-      //   throw new Error(errorData.details || errorData.error || 'Failed to update lesson completion');
-      // }
+      // const idToken = await auth.currentUser?.getIdToken();
+      // if (!idToken) throw new Error("User not authenticated");
+      // --- API CALL COMMENTED OUT FOR SIMPLIFICATION ---
+      // const response = await fetch(`/api/learn/progress/${params.courseId}/${currentLesson.id}`, { /* ... */ });
+      // if (!response.ok) { /* ... */ }
       // const updatedProgressData: UserCourseProgressProperties = await response.json();
       // setCompletedLessons(new Set(updatedProgressData.lessonIdsCompletadas));
-      
       // const newProgress = flatLessons.length > 0 ? Math.round((new Set(updatedProgressData.lessonIdsCompletadas).size / flatLessons.length) * 100) : 0;
       // setCourseProgress(newProgress);
 
-      // --- SIMULACIÓN DE ACTUALIZACIÓN DE PROGRESO ---
+      // --- SIMULATION OF PROGRESS UPDATE ---
       const newCompletedLessons = new Set(completedLessons);
       if (newCompletedLessons.has(currentLesson.id)) {
         newCompletedLessons.delete(currentLesson.id);
@@ -259,15 +275,14 @@ export default function LessonPage() {
         newCompletedLessons.add(currentLesson.id);
       }
       setCompletedLessons(newCompletedLessons);
-      const newProgress = flatLessons.length > 0 ? Math.round((newCompletedLessons.size / flatLessons.length) * 100) : 0;
-      setCourseProgress(newProgress);
-      console.log("[SIMPLIFICADO] Progreso simulado actualizado.");
-      // --- FIN SIMULACIÓN ---
-
+      // Recalculate progress based on the new set
+      const newProgressPercentage = flatLessons.length > 0 ? Math.round((newCompletedLessons.size / flatLessons.length) * 100) : 0;
+      setCourseProgress(newProgressPercentage);
+      // --- END SIMULATION ---
 
       toast({
-        title: "[SIMULADO] Progreso Actualizado",
-        description: `Lección "${currentLesson.nombre}" marcada como ${completedLessons.has(currentLesson.id) ? 'completada' : 'no completada'}.`
+        title: "Progreso Actualizado (Simulado)",
+        description: `Lección "${currentLesson.nombre}" marcada como ${newCompletedLessons.has(currentLesson.id) ? 'completada' : 'no completada'}.`
       });
 
     } catch (err: any) {
@@ -281,11 +296,11 @@ export default function LessonPage() {
   const isCurrentLessonCompleted = currentLesson ? completedLessons.has(currentLesson.id) : false;
 
   const renderLessonContentPlayer = () => {
-    if (isLoadingCourse && !currentLesson) { // Mostrar skeleton si está cargando y no hay lección aún
+    if (isLoadingCourse && !currentLesson) {
         return <Skeleton className="aspect-video w-full rounded-lg" />;
     }
     if (!currentLesson || !currentLesson.contenidoPrincipal) {
-        return <div className="p-6 bg-card rounded-lg shadow-md flex items-center justify-center text-muted-foreground h-full min-h-[300px] md:min-h-[400px] lg:min-h-[500px]">Selecciona una lección para ver su contenido. (Modo simplificado)</div>;
+        return <div className="p-6 bg-card rounded-lg shadow-md flex items-center justify-center text-muted-foreground h-full min-h-[300px] md:min-h-[400px] lg:min-h-[500px]">Contenido de lección no disponible (modo simplificado).</div>;
     }
     const { tipo, url, texto } = currentLesson.contenidoPrincipal;
     switch (tipo) {
@@ -376,11 +391,14 @@ export default function LessonPage() {
             </AccordionContent>
           </AccordionItem>
         ))}
+         {(!courseStructure || courseStructure.modules.length === 0) && !isLoadingCourse &&
+            <p className="p-4 text-sm text-muted-foreground text-center">Este curso no tiene módulos definidos (modo simplificado).</p>
+         }
       </Accordion>
     </ScrollArea>
   );
 
-  if (isLoadingCourse || (isLoadingProgress && !courseStructure) ) { // Ajuste para mostrar skeleton si está cargando estructura inicial
+  if (isLoadingCourse || (isLoadingProgress && !courseStructure) ) {
     return (
       <div className="flex h-screen md:h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden">
         <div className="w-72 lg:w-80 border-r bg-card hidden md:flex flex-col p-0"> 
@@ -418,7 +436,7 @@ export default function LessonPage() {
     );
   }
 
-  if (error && !courseStructure) { // Solo mostrar error si no se pudo cargar la estructura inicial
+  if (error && !courseStructure) {
     return (
         <div className="container mx-auto py-12 px-4 md:px-6 text-center min-h-screen flex items-center justify-center">
             <Card className="max-w-md mx-auto shadow-lg p-6 rounded-xl bg-card">
@@ -446,7 +464,7 @@ export default function LessonPage() {
     );
   }
 
-  if (!courseStructure || (!currentLesson && !isLoadingCourse) ) { // Si terminó de cargar y no hay lección actual
+  if (!courseStructure || (!currentLesson && !isLoadingCourse) ) {
     return (
       <div className="container py-8 text-center min-h-screen flex items-center justify-center">
         <Card className="max-w-md mx-auto shadow-lg p-6 rounded-xl bg-card">
@@ -454,10 +472,10 @@ export default function LessonPage() {
                 <div className="mx-auto p-3 bg-primary/10 rounded-full w-fit">
                     <HelpCircle className="h-12 w-12 text-primary" />
                 </div>
-                <CardTitle className="text-2xl mt-4">Lección no Encontrada (Simplificado)</CardTitle>
+                <CardTitle className="text-2xl mt-4">Lección no Encontrada</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-                <p className="text-muted-foreground">La lección que buscas no existe o el curso no es válido (Modo Simplificado). Por favor, verifica la URL o vuelve al listado de cursos.</p>
+                <p className="text-muted-foreground">La lección que buscas no existe o el curso no es válido. Por favor, verifica la URL o vuelve al listado de cursos.</p>
             </CardContent>
             <CardFooter className="p-0 mt-6 flex flex-col gap-3">
                 <Button variant="outline" asChild className="w-full">
@@ -509,26 +527,22 @@ export default function LessonPage() {
 
             <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 py-4 border-t">
               <div className="flex gap-2 w-full md:w-auto">
-                {prevLesson ? (
-                  <Button 
+                <Button 
                     variant="outline" 
                     className="flex-1 md:flex-none"
-                    onClick={() => router.push(`/learn/${params.courseId}/${prevLesson.id}`)}
+                    onClick={() => prevLesson && router.push(`/learn/${params.courseId}/${prevLesson.id}`)}
                     disabled={!prevLesson}
                   >
                     <ChevronLeft className="h-4 w-4 mr-2" /> Anterior
                   </Button>
-                ) : <div className="flex-1 md:flex-none"></div>}
-                {nextLesson ? (
-                  <Button 
+                <Button 
                     variant="default" 
                     className="flex-1 md:flex-none"
-                    onClick={() => router.push(`/learn/${params.courseId}/${nextLesson.id}`)}
+                    onClick={() => nextLesson && router.push(`/learn/${params.courseId}/${nextLesson.id}`)}
                     disabled={!nextLesson}
                   >
                     Siguiente <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
-                ) : <div className="flex-1 md:flex-none"></div>}
               </div>
               <Button 
                 onClick={toggleLessonComplete}
@@ -549,7 +563,7 @@ export default function LessonPage() {
                 <TabsTrigger value="comments" className="text-xs sm:text-sm"><MessageSquare className="h-4 w-4 mr-1 md:mr-2" />Comentarios</TabsTrigger>
               </TabsList>
               <TabsContent value="description">
-                <Card><CardContent className="p-4 md:p-6 text-sm text-foreground/80"><p>{currentLesson?.descripcionBreve || "No hay descripción disponible para esta lección (Modo simplificado)."}</p></CardContent></Card>
+                <Card><CardContent className="p-4 md:p-6 text-sm text-foreground/80"><p>{currentLesson?.descripcionBreve || "No hay descripción disponible para esta lección (modo simplificado)."}</p></CardContent></Card>
               </TabsContent>
               <TabsContent value="materials">
                 <Card>
@@ -600,5 +614,4 @@ export default function LessonPage() {
     </div>
   );
 }
-
     

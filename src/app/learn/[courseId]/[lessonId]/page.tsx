@@ -275,17 +275,16 @@ export default function LessonPage() {
               <ul className="space-y-px py-1">
                 {moduleItem.lessons.map((lesson) => (
                   <li key={lesson.id}>
-                    <Link href={`/learn/${params.courseId}/${lesson.id}`} passHref legacyBehavior>
-                      <a
-                        onClick={onLessonClick}
-                        className={`flex items-center w-full justify-start text-left h-auto py-2.5 px-3 text-xs group
-                          ${lesson.id === currentLesson?.id ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/80 hover:bg-primary/5 hover:text-primary/90'}
-                          ${completedLessons.has(lesson.id) && lesson.id !== currentLesson?.id ? 'text-muted-foreground/70 line-through' : ''}`}
-                      >
-                        {lesson.contenidoPrincipal.tipo === 'video' ? <PlayCircle className="h-4 w-4 mr-2.5 shrink-0 opacity-70 group-hover:opacity-100" /> : <FileText className="h-4 w-4 mr-2.5 shrink-0 opacity-70 group-hover:opacity-100" />}
-                        <span className="flex-grow truncate mr-2">{lesson.nombre}</span>
-                        {completedLessons.has(lesson.id) && <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />}
-                      </a>
+                    <Link
+                      href={`/learn/${params.courseId}/${lesson.id}`}
+                      onClick={onLessonClick}
+                      className={`flex items-center w-full justify-start text-left h-auto py-2.5 px-3 text-xs group
+                        ${lesson.id === currentLesson?.id ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/80 hover:bg-primary/5 hover:text-primary/90'}
+                        ${completedLessons.has(lesson.id) && lesson.id !== currentLesson?.id ? 'text-muted-foreground/70 line-through' : ''}`}
+                    >
+                      {lesson.contenidoPrincipal.tipo === 'video' ? <PlayCircle className="h-4 w-4 mr-2.5 shrink-0 opacity-70 group-hover:opacity-100" /> : <FileText className="h-4 w-4 mr-2.5 shrink-0 opacity-70 group-hover:opacity-100" />}
+                      <span className="flex-grow truncate mr-2">{lesson.nombre}</span>
+                      {completedLessons.has(lesson.id) && <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />}
                     </Link>
                   </li>
                 ))}
@@ -428,17 +427,23 @@ export default function LessonPage() {
             <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 py-4 border-t">
               <div className="flex gap-2 w-full md:w-auto">
                 {prevLesson ? (
-                  <Button variant="outline" asChild className="flex-1 md:flex-none">
-                    <Link href={`/learn/${params.courseId}/${prevLesson.id}`}>
-                      <ChevronLeft className="h-4 w-4 mr-2" /> Anterior
-                    </Link>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 md:flex-none"
+                    onClick={() => router.push(`/learn/${params.courseId}/${prevLesson.id}`)}
+                    disabled={!prevLesson}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-2" /> Anterior
                   </Button>
                 ) : <div className="flex-1 md:flex-none"></div>}
                 {nextLesson ? (
-                  <Button variant="default" asChild className="flex-1 md:flex-none">
-                    <Link href={`/learn/${params.courseId}/${nextLesson.id}`}>
-                      Siguiente <ChevronRight className="h-4 w-4 ml-2" />
-                    </Link>
+                  <Button 
+                    variant="default" 
+                    className="flex-1 md:flex-none"
+                    onClick={() => router.push(`/learn/${params.courseId}/${nextLesson.id}`)}
+                    disabled={!nextLesson}
+                  >
+                    Siguiente <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
                 ) : <div className="flex-1 md:flex-none"></div>}
               </div>

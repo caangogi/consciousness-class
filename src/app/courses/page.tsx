@@ -43,7 +43,7 @@ export default function CoursesPage() {
   }, []);
 
   // Placeholder for categories and sorting options
-  const categories = ["Desarrollo Web", "Data Science", "Diseño", "Marketing", "Fotografía", "Finanzas", "Desarrollo de Videojuegos"];
+  const categories = ["Desarrollo Web", "Data Science", "Diseño", "Marketing", "Fotografía", "Finanzas", "Desarrollo de Videojuegos", "Bienestar", "Tecnología"];
   const sortOptions = [
     { value: "popularity", label: "Popularidad" },
     { value: "newest", label: "Más Recientes" },
@@ -55,10 +55,15 @@ export default function CoursesPage() {
   if (error) {
     return (
       <div className="container mx-auto py-12 px-4 md:px-6 text-center">
-        <Filter className="h-16 w-16 text-destructive mx-auto mb-4" />
-        <h3 className="text-xl font-semibold mb-2">Error al Cargar Cursos</h3>
-        <p className="text-muted-foreground">{error}</p>
-        <Button onClick={() => window.location.reload()} className="mt-4">Intentar de Nuevo</Button>
+        <div className="inline-block p-4 bg-destructive/10 rounded-full mb-4">
+          <Filter className="h-12 w-12 text-destructive" />
+        </div>
+        <h3 className="text-xl font-semibold mb-2 text-destructive-foreground">Error al Cargar Cursos</h3>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <Button onClick={() => window.location.reload()} variant="destructive">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Intentar de Nuevo
+        </Button>
       </div>
     );
   }
@@ -73,13 +78,13 @@ export default function CoursesPage() {
       </header>
 
       {/* Filters Section */}
-      <div className="mb-8 p-6 bg-card rounded-lg shadow-md">
+      <Card className="mb-8 p-4 md:p-6 shadow-lg rounded-xl">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           <div className="relative">
             <Input
               type="search"
               placeholder="Buscar por nombre o palabra clave..."
-              className="pl-10"
+              className="pl-10 h-10 rounded-md border-border focus-visible:ring-primary"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -87,7 +92,7 @@ export default function CoursesPage() {
           </div>
           
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full h-10 rounded-md border-border focus:ring-primary">
               <SelectValue placeholder="Categoría" />
             </SelectTrigger>
             <SelectContent>
@@ -97,7 +102,7 @@ export default function CoursesPage() {
           </Select>
 
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full h-10 rounded-md border-border focus:ring-primary">
               <SelectValue placeholder="Ordenar por" />
             </SelectTrigger>
             <SelectContent>
@@ -105,12 +110,12 @@ export default function CoursesPage() {
             </SelectContent>
           </Select>
           
-          <Button variant="outline" className="w-full lg:w-auto">
+          <Button variant="outline" className="w-full lg:w-auto h-10 rounded-md border-border hover:border-primary hover:bg-primary/5">
             <SlidersHorizontal className="mr-2 h-4 w-4" />
             Más Filtros
           </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Courses Grid */}
       {isLoading ? (
@@ -121,7 +126,7 @@ export default function CoursesPage() {
               <CardContent className="flex-grow p-5 space-y-3">
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-6 w-full" />
-                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" /> {/* Increased height for description */}
                 <Skeleton className="h-4 w-3/4" />
               </CardContent>
               <CardFooter className="p-5 border-t bg-secondary/30 flex justify-between items-center">
@@ -139,7 +144,9 @@ export default function CoursesPage() {
         </div>
       ) : (
         <div className="text-center py-12">
-          <Filter className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <div className="inline-block p-4 bg-secondary rounded-full mb-4">
+              <Filter className="h-12 w-12 text-muted-foreground" />
+            </div>
           <h3 className="text-xl font-semibold mb-2">No se encontraron cursos</h3>
           <p className="text-muted-foreground">Intenta ajustar tus filtros o revisa más tarde.</p>
         </div>
@@ -148,12 +155,11 @@ export default function CoursesPage() {
       {/* Pagination (Placeholder) */}
       {!isLoading && courses.length > 0 && (
         <div className="mt-12 flex justify-center">
-          <Button variant="outline" className="mr-2" disabled>Anterior</Button>
-          <Button variant="default" disabled>Siguiente</Button>
+          <Button variant="outline" className="mr-2 rounded-md" disabled>Anterior</Button>
+          <Button variant="default" className="rounded-md" disabled>Siguiente</Button>
         </div>
       )}
     </div>
   );
 }
-
     

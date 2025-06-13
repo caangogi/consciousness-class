@@ -4,7 +4,8 @@ import type { IUserRepository, EnrolledCourseWithProgress, UserWithEnrolledCours
 import { UserEntity, type UserProperties } from '@/features/user/domain/entities/user.entity';
 import { adminDb } from '@/lib/firebase/admin';
 import type { FirebaseError } from 'firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+// FieldValue no es necesario con el nuevo enfoque de lectura-modificación-escritura, pero lo mantenemos por si se revierte.
+// import { FieldValue } from 'firebase-admin/firestore'; 
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { UserCourseProgressProperties } from '@/features/progress/domain/entities/user-course-progress.entity';
 
@@ -42,8 +43,7 @@ export class FirebaseUserRepository implements IUserRepository {
         return null;
       }
       const data = docSnap.data() as UserProperties;
-      console.log(`[FirebaseUserRepository] findByUid - UID: ${uid}, Raw cursosInscritos from Firestore:`, JSON.stringify(data.cursosInscritos));
-      // Ensure cursosInscritos is always an array
+      console.log(`[FirebaseUserRepository] findByUid - UID: ${uid}, Raw cursosInscritos from Firestore:`, JSON.stringify(data.cursosInscritos)); 
       if (!Array.isArray(data.cursosInscritos)) {
         data.cursosInscritos = [];
       }
@@ -63,7 +63,6 @@ export class FirebaseUserRepository implements IUserRepository {
         return null;
       }
       const data = snapshot.docs[0].data() as UserProperties;
-      // Ensure cursosInscritos is always an array
       if (!Array.isArray(data.cursosInscritos)) {
         data.cursosInscritos = [];
       }
@@ -100,7 +99,6 @@ export class FirebaseUserRepository implements IUserRepository {
          updateData.photoURL = null; 
       }
 
-      // Ensure cursosInscritos remains an array during update if present
       if (data.cursosInscritos !== undefined && !Array.isArray(data.cursosInscritos)) {
         console.warn(`[FirebaseUserRepository] cursosInscritos for UID ${uid} was not an array during update, initializing as empty array.`);
         updateData.cursosInscritos = [];
@@ -140,33 +138,55 @@ export class FirebaseUserRepository implements IUserRepository {
   }
 
   async addCourseToEnrolled(userId: string, courseId: string): Promise<void> {
-    console.log(`[FirebaseUserRepository] Attempting to add Course ID: '${courseId}' to User ID: '${userId}' enrolled courses (cursosInscritos).`);
+    console.log(`[FirebaseUserRepository] addCourseToEnrolled - User UID: ${userId}, Course ID: ${courseId}`);
     const userRef = this.usersCollection.doc(userId);
     try {
+      const userDoc = await userRef.get();
+      if (!userDoc.exists) {
+        console.error(`[FirebaseUserRepository] addCourseToEnrolled - User ${userId} not found.`);
+        throw new Error(`User ${userId} not found for enrollment.`);
+      }
+
+      const userData = userDoc.data() as UserProperties;
+      let currentEnrolledCourses: string[] = [];
+      if (Array.isArray(userData.cursosInscritos)) {
+        currentEnrolledCourses = userData.cursosInscritos;
+      } else if (userData.cursosInscritos) {
+        console.warn(`[FirebaseUserRepository] addCourseToEnrolled - cursosInscritos for user ${userId} is not an array, re-initializing. Value:`, userData.cursosInscritos);
+      }
+      console.log(`[FirebaseUserRepository] addCourseToEnrolled - Current cursosInscritos: ${JSON.stringify(currentEnrolledCourses)}`);
+
+      if (!currentEnrolledCourses.includes(courseId)) {
+        currentEnrolledCourses.push(courseId);
+        console.log(`[FirebaseUserRepository] addCourseToEnrolled - Adding courseId. New cursosInscritos: ${JSON.stringify(currentEnrolledCourses)}`);
         await userRef.update({
-            cursosInscritos: FieldValue.arrayUnion(courseId),
-            updatedAt: new Date().toISOString()
+          cursosInscritos: currentEnrolledCourses,
+          updatedAt: new Date().toISOString()
         });
-        console.log(`[FirebaseUserRepository] Firestore update called for user '${userId}' to add course '${courseId}'.`);
+        console.log(`[FirebaseUserRepository] addCourseToEnrolled - Firestore update called for user '${userId}' with new cursosInscritos array.`);
+      } else {
+        console.log(`[FirebaseUserRepository] addCourseToEnrolled - CourseId ${courseId} already present in user ${userId}'s cursosInscritos.`);
+      }
+      
+      // Verification step
+      const updatedUserSnap = await userRef.get();
+      const updatedUserData = updatedUserSnap.data() as UserProperties | undefined;
 
-        // Verification step
-        const updatedUserSnap = await userRef.get();
-        const updatedUserData = updatedUserSnap.data() as UserProperties | undefined;
-
-        if (updatedUserData && Array.isArray(updatedUserData.cursosInscritos) && updatedUserData.cursosInscritos.includes(courseId)) {
-            console.log(`[FirebaseUserRepository] SUCCESS: Course ID '${courseId}' confirmed in user '${userId}' enrolled courses AFTER update. Current array: ${JSON.stringify(updatedUserData.cursosInscritos)}`);
-        } else {
-            console.error(`[FirebaseUserRepository] CRITICAL FAILURE: Firestore update for cursosInscritos DID NOT PERSIST or was not found for user ${userId}, course ${courseId}. Current cursosInscritos: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
-            // Consider if throwing an error here is appropriate. 
-            // If it doesn't persist, the webhook might still return 200 if this doesn't throw.
-            // For now, logging an error. For stricter handling, uncomment the throw.
-            // throw new Error(`CRITICAL: Firestore update for cursosInscritos DID NOT PERSIST for user ${userId}, course ${courseId}.`);
-        }
+      if (updatedUserData && Array.isArray(updatedUserData.cursosInscritos) && updatedUserData.cursosInscritos.includes(courseId)) {
+        console.log(`[FirebaseUserRepository] SUCCESS: Course ID '${courseId}' confirmed in user '${userId}' enrolled courses AFTER update. Current array: ${JSON.stringify(updatedUserData.cursosInscritos)}`);
+      } else {
+        console.error(`[FirebaseUserRepository] CRITICAL FAILURE: Firestore update for cursosInscritos DID NOT PERSIST or courseId not found for user ${userId}, course ${courseId}. Read back array: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
+        throw new Error(`[FirebaseUserRepository] CRITICAL: Firestore update for cursosInscritos DID NOT PERSIST for user ${userId}, course ${courseId}. Array is: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
+      }
 
     } catch (error: any) {
-        const firebaseError = error as FirebaseError;
-        console.error(`[FirebaseUserRepository] ERROR adding course '${courseId}' to user '${userId}':`, firebaseError.message, firebaseError.stack);
-        throw new Error(`Firestore addCourseToEnrolled operation failed: ${firebaseError.message}`);
+      const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseUserRepository] ERROR adding course '${courseId}' to user '${userId}':`, firebaseError.message, firebaseError.stack);
+      // Re-throw specific error or the original one
+      if (error.message.startsWith('[FirebaseUserRepository] CRITICAL:')) {
+        throw error;
+      }
+      throw new Error(`Firestore addCourseToEnrolled operation failed: ${firebaseError.message}`);
     }
   }
 
@@ -185,7 +205,7 @@ export class FirebaseUserRepository implements IUserRepository {
 
       const userData = userDocSnap.data() as UserProperties;
       if (!Array.isArray(userData.cursosInscritos)) {
-        userData.cursosInscritos = []; // Ensure it's an array before creating entity
+        userData.cursosInscritos = []; 
       }
       const userEntity = new UserEntity(userData);
       

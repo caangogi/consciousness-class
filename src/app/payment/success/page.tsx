@@ -10,7 +10,7 @@ import { useEffect, useState, useCallback } from 'react';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
 import type { LessonProperties } from '@/features/course/domain/entities/lesson.entity';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext'; 
 
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
@@ -25,12 +25,12 @@ export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const courseId = searchParams.get('courseId');
-  const { currentUser, loading: authLoading, refreshUserProfile } = useAuth(); // Get currentUser and loading
+  const { currentUser, loading: authLoading, refreshUserProfile } = useAuth(); 
   
-  const [isLoadingSession, setIsLoadingSession] = useState(true); // Renamed to avoid confusion with authLoading
   const [isLoadingCourseData, setIsLoadingCourseData] = useState(false);
   const [firstLessonId, setFirstLessonId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasRefreshed, setHasRefreshed] = useState(false); // New state to control single refresh
 
   const fetchCourseDataForLink = useCallback(async () => {
     if (!courseId) return;
@@ -59,30 +59,36 @@ export default function PaymentSuccessPage() {
   }, [courseId]);
 
   useEffect(() => {
+    console.log(`[PaymentSuccessPage] useEffect triggered. Session: ${sessionId}, Course: ${courseId}, AuthLoading: ${authLoading}, CurrentUser: ${!!currentUser}, HasRefreshed: ${hasRefreshed}`);
     if (sessionId && courseId) {
-      if (!authLoading && currentUser) {
+      if (!authLoading && currentUser && !hasRefreshed) {
         console.log(`[PaymentSuccessPage] Auth loaded and user present (UID: ${currentUser.uid}). Attempting to refresh profile and fetch course data...`);
-        setIsLoadingSession(false); // No longer loading session details specifically, auth handles user loading
+        setHasRefreshed(true); // Set refresh flag
         refreshUserProfile().then(() => {
           console.log("[PaymentSuccessPage] User profile refresh COMPLETED.");
           fetchCourseDataForLink(); 
         }).catch(err => {
           console.error("[PaymentSuccessPage] Error refreshing user profile on payment success:", err);
-          // Still try to fetch course data for link even if profile refresh has an issue.
-          fetchCourseDataForLink();
+          fetchCourseDataForLink(); // Still try to fetch course data
         });
-      } else {
-        console.log(`[PaymentSuccessPage] Waiting for auth to load (authLoading: ${authLoading}) or user to be present (currentUser: ${!!currentUser}). Session ID: ${sessionId}, Course ID: ${courseId}`);
-        // setIsLoadingSession(true) could be set here if we want the "Verifying your purchase..." message
-        // For now, if auth is loading, the main page loader might be sufficient, or we can keep a specific one
-         if (authLoading) setIsLoadingSession(true); else setIsLoadingSession(false);
+      } else if (authLoading) {
+        console.log("[PaymentSuccessPage] Waiting for auth to load...");
+      } else if (!currentUser) {
+        console.log("[PaymentSuccessPage] Waiting for user to be present...");
+      } else if (hasRefreshed) {
+        console.log("[PaymentSuccessPage] Profile already refreshed for this session.");
+        // If already refreshed, and course data might not have loaded (e.g. if refreshUserProfile didn't trigger a new currentUser object that fetchCourseDataForLink depended on)
+        // we might need to call fetchCourseDataForLink here too, or ensure its dependencies are correct.
+        // For now, let's assume if it's refreshed, fetchCourseDataForLink was also called.
+        if (!firstLessonId && !isLoadingCourseData && !error) { // Only call if not already loading or errored
+            fetchCourseDataForLink();
+        }
       }
     } else {
       console.warn('[PaymentSuccessPage] Reached without session_id or courseId.');
-      setIsLoadingSession(false);
       setError("Faltan parámetros para confirmar la compra.");
     }
-  }, [sessionId, courseId, fetchCourseDataForLink, refreshUserProfile, currentUser, authLoading]);
+  }, [sessionId, courseId, currentUser, authLoading, refreshUserProfile, fetchCourseDataForLink, hasRefreshed, firstLessonId, isLoadingCourseData, error]);
 
 
   return (
@@ -98,7 +104,7 @@ export default function PaymentSuccessPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isLoadingSession ? ( // Changed to use isLoadingSession for clarity
+          {(authLoading && !currentUser) ? ( 
              <p className="text-muted-foreground flex items-center justify-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verificando tu compra...</p>
           ) : error ? (
             <p className="text-destructive">{error}</p>
@@ -117,7 +123,7 @@ export default function PaymentSuccessPage() {
           )}
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center">
-           {courseId && !isLoadingSession && !error && (
+           {courseId && (!authLoading || currentUser) && !error && ( // Enable buttons once auth is no longer loading or user is present
              isLoadingCourseData ? (
                 <Button disabled>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando curso...
@@ -128,7 +134,7 @@ export default function PaymentSuccessPage() {
                     <BookOpen className="mr-2 h-4 w-4"/> Ir al Curso
                     </Link>
                 </Button>
-             ) : (
+             ) : ( // Fallback if firstLessonId couldn't be determined but courseId exists
                 <Button asChild>
                     <Link href={`/courses/${courseId}`}>
                     <BookOpen className="mr-2 h-4 w-4"/> Ver Detalles del Curso

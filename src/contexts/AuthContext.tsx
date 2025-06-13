@@ -126,14 +126,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (auth.currentUser) {
       console.log(`[AuthContext] refreshUserProfile START for UID: ${auth.currentUser.uid}. Current cursosInscritos in context (before fetch):`, JSON.stringify(currentUser?.cursosInscritos));
       await fetchAndSetUserProfile(auth.currentUser);
-      // Log an updated currentUser AFTER fetchAndSetUserProfile has completed and potentially re-rendered.
-      // This specific log might show the state before the next render cycle fully updates `currentUser` here due to closure.
-      // The more reliable "after" log is inside fetchAndSetUserProfile or in a useEffect dependent on currentUser.
+      // Note: currentUser logged here might not reflect the absolute latest state immediately due to render cycles
       console.log(`[AuthContext] refreshUserProfile END for UID: ${auth.currentUser.uid}. (Note: context might show next render's data for 'cursosInscritos' here)`);
     } else {
         console.log("[AuthContext] No current user to refresh.");
     }
-  }, [fetchAndSetUserProfile]); // Removido currentUser de las dependencias para romper el bucle
+  }, [fetchAndSetUserProfile]); 
   
   const value = {
     currentUser,

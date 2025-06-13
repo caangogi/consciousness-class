@@ -38,6 +38,7 @@ const placeholderReviews = [
 export default function CourseDetailPage() {
   const params = useParams<{ id: string }>();
   const courseId = params.id;
+  console.log("[CourseDetailPage] Render. params.id:", params.id, "courseId var:", courseId); // Log para depuración
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser, loading: authLoading, refreshUserProfile } = useAuth();
@@ -49,7 +50,6 @@ export default function CourseDetailPage() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Recalculate isUserEnrolled whenever currentUser or courseId changes.
   const isUserEnrolled = currentUser?.cursosInscritos?.includes(courseId) ?? false;
 
 
@@ -61,21 +61,23 @@ export default function CourseDetailPage() {
         variant: 'default',
         duration: 5000,
       });
-      // Remove the query parameter from the URL without reloading the page content
       router.replace(`/courses/${courseId}`, { scroll: false });
     }
   }, [searchParams, courseId, router, toast]);
 
   const fetchCourseData = useCallback(async () => {
     if (!courseId) {
-      console.error("[CourseDetailPage] fetchCourseData: courseId is missing.");
-      setError("ID del curso no encontrado en la URL.");
+      console.warn("[CourseDetailPage] fetchCourseData: courseId is missing or undefined. Current params.id:", params.id);
+      setError("ID del curso no disponible en la URL.");
       setIsLoading(false);
+      setCourseData(null); 
       return;
     }
     console.log(`[CourseDetailPage] fetchCourseData called for courseId: ${courseId}`);
     setIsLoading(true);
     setError(null);
+    setCourseData(null); // Limpiar datos previos antes de un nuevo fetch
+
     try {
       const response = await fetch(`/api/learn/course-structure/${courseId}`);
       console.log(`[CourseDetailPage] API response status: ${response.status} for ${courseId}`);
@@ -93,22 +95,26 @@ export default function CourseDetailPage() {
       const data: CourseStructureData = await response.json();
       console.log(`[CourseDetailPage] API success response data for ${courseId}:`, data);
       setCourseData(data);
+      setError(null); // Limpiar cualquier error anterior si el fetch es exitoso
     } catch (err: any) {
       console.error(`[CourseDetailPage] Error in fetchCourseData for ${courseId}:`, err);
       setError(err.message);
+      setCourseData(null); // Asegurar que courseData esté null si hay error
     } finally {
       console.log(`[CourseDetailPage] fetchCourseData finally block for ${courseId}. Setting isLoading to false.`);
       setIsLoading(false);
     }
-  }, [courseId]);
+  }, [courseId, params.id, toast]); // Añadido params.id y toast
 
 
   useEffect(() => {
-    fetchCourseData();
+    if (courseId) { // Solo llamar si courseId está definido
+        fetchCourseData();
+    }
     if (currentUser) { 
         refreshUserProfile().catch(err => console.error("Failed to refresh user profile on course detail page:", err));
     }
-  }, [fetchCourseData, currentUser, refreshUserProfile]);
+  }, [courseId, fetchCourseData, currentUser, refreshUserProfile]);
 
   const handleFreeEnrollment = async () => {
     if (!currentUser || !courseId || !courseData) {
@@ -135,7 +141,7 @@ export default function CourseDetailPage() {
         }
         
         toast({ title: "¡Inscripción Exitosa!", description: `Te has inscrito correctamente en "${courseData.course.nombre}".` });
-        await refreshUserProfile(); // Refresh profile to update currentUser.cursosInscritos
+        await refreshUserProfile(); 
     } catch (err: any) {
         toast({ title: "Error de Inscripción", description: err.message, variant: "destructive" });
         console.error("Error enrolling in free course:", err);
@@ -271,7 +277,7 @@ export default function CourseDetailPage() {
   }
 
   if (!courseData) {
-    return <div className="container py-12 text-center">No se encontraron datos para este curso.</div>;
+    return <div className="container py-12 text-center">No se encontraron datos para este curso o el ID no es válido.</div>;
   }
 
   const { course, modules } = courseData;
@@ -537,4 +543,6 @@ export default function CourseDetailPage() {
     </motion.div>
   );
 }
+    
+
     

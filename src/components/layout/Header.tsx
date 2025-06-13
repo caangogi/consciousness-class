@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import React from 'react'; // Added React import
+import React from 'react';
 import { Logo } from '@/components/shared/Logo';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { BookOpen, LayoutDashboard, LogOut, UserCircle, Menu as MenuIcon, Briefcase, MessageCircleQuestion } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from '@/components/ui/sheet'; // Asegurada la importación de SheetHeader
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter, usePathname } from 'next/navigation';
@@ -29,6 +29,8 @@ const navLinks = [
   { href: '/#faq', label: 'FAQ', isHashLink: true },
   { href: '/blog', label: 'Blog' },
 ];
+
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
 
 export function Header() {
   const { currentUser, userRole, loading, logout } = useAuth();
@@ -153,7 +155,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-[72px] items-center justify-between">
-        <Logo useIconOnly={false} />
+        <Logo imageUrl={LOGO_URL} altText="MentorBloom Logo" />
 
         <nav className="hidden md:flex items-center gap-1 bg-secondary/50 px-2 py-1.5 rounded-full shadow-sm">
           {navLinks.map((link) => (
@@ -183,9 +185,12 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] flex flex-col">
-              <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
+              <SheetHeader className="sr-only"> {/* Oculto visualmente para accesibilidad */}
+                <SheetTitle>Navegación Principal</SheetTitle>
+                <SheetDescription>Enlaces principales y opciones de autenticación.</SheetDescription>
+              </SheetHeader>
               <div className="mb-6 border-b pb-4">
-                 <Logo useIconOnly={false} onClick={() => setIsSheetOpen(false)}/>
+                 <Logo imageUrl={LOGO_URL} altText="MentorBloom Logo" onClick={() => setIsSheetOpen(false)}/>
               </div>
               <nav className="grid gap-3 text-base font-medium flex-grow">
                 {navLinks.map((link) => (

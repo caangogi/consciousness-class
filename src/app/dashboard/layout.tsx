@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { DashboardSidebar, navItems } from '@/components/dashboard/DashboardSidebar'; // Import navItems
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet'; // Added SheetDescription
 import { Menu as MenuIcon, LogOut } from 'lucide-react'; // Removed unused icons
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
@@ -16,6 +16,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 // NavItem type is implicitly available via navItems import if DashboardSidebar exports it,
 // or defined locally if needed. For now, assume navItems from DashboardSidebar is sufficient.
+
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
+
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { currentUser, userRole, loading, logout } = useAuth();
@@ -55,7 +58,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return (
        <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-2">
-          <Logo/>
+          <Logo imageUrl={LOGO_URL} altText="MentorBloom Logo" />
           <p className="text-muted-foreground">Cargando dashboard...</p>
           <div className="mt-4 w-64">
             <Skeleton className="h-4 w-full mb-2" />
@@ -79,7 +82,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="sm:max-w-xs flex flex-col">
-             <SheetTitle className="sr-only">Navegación del Dashboard</SheetTitle>
+             <SheetHeader className="sr-only"> {/* Oculto visualmente */}
+                <SheetTitle>Navegación del Dashboard</SheetTitle>
+                <SheetDescription>Enlaces y opciones del panel de control.</SheetDescription>
+             </SheetHeader>
               <div className="flex items-center gap-2 border-b pb-4 mb-4">
                 <Avatar className="h-9 w-9">
                     <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} />
@@ -109,7 +115,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </SheetContent>
           </Sheet>
            <div className="md:hidden">
-             <Logo />
+             <Logo imageUrl={LOGO_URL} altText="MentorBloom Logo" />
            </div>
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8 bg-background overflow-auto">

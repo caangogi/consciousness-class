@@ -144,10 +144,16 @@ export class FirebaseUserRepository implements IUserRepository {
     };
     console.log(`[FirebaseUserRepository - addCourseToEnrolled] Attempting to update user '${userId}' with payload:`, JSON.stringify(updatePayload));
     try {
+      if (!adminDb) { // Double check, though usersCollection getter does it too
+        const errorMessage = 'Firebase Admin SDK (adminDb) not initialized in addCourseToEnrolled.';
+        console.error(`[FirebaseUserRepository - addCourseToEnrolled] CRITICAL: ${errorMessage}`);
+        throw new Error(errorMessage);
+      }
       await userRef.update(updatePayload);
       console.log(`[FirebaseUserRepository - addCourseToEnrolled] Firestore userRef.update() call completed for User ID: ${userId}, Course ID: ${courseId}.`);
     } catch (error: any) {
       const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseUserRepository - addCourseToEnrolled] Firestore specific error details: Code='${firebaseError.code}', Message='${firebaseError.message}', Stack='${firebaseError.stack}'`);
       console.error(`[FirebaseUserRepository - addCourseToEnrolled] CRITICAL ERROR updating user '${userId}' to add course '${courseId}':`, firebaseError.message, firebaseError.stack);
       // Propagate the error to be handled by the service/webhook
       throw new Error(`Firestore addCourseToEnrolled (arrayUnion) operation failed for user ${userId}: ${firebaseError.message}`);

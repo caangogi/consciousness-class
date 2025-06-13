@@ -20,7 +20,7 @@ interface RouteParams {
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  console.log(`[API /learn/course-structure] Received request for courseId: ${params?.courseId}`);
+  console.log(`[API /learn/course-structure] Received request for courseId: ${params.courseId}`);
   try {
     const courseId = params.courseId;
     if (!courseId) {
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error(`[API /learn/course-structure] Error for courseId ${params?.courseId}:`, error);
+    console.error(`[API /learn/course-structure] Error for courseId ${params.courseId}:`, error);
     let errorMessage = 'Internal Server Error';
     let errorDetails = 'An unexpected error occurred while fetching the course structure.';
     let statusCode = 500;

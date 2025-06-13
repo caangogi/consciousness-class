@@ -93,6 +93,7 @@ export class FirebaseCourseRepository implements ICourseRepository {
       console.log(`[FirebaseCourseRepository - incrementStudentCount] Firestore courseRef.update() call completed for Course ID: ${courseId}.`);
     } catch (error: any) {
       const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseCourseRepository - incrementStudentCount] Firestore specific error details: Code='${firebaseError.code}', Message='${firebaseError.message}', Stack='${firebaseError.stack}'`);
       console.error(`[FirebaseCourseRepository - incrementStudentCount] CRITICAL ERROR updating course '${courseId}' to increment student count:`, firebaseError.message, firebaseError.stack);
       throw new Error(`Firestore incrementStudentCount operation failed for course ${courseId}: ${firebaseError.message}`);
     }

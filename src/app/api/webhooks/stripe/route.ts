@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        console.log(`[Stripe Webhook] Processing 'checkout.session.completed'. Session ID: ${session.id}, Payment Status: ${session.payment_status}`);
+        console.log(`[Stripe Webhook] Processing '${event.type}'. Session ID: ${session.id}, Payment Status: ${session.payment_status}`);
         await writeWebhookLog(eventId, 'checkout.session.completed_received', { sessionId: session.id, payment_status: session.payment_status, metadata: session.metadata });
 
         if (session.payment_status === 'paid') {
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
           const userId = session.metadata?.userId ?? session.metadata?.userid;
           const courseId = session.metadata?.courseId ?? session.metadata?.courseid;
           
-          console.log('[Stripe Webhook] Metadata received:', session.metadata);
+          console.log('[Stripe Webhook] Metadata recibida:', session.metadata);
           console.log(`[Stripe Webhook] Extracted - User ID: ${userId}, Course ID: ${courseId}`);
           await writeWebhookLog(eventId, 'extracted_metadata', { userId, courseId, rawMetadata: session.metadata });
 
@@ -97,9 +97,7 @@ export async function POST(request: NextRequest) {
           if (!userId || !courseId) {
             console.error(`[Stripe Webhook] CRITICAL: Missing metadata. User ID: ${userId}, Course ID: ${courseId}. Cannot proceed with enrollment for session ${session.id}.`);
             await writeWebhookLog(eventId, 'missing_metadata_error', { userId, courseId, rawMetadata: session.metadata });
-            // Still return 200 to Stripe to acknowledge receipt, but log error critically.
-            // Alternatively, return 400 if Stripe should retry for metadata issues, but this is unlikely if session was created correctly.
-            return NextResponse.json({ error: 'Webhook Error: Missing essential metadata (userId or courseId).' }, { status: 400 }); // Consider if 200 is better if it's a permanent issue
+            return NextResponse.json({ error: 'Webhook Error: Missing essential metadata (userId or courseId).' }, { status: 400 });
           }
 
           console.log(`[Stripe Webhook] Metadata OK. Calling EnrollmentService for User: ${userId}, Course: ${courseId}`);
@@ -117,20 +115,19 @@ export async function POST(request: NextRequest) {
         }
         break;
       }
-      // Add other event types as needed
       default:
         console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
         await writeWebhookLog(eventId, 'unhandled_event_type', { type: event.type });
     }
 
-    console.log(`[Stripe Webhook] Event ${event.id} (Type: ${event.type}) processed successfully. Responding 200 OK.`);
+    console.log(`[Stripe Webhook] Webhook processed event ${event.id} (Type: ${event.type}) successfully. Responding 200 OK.`);
     await writeWebhookLog(eventId, 'processing_complete_200_ok', { type: event.type });
     return NextResponse.json({ received: true }, { status: 200 });
 
   } catch (error: any) {
     console.error(`[Stripe Webhook] CRITICAL ERROR processing event ${event.id} (Type: ${event.type}):`, error.message, error.stack);
     await writeWebhookLog(eventId, 'critical_processing_error_500', { type: event.type, error: error.message, stack: error.stack });
-    // Respond with 500 to indicate to Stripe that the webhook failed and should be retried (if applicable for the error type)
+    console.log(`[Stripe Webhook] Responding to Stripe with 500 ERROR after processing failure for event ${event.id}`);
     return NextResponse.json({ error: 'Webhook processing failed.', details: error.message }, { status: 500 });
   }
 }

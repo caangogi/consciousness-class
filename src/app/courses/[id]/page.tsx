@@ -107,23 +107,31 @@ export default function CourseDetailPage() {
   }, [courseId, params.id, toast]);
 
 
+  // useEffect to fetch course data when courseId changes
   useEffect(() => {
-    console.log("[CourseDetailPage] Main useEffect triggered. Current courseId:", courseId);
+    console.log("[CourseDetailPage] Course Data useEffect triggered. Current courseId:", courseId);
     if (courseId) {
-        console.log("[CourseDetailPage] Main useEffect: courseId is present, calling fetchCourseData.");
+        console.log("[CourseDetailPage] Course Data useEffect: courseId is present, calling fetchCourseData.");
         fetchCourseData();
     } else {
-        console.warn("[CourseDetailPage] Main useEffect: courseId is NOT present. Not calling fetchCourseData.");
+        console.warn("[CourseDetailPage] Course Data useEffect: courseId is NOT present. Not calling fetchCourseData.");
         setError("El ID del curso no está presente en la URL.");
         setIsLoading(false); 
         setCourseData(null); 
     }
+  }, [courseId, fetchCourseData]);
 
-    if (currentUser) {
-        console.log("[CourseDetailPage] Main useEffect: currentUser is present, calling refreshUserProfile.");
+  // useEffect to refresh user profile when currentUser.uid changes or authLoading finishes
+  useEffect(() => {
+    console.log(`[CourseDetailPage] User Profile useEffect triggered. currentUser.uid: ${currentUser?.uid}, authLoading: ${authLoading}`);
+    if (!authLoading && currentUser?.uid) { // Only refresh if auth has loaded and we have a user
+        console.log("[CourseDetailPage] User Profile useEffect: authLoading is false and currentUser.uid is present, calling refreshUserProfile.");
         refreshUserProfile().catch(err => console.error("Failed to refresh user profile on course detail page:", err));
+    } else if (!authLoading && !currentUser?.uid) {
+        console.log("[CourseDetailPage] User Profile useEffect: authLoading is false but no currentUser.uid. Not refreshing.");
     }
-  }, [courseId, fetchCourseData, currentUser, refreshUserProfile]);
+  }, [currentUser?.uid, authLoading, refreshUserProfile]);
+
 
   const handleFreeEnrollment = async () => {
     if (!currentUser || !courseId || !courseData) {
@@ -555,4 +563,3 @@ export default function CourseDetailPage() {
     </motion.div>
   );
 }
-

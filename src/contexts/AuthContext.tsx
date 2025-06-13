@@ -68,7 +68,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           updatedAt: data.updatedAt,
           referralCodeGenerated: data.referralCodeGenerated,
           referredBy: data.referredBy,
-          cursosInscritos: data.cursosInscritos || [], // Explicitly ensure cursosInscritos is an array
+          cursosInscritos: data.cursosInscritos || [],
           referidosExitosos: data.referidosExitosos,
           balanceCredito: data.balanceCredito,
         };
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         photoURL: userProfileData.photoURL !== undefined ? userProfileData.photoURL : user.photoURL, 
         ...userProfileData, 
         role: fetchedRole,
-        cursosInscritos: userProfileData.cursosInscritos || [], // Ensure it's always an array
+        cursosInscritos: userProfileData.cursosInscritos || [], 
       };
       
       setCurrentUser(combinedUser);
@@ -110,21 +110,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true);
     try {
       await auth.signOut();
-      // User state will be cleared by onAuthStateChanged listener
       console.log("[AuthContext] User signed out.");
     } catch (error) {
       console.error("[AuthContext] Error signing out: ", error);
-    } finally {
-        // setLoading(false); // No need, onAuthStateChanged will handle loading false
     }
   };
 
   const refreshUserProfile = useCallback(async () => {
     if (auth.currentUser) {
       console.log("[AuthContext] Refreshing user profile for UID:", auth.currentUser.uid);
-      setLoading(true); // Indicate loading during refresh
+      // setLoading(true); // Avoid setting loading true here if it causes UI flicker, onAuthStateChanged handles initial load
       await fetchAndSetUserProfile(auth.currentUser);
-      setLoading(false);
+      // setLoading(false); // Correspondingly, don't set to false if not set true above
     } else {
         console.log("[AuthContext] No current user to refresh.");
     }

@@ -50,7 +50,8 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Recalculate isUserEnrolled whenever currentUser or courseId changes.
-  const isUserEnrolled = !!currentUser?.cursosInscritos?.includes(courseId);
+  const isUserEnrolled = currentUser?.cursosInscritos?.includes(courseId) ?? false;
+
 
   useEffect(() => {
     if (searchParams.get('canceled') === 'true') {
@@ -67,31 +68,44 @@ export default function CourseDetailPage() {
 
   const fetchCourseData = useCallback(async () => {
     if (!courseId) {
+      console.error("[CourseDetailPage] fetchCourseData: courseId is missing.");
       setError("ID del curso no encontrado en la URL.");
       setIsLoading(false);
       return;
     }
+    console.log(`[CourseDetailPage] fetchCourseData called for courseId: ${courseId}`);
     setIsLoading(true);
     setError(null);
     try {
       const response = await fetch(`/api/learn/course-structure/${courseId}`);
+      console.log(`[CourseDetailPage] API response status: ${response.status} for ${courseId}`);
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData;
+        try {
+          errorData = await response.json();
+          console.error("[CourseDetailPage] API error response data:", errorData);
+        } catch (e) {
+          console.error("[CourseDetailPage] API error: Could not parse JSON from error response. Status text:", response.statusText);
+          errorData = { details: `Error ${response.status}: ${response.statusText}` };
+        }
         throw new Error(errorData.details || errorData.error || 'Error al cargar los datos del curso');
       }
       const data: CourseStructureData = await response.json();
+      console.log(`[CourseDetailPage] API success response data for ${courseId}:`, data);
       setCourseData(data);
     } catch (err: any) {
+      console.error(`[CourseDetailPage] Error in fetchCourseData for ${courseId}:`, err);
       setError(err.message);
-      console.error("Error fetching course data:", err);
     } finally {
+      console.log(`[CourseDetailPage] fetchCourseData finally block for ${courseId}. Setting isLoading to false.`);
       setIsLoading(false);
     }
   }, [courseId]);
 
+
   useEffect(() => {
     fetchCourseData();
-    if (currentUser) { // If user is logged in, refresh their profile to get latest enrollment status
+    if (currentUser) { 
         refreshUserProfile().catch(err => console.error("Failed to refresh user profile on course detail page:", err));
     }
   }, [fetchCourseData, currentUser, refreshUserProfile]);
@@ -523,3 +537,4 @@ export default function CourseDetailPage() {
     </motion.div>
   );
 }
+    

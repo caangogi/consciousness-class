@@ -20,9 +20,11 @@ interface RouteParams {
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  console.log(`[API /learn/course-structure] Received request for courseId: ${params?.courseId}`);
   try {
     const courseId = params.courseId;
     if (!courseId) {
+      console.error('[API /learn/course-structure] Bad Request: Missing course ID in path.');
       return NextResponse.json({ error: 'Bad Request: Missing course ID in path.' }, { status: 400 });
     }
 
@@ -37,10 +39,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const lessonService = new LessonService(lessonRepository, moduleRepository, courseRepository);
 
     // 1. Fetch course details
+    console.log(`[API /learn/course-structure] Fetching course details for ID: ${courseId}`);
     const course = await courseService.getCourseById(courseId);
     if (!course) {
+      console.warn(`[API /learn/course-structure] Course not found for ID: ${courseId}`);
       return NextResponse.json({ error: 'Course not found.' }, { status: 404 });
     }
+    console.log(`[API /learn/course-structure] Course found: ${course.nombre}`);
      // Ensure course is published for public learn access (can be bypassed for creators/admins if needed)
     // if (course.estado !== 'publicado') {
     //   return NextResponse.json({ error: 'Course not available.' }, { status: 403 });
@@ -48,25 +53,29 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 
     // 2. Fetch modules for the course (already ordered by ModuleService)
+    console.log(`[API /learn/course-structure] Fetching modules for course ID: ${courseId}`);
     const modules = await moduleService.getModulesByCourseId(courseId);
+    console.log(`[API /learn/course-structure] Found ${modules.length} modules for course ID: ${courseId}`);
 
     // 3. Fetch lessons for each module (already ordered by LessonService)
     const modulesWithLessons: ModuleWithLessons[] = [];
     for (const module of modules) {
+      console.log(`[API /learn/course-structure] Fetching lessons for module ID: ${module.id} (Course: ${courseId})`);
       const lessons = await lessonService.getLessonsByModuleId(courseId, module.id);
+      console.log(`[API /learn/course-structure] Found ${lessons.length} lessons for module ID: ${module.id}`);
       modulesWithLessons.push({
         ...module.toPlainObject(),
         lessons: lessons.map(lesson => lesson.toPlainObject()),
       });
     }
-
+    console.log(`[API /learn/course-structure] Successfully assembled course structure for course ID: ${courseId}`);
     return NextResponse.json({
       course: course.toPlainObject(),
       modules: modulesWithLessons,
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error(`Error in GET /api/learn/course-structure/${params?.courseId}:`, error);
+    console.error(`[API /learn/course-structure] Error for courseId ${params?.courseId}:`, error);
     let errorMessage = 'Internal Server Error';
     let errorDetails = 'An unexpected error occurred while fetching the course structure.';
     let statusCode = 500;

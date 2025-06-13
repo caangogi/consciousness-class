@@ -61,7 +61,7 @@ export default function CourseDetailPage() {
         variant: 'default',
         duration: 5000,
       });
-      router.replace(\`/courses/\${courseId}\`, { scroll: false });
+      router.replace(`/courses/${courseId}`, { scroll: false });
     }
   }, [searchParams, courseId, router, toast]);
 
@@ -73,14 +73,14 @@ export default function CourseDetailPage() {
       setCourseData(null);
       return;
     }
-    console.log(\`[CourseDetailPage] fetchCourseData called for courseId: \${courseId}\`);
+    console.log(`[CourseDetailPage] fetchCourseData called for courseId: ${courseId}`);
     setIsLoading(true);
     setError(null);
     setCourseData(null);
 
     try {
-      const response = await fetch(\`/api/learn/course-structure/\${courseId}\`);
-      console.log(\`[CourseDetailPage] API response status: \${response.status} for \${courseId}\`);
+      const response = await fetch(`/api/learn/course-structure/${courseId}`);
+      console.log(`[CourseDetailPage] API response status: ${response.status} for ${courseId}`);
       if (!response.ok) {
         let errorData;
         try {
@@ -88,20 +88,20 @@ export default function CourseDetailPage() {
           console.error("[CourseDetailPage] API error response data:", errorData);
         } catch (e) {
           console.error("[CourseDetailPage] API error: Could not parse JSON from error response. Status text:", response.statusText);
-          errorData = { details: \`Error \${response.status}: \${response.statusText}\` };
+          errorData = { details: `Error ${response.status}: ${response.statusText}` };
         }
         throw new Error(errorData.details || errorData.error || 'Error al cargar los datos del curso');
       }
       const data: CourseStructureData = await response.json();
-      console.log(\`[CourseDetailPage] API success response data for \${courseId}:\`, data);
+      console.log(`[CourseDetailPage] API success response data for ${courseId}:`, data);
       setCourseData(data);
       setError(null);
     } catch (err: any) {
-      console.error(\`[CourseDetailPage] Error in fetchCourseData for \${courseId}:\`, err);
+      console.error(`[CourseDetailPage] Error in fetchCourseData for ${courseId}:`, err);
       setError(err.message);
       setCourseData(null);
     } finally {
-      console.log(\`[CourseDetailPage] fetchCourseData finally block for \${courseId}. Setting isLoading to false.\`);
+      console.log(`[CourseDetailPage] fetchCourseData finally block for ${courseId}. Setting isLoading to false.`);
       setIsLoading(false);
     }
   }, [courseId, params.id, toast]);
@@ -128,7 +128,7 @@ export default function CourseDetailPage() {
   const handleFreeEnrollment = async () => {
     if (!currentUser || !courseId || !courseData) {
         toast({ title: "Error", description: "Usuario no autenticado o datos del curso no disponibles.", variant: "destructive" });
-        if (!currentUser) router.push(\`/login?redirect=/courses/\${courseId}\`);
+        if (!currentUser) router.push(`/login?redirect=/courses/${courseId}`);
         return;
     }
     setIsProcessingEnrollment(true);
@@ -136,11 +136,11 @@ export default function CourseDetailPage() {
         const idToken = await auth.currentUser?.getIdToken(true);
         if (!idToken) throw new Error("No se pudo obtener el token de autenticación.");
 
-        const response = await fetch(\`/api/courses/\${courseId}/enroll\`, {
+        const response = await fetch(`/api/courses/${courseId}/enroll`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': \`Bearer \${idToken}\`,
+                'Authorization': `Bearer ${idToken}`,
             },
         });
 
@@ -149,7 +149,7 @@ export default function CourseDetailPage() {
             throw new Error(errorData.details || errorData.error || 'Error al inscribirse en el curso.');
         }
         
-        toast({ title: "¡Inscripción Exitosa!", description: \`Te has inscrito correctamente en "\${courseData.course.nombre}".\` });
+        toast({ title: "¡Inscripción Exitosa!", description: `Te has inscrito correctamente en "${courseData.course.nombre}".` });
         await refreshUserProfile();
     } catch (err: any) {
         toast({ title: "Error de Inscripción", description: err.message, variant: "destructive" });
@@ -162,7 +162,7 @@ export default function CourseDetailPage() {
   const handlePaidCheckout = async () => {
     if (!currentUser || !courseId || !courseData) {
         toast({ title: "Error", description: "Usuario no autenticado o datos del curso no disponibles.", variant: "destructive" });
-        if (!currentUser) router.push(\`/login?redirect=/courses/\${courseId}\`);
+        if (!currentUser) router.push(`/login?redirect=/courses/${courseId}`);
         return;
     }
     if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
@@ -174,11 +174,11 @@ export default function CourseDetailPage() {
         const idToken = await auth.currentUser?.getIdToken(true);
         if (!idToken) throw new Error("No se pudo obtener el token de autenticación.");
 
-        const response = await fetch(\`/api/checkout/create-session\`, {
+        const response = await fetch(`/api/checkout/create-session`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': \`Bearer \${idToken}\`,
+                'Authorization': `Bearer ${idToken}`,
             },
             body: JSON.stringify({ courseId }),
         });
@@ -299,8 +299,8 @@ export default function CourseDetailPage() {
 
   const creatorDisplay = {
     id: course.creadorUid,
-    nombre: \`Creator \${course.creadorUid.substring(0, 6)}\`,
-    avatarUrl: \`https://placehold.co/80x80.png?text=\${course.creadorUid.substring(0,2).toUpperCase()}\`,
+    nombre: `Creator ${course.creadorUid.substring(0, 6)}`,
+    avatarUrl: `https://placehold.co/80x80.png?text=${course.creadorUid.substring(0,2).toUpperCase()}`,
     dataAiHint: "instructor avatar",
     bio: 'Instructor apasionado con experiencia en la industria.',
   };
@@ -312,7 +312,7 @@ export default function CourseDetailPage() {
     if (!currentUser) {
         return (
             <Button size="lg" className={commonButtonClasses} asChild>
-                <Link href={\`/login?redirect=/courses/\${courseId}\`}>
+                <Link href={`/login?redirect=/courses/${courseId}`}>
                     <LogIn className="mr-2 h-5 w-5" /> Iniciar Sesión para Acceder
                 </Link>
             </Button>
@@ -321,7 +321,7 @@ export default function CourseDetailPage() {
     if (isUserEnrolled) {
         return (
             <Button size="lg" className={commonButtonClasses} asChild>
-               <Link href={\`/learn/\${course.id}/\${firstLessonId}\`}>Ir al Curso</Link>
+               <Link href={`/learn/${course.id}/${firstLessonId}`}>Ir al Curso</Link>
             </Button>
         );
     }
@@ -336,7 +336,7 @@ export default function CourseDetailPage() {
     return (
         <Button size="lg" className={commonButtonClasses} onClick={handlePaidCheckout} disabled={processing}>
              {processing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ShoppingCart className="mr-2 h-5 w-5"/>}
-             {processing ? 'Procesando...' : \`Comprar por \${course.precio.toFixed(2)} €\`}
+             {processing ? 'Procesando...' : `Comprar por ${course.precio.toFixed(2)} €`}
         </Button>
     );
   };
@@ -374,7 +374,7 @@ export default function CourseDetailPage() {
                 </Avatar>
                 <div>
                   <p className="text-sm">Creado por</p>
-                  <Link href={\`/creators/\${creatorDisplay.id}\`} className="font-semibold hover:underline text-lg">{creatorDisplay.nombre}</Link>
+                  <Link href={`/creators/${creatorDisplay.id}`} className="font-semibold hover:underline text-lg">{creatorDisplay.nombre}</Link>
                 </div>
               </div>
 
@@ -399,7 +399,7 @@ export default function CourseDetailPage() {
                 >
                   <Image
                     src={course.imagenPortadaUrl || 'https://placehold.co/1200x675.png'}
-                    alt={\`Portada del curso \${course.nombre}\`}
+                    alt={`Portada del curso ${course.nombre}`}
                     layout="fill"
                     objectFit="cover"
                     className="transition-transform duration-500 ease-in-out"
@@ -409,7 +409,7 @@ export default function CourseDetailPage() {
                 </motion.div>
                 <CardContent className="p-6 space-y-4">
                   <p className="text-4xl font-bold text-primary">
-                      {isCourseFree ? 'Gratis' : \`\${course.precio.toFixed(2)} €\`}
+                      {isCourseFree ? 'Gratis' : `${course.precio.toFixed(2)} €`}
                   </p>
                   {renderActionButton()}
                   <p className="text-xs text-muted-foreground text-center">Garantía de 30 días. Acceso de por vida.</p>
@@ -438,9 +438,9 @@ export default function CourseDetailPage() {
                 <CardDescription className="text-base">{modules.length} módulos &bull; {totalLessons} lecciones &bull; {course.duracionEstimada} en total</CardDescription>
               </CardHeader>
               <CardContent>
-                <Accordion type="single" collapsible className="w-full" defaultValue={modules[0]?.id ? \`module-\${modules[0].id}\` : undefined}>
+                <Accordion type="single" collapsible className="w-full" defaultValue={modules[0]?.id ? `module-${modules[0].id}` : undefined}>
                   {modules.map((moduleItem, index) => (
-                    <AccordionItem value={\`module-\${moduleItem.id}\`} key={moduleItem.id} className="border-b last:border-b-0">
+                    <AccordionItem value={`module-${moduleItem.id}`} key={moduleItem.id} className="border-b last:border-b-0">
                       <AccordionTrigger className="text-lg hover:no-underline py-4 px-1 group">
                         <div className="flex justify-between w-full items-center">
                            <span className="font-semibold text-foreground/90 group-hover:text-primary transition-colors">{moduleItem.orden}. {moduleItem.nombre}</span>
@@ -494,7 +494,7 @@ export default function CourseDetailPage() {
                           <span className="font-semibold text-md">{comment.usuario.nombre}</span>
                           <div className="flex">
                             {[...Array(5)].map((_, i) => (
-                              <Star key={i} className={\`h-4 w-4 \${i < comment.rating ? 'text-accent fill-accent' : 'text-muted-foreground/30'}\`} />
+                              <Star key={i} className={`h-4 w-4 ${i < comment.rating ? 'text-accent fill-accent' : 'text-muted-foreground/30'}`} />
                             ))}
                           </div>
                         </div>
@@ -523,7 +523,7 @@ export default function CourseDetailPage() {
                 <h3 className="text-xl font-semibold text-primary mb-1">{creatorDisplay.nombre}</h3>
                 <p className="text-sm text-muted-foreground mt-2 mb-4 px-2">{creatorDisplay.bio}</p>
                 <Button variant="outline" asChild className="w-full shadow-sm">
-                  <Link href={\`/creators/\${creatorDisplay.id}\`}>Ver Perfil del Creator</Link>
+                  <Link href={`/creators/${creatorDisplay.id}`}>Ver Perfil del Creator</Link>
                 </Button>
               </CardContent>
             </Card>

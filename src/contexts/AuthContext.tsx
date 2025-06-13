@@ -72,9 +72,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           referidosExitosos: data.referidosExitosos,
           balanceCredito: data.balanceCredito,
         };
-        // console.log(`[AuthContext] Fetched user profile for ${user.uid}:`, { role: fetchedRole, cursosInscritos: userProfileData.cursosInscritos });
       } else {
          console.warn(`[AuthContext] User document for ${user.uid} not found in Firestore. Defaulting role to student and empty enrollments.`);
+         userProfileData.cursosInscritos = []; // Ensure it's an array even if doc doesn't exist
       }
       
       const combinedUser: UserProfile = {
@@ -120,19 +120,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error("[AuthContext] Error signing out: ", error);
     }
-    // No necesitas setCurrentUser(null) aquí; onAuthStateChanged lo manejará.
-    // setLoading(false) también se maneja por onAuthStateChanged.
   };
 
   const refreshUserProfile = useCallback(async () => {
     if (auth.currentUser) {
       console.log(`[AuthContext] refreshUserProfile START for UID: ${auth.currentUser.uid}. Current cursosInscritos in context (before fetch):`, JSON.stringify(currentUser?.cursosInscritos));
       await fetchAndSetUserProfile(auth.currentUser);
-      console.log(`[AuthContext] refreshUserProfile END for UID: ${auth.currentUser.uid}. Current cursosInscritos in context (after fetch):`, JSON.stringify(currentUser?.cursosInscritos));
+      // Log an updated currentUser AFTER fetchAndSetUserProfile has completed and potentially re-rendered.
+      // This specific log might show the state before the next render cycle fully updates `currentUser` here due to closure.
+      // The more reliable "after" log is inside fetchAndSetUserProfile or in a useEffect dependent on currentUser.
+      console.log(`[AuthContext] refreshUserProfile END for UID: ${auth.currentUser.uid}. (Note: context might show next render's data for 'cursosInscritos' here)`);
     } else {
         console.log("[AuthContext] No current user to refresh.");
     }
-  }, [fetchAndSetUserProfile, currentUser]); 
+  }, [fetchAndSetUserProfile]); // Removido currentUser de las dependencias para romper el bucle
   
   const value = {
     currentUser,

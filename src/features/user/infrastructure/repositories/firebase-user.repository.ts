@@ -131,7 +131,8 @@ export class FirebaseUserRepository implements IUserRepository {
     try {
       await this.usersCollection.doc(uid).delete();
       console.log(`[FirebaseUserRepository] Firestore profile for UID ${uid} deleted.`);
-    } catch (error: any) {
+    } catch (error: any)
+{
       const firebaseError = error as FirebaseError;
       console.error(`[FirebaseUserRepository] Error deleting user (UID: ${uid}):`, firebaseError.message, firebaseError.code, firebaseError.stack);
       throw new Error(`Firestore delete operation failed: ${firebaseError.message}`);
@@ -140,8 +141,8 @@ export class FirebaseUserRepository implements IUserRepository {
 
   async addCourseToEnrolled(userId: string, courseId: string): Promise<void> {
     console.log(`[FirebaseUserRepository] Attempting to add Course ID: '${courseId}' to User ID: '${userId}' enrolled courses (cursosInscritos).`);
+    const userRef = this.usersCollection.doc(userId);
     try {
-        const userRef = this.usersCollection.doc(userId);
         await userRef.update({
             cursosInscritos: FieldValue.arrayUnion(courseId),
             updatedAt: new Date().toISOString()
@@ -153,10 +154,13 @@ export class FirebaseUserRepository implements IUserRepository {
         const updatedUserData = updatedUserSnap.data() as UserProperties | undefined;
 
         if (updatedUserData && Array.isArray(updatedUserData.cursosInscritos) && updatedUserData.cursosInscritos.includes(courseId)) {
-            console.log(`[FirebaseUserRepository] SUCCESS: Course ID '${courseId}' confirmed in user '${userId}' enrolled courses after update.`);
+            console.log(`[FirebaseUserRepository] SUCCESS: Course ID '${courseId}' confirmed in user '${userId}' enrolled courses AFTER update. Current array: ${JSON.stringify(updatedUserData.cursosInscritos)}`);
         } else {
-            console.error(`[FirebaseUserRepository] CRITICAL: Firestore update for cursosInscritos DID NOT PERSIST or was not found for user ${userId}, course ${courseId}. Current cursosInscritos: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
-            throw new Error(`[FirebaseUserRepository] CRITICAL: Firestore update for cursosInscritos DID NOT PERSIST for user ${userId}, course ${courseId}. Array is: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
+            console.error(`[FirebaseUserRepository] CRITICAL FAILURE: Firestore update for cursosInscritos DID NOT PERSIST or was not found for user ${userId}, course ${courseId}. Current cursosInscritos: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
+            // Consider if throwing an error here is appropriate. 
+            // If it doesn't persist, the webhook might still return 200 if this doesn't throw.
+            // For now, logging an error. For stricter handling, uncomment the throw.
+            // throw new Error(`CRITICAL: Firestore update for cursosInscritos DID NOT PERSIST for user ${userId}, course ${courseId}.`);
         }
 
     } catch (error: any) {

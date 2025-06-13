@@ -104,7 +104,7 @@ export default function CourseDetailPage() {
       console.log(`[CourseDetailPage] fetchCourseData finally block for ${courseId}. Setting isLoading to false.`);
       setIsLoading(false);
     }
-  }, [courseId, params.id, toast]);
+  }, [courseId, params.id]); // Eliminado toast de las dependencias de useCallback
 
 
   // useEffect to fetch course data when courseId changes
@@ -168,11 +168,23 @@ export default function CourseDetailPage() {
   };
 
   const handlePaidCheckout = async () => {
-    if (!currentUser || !courseId || !courseData) {
+    if (!currentUser || !courseId || !courseData?.course) {
         toast({ title: "Error", description: "Usuario no autenticado o datos del curso no disponibles.", variant: "destructive" });
         if (!currentUser) router.push(`/login?redirect=/courses/${courseId}`);
         return;
     }
+
+    // --- AÑADIR ESTA VALIDACIÓN ---
+    if (currentUser?.cursosInscritos?.includes(courseData.course.id)) {
+      toast({ 
+        title: "Ya Inscrito", 
+        description: "Ya estás inscrito en este curso.",
+        variant: "default"
+      });
+      return;
+    }
+    // --- FIN DE LA VALIDACIÓN ---
+
     if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
       toast({ title: "Error de Configuración", description: "La pasarela de pago no está configurada correctamente (Clave Pública).", variant: "destructive" });
       return;
@@ -408,11 +420,11 @@ export default function CourseDetailPage() {
                   <Image
                     src={course.imagenPortadaUrl || 'https://placehold.co/1200x675.png'}
                     alt={`Portada del curso ${course.nombre}`}
-                    layout="fill"
-                    objectFit="cover"
-                    className="transition-transform duration-500 ease-in-out"
+                    fill={true}
+                    className="object-cover transition-transform duration-500 ease-in-out"
                     data-ai-hint={course.dataAiHintImagenPortada || 'course detail cover'}
                     priority
+                    sizes="(max-width: 1023px) 100vw, 33vw"
                   />
                 </motion.div>
                 <CardContent className="p-6 space-y-4">

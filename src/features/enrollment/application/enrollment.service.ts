@@ -34,8 +34,7 @@ export class EnrollmentService {
       }
 
       if (user.cursosInscritos.includes(courseId)) {
-        console.warn(`[EnrollmentService] User ${userId} is ALREADY enrolled in course ${courseId}. No action taken.`);
-        // Consider if this should be an error or just a soft return. For now, soft return.
+        console.log(`[EnrollmentService] IDEMPOTENCY HANDLED: User ${userId} is already enrolled in course ${courseId}. This is an expected scenario (e.g., webhook retry or repeat purchase). The event is acknowledged as successfully processed, and no database update is necessary.`);
         return; 
       }
 

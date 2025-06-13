@@ -20,7 +20,7 @@ import type { LessonProperties } from '@/features/course/domain/entities/lesson.
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'; // Added SheetHeader, SheetTitle, SheetDescription
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { auth } from '@/lib/firebase/config';
 
 interface ModuleWithLessons extends ModuleProperties {
@@ -63,9 +63,6 @@ export default function LessonPage() {
     if (!courseIdToFetch) return;
     console.log(`[LessonPage] Fetching course structure for ${courseIdToFetch}`);
     
-    // No resetear courseStructure aquí si es el mismo courseId, solo si isInitialCourseLoad es true
-    // Esto se maneja en el useEffect que llama a esta función.
-
     try {
       const response = await fetch(`/api/learn/course-structure/${courseIdToFetch}`);
       if (!response.ok) {
@@ -82,7 +79,7 @@ export default function LessonPage() {
       setCourseLoadError(err.message);
       setCourseStructure(null); 
     }
-  }, []); // Dependencias mínimas, las lógicas de control están en los useEffect
+  }, []);
 
   const fetchUserProgress = useCallback(async (courseIdToFetch: string) => {
     if (!currentUser || !courseIdToFetch) return;
@@ -105,7 +102,6 @@ export default function LessonPage() {
     }
   }, [currentUser, toast]);
 
-  // Effect for initial course load or when courseId changes
   useEffect(() => {
     if (params.courseId) {
       console.log(`[LessonPage] Course ID changed or initial load: ${params.courseId}. Setting isInitialCourseLoad to true.`);
@@ -122,22 +118,19 @@ export default function LessonPage() {
     }
   }, [params.courseId, currentUser, fetchCourseStructureData, fetchUserProgress]);
 
-  // Effect to mark the end of the initial course load
   useEffect(() => {
     if (courseStructure !== null || courseLoadError !== null) {
-      if(isInitialCourseLoad){ // Solo cambiar si realmente era una carga inicial
+      if(isInitialCourseLoad){
         console.log("[LessonPage] Course structure or error received. Setting isInitialCourseLoad to false.");
         setIsInitialCourseLoad(false);
       }
     }
   }, [courseStructure, courseLoadError, isInitialCourseLoad]);
 
-  // Effect to update current lesson when lessonId changes or course structure loads (after initial load)
   useEffect(() => {
     if (isInitialCourseLoad || !courseStructure || !params.lessonId) {
       console.log(`[LessonPage] Update current lesson effect: SKIPPING. isInitialCourseLoad: ${isInitialCourseLoad}, courseStructure: ${!!courseStructure}, params.lessonId: ${params.lessonId}`);
       if (!isInitialCourseLoad && courseStructure && !params.lessonId && currentLesson !== null) {
-          // Si el curso está cargado pero no hay lessonId (ej. URL base del curso), limpiamos la lección
           setCurrentLesson(null); 
       }
       return;
@@ -175,7 +168,6 @@ export default function LessonPage() {
       setNextLesson(null);
     }
     
-    // No timeout needed, React handles state updates efficiently
     setIsLoadingLessonContent(false);
     console.log("[LessonPage] isLoadingLessonContent set to false after lesson update.");
 
@@ -249,13 +241,13 @@ export default function LessonPage() {
     switch (tipo) {
       case 'video':
         if (!url) return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground flex items-center justify-center h-full">URL del video no disponible.</div>;
-        return <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-xl"><video key={currentLesson.id + url} controls src={url} className="w-full h-full"><track kind="captions" /></video></div>;
+        return <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-xl"><video key={currentLesson.id + (url || '')} controls src={url} className="w-full h-full"><track kind="captions" /></video></div>;
       case 'documento_pdf':
         if (!url) return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground flex items-center justify-center h-full">URL del PDF no disponible.</div>;
-        return <div className="h-[60vh] md:h-[calc(100vh-280px)] bg-muted rounded-lg shadow-inner"><iframe key={currentLesson.id + url} src={url} width="100%" height="100%" className="border-0 rounded-lg" title={currentLesson.nombre}/></div>;
+        return <div className="h-[60vh] md:h-[calc(100vh-280px)] bg-muted rounded-lg shadow-inner"><iframe key={currentLesson.id + (url || '')} src={url} width="100%" height="100%" className="border-0 rounded-lg" title={currentLesson.nombre}/></div>;
       case 'texto_rico':
         if (!texto) return <div className="p-6 bg-card rounded-lg shadow-md text-muted-foreground flex items-center justify-center h-full">Contenido de texto no disponible.</div>;
-        return <Card className="h-full overflow-y-auto shadow-sm"><CardContent className="p-6 prose max-w-none" dangerouslySetInnerHTML={{ __html: texto }} /></Card>;
+        return <Card className="h-full overflow-y-auto shadow-sm"><CardContent className="p-6"><div key={currentLesson.id + (texto || '')} className="prose max-w-none" dangerouslySetInnerHTML={{ __html: texto }} /></CardContent></Card>;
       default:
         return <div className="p-6 bg-card rounded-lg shadow-md flex items-center justify-center h-full">Contenido no disponible para tipo: {tipo}.</div>;
     }

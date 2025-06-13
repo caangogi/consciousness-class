@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Edit3, Eye, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { PlusCircle, Edit3, Eye, Loader2, AlertTriangle, RefreshCw, BookOpen } from 'lucide-react'; // Added BookOpen
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import { Skeleton } from '@/components/ui/skeleton';
 import { auth } from '@/lib/firebase/config';
+import { cn } from '@/lib/utils'; // Added import for cn
 
 interface CreatorCourse extends CourseProperties {
   // Potential future aggregated fields
@@ -230,4 +231,3 @@ export default function CreatorCoursesPage() {
     </div>
   );
 }
-

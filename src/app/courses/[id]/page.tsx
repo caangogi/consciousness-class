@@ -37,8 +37,9 @@ const placeholderReviews = [
 
 export default function CourseDetailPage() {
   const params = useParams<{ id: string }>();
-  const courseId = params.id;
+  const courseId = params.id; // courseId se actualiza si params.id cambia
   console.log("[CourseDetailPage] Render. params.id:", params.id, "courseId var:", courseId);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser, loading: authLoading, refreshUserProfile } = useAuth();
@@ -52,7 +53,6 @@ export default function CourseDetailPage() {
 
   const isUserEnrolled = currentUser?.cursosInscritos?.includes(courseId) ?? false;
 
-
   useEffect(() => {
     if (searchParams.get('canceled') === 'true') {
       toast({
@@ -61,22 +61,24 @@ export default function CourseDetailPage() {
         variant: 'default',
         duration: 5000,
       });
+      // Remove the 'canceled' query param from URL without reloading the page
       router.replace(`/courses/${courseId}`, { scroll: false });
     }
   }, [searchParams, courseId, router, toast]);
 
   const fetchCourseData = useCallback(async () => {
+    // Usa courseId directamente aquí ya que está en el scope del useCallback y sus dependencias.
     if (!courseId) {
-      console.warn("[CourseDetailPage] fetchCourseData: courseId is missing or undefined. Current params.id:", params.id);
+      console.warn("[CourseDetailPage] fetchCourseData: courseId is missing. Current params.id:", params.id);
       setError("ID del curso no disponible en la URL.");
       setIsLoading(false);
-      setCourseData(null); 
+      setCourseData(null);
       return;
     }
     console.log(`[CourseDetailPage] fetchCourseData called for courseId: ${courseId}`);
     setIsLoading(true);
     setError(null);
-    setCourseData(null); 
+    setCourseData(null);
 
     try {
       const response = await fetch(`/api/learn/course-structure/${courseId}`);
@@ -95,34 +97,35 @@ export default function CourseDetailPage() {
       const data: CourseStructureData = await response.json();
       console.log(`[CourseDetailPage] API success response data for ${courseId}:`, data);
       setCourseData(data);
-      setError(null); 
+      setError(null);
     } catch (err: any) {
       console.error(`[CourseDetailPage] Error in fetchCourseData for ${courseId}:`, err);
       setError(err.message);
-      setCourseData(null); 
+      setCourseData(null);
     } finally {
       console.log(`[CourseDetailPage] fetchCourseData finally block for ${courseId}. Setting isLoading to false.`);
       setIsLoading(false);
     }
-  }, [courseId, params.id, toast]);
+  }, [courseId, params.id, toast]); // courseId y params.id como dependencias. toast es estable.
 
 
   useEffect(() => {
     console.log("[CourseDetailPage] Main useEffect triggered. Current courseId:", courseId);
-    if (courseId) { 
+    if (courseId) {
         console.log("[CourseDetailPage] Main useEffect: courseId is present, calling fetchCourseData.");
         fetchCourseData();
     } else {
         console.warn("[CourseDetailPage] Main useEffect: courseId is NOT present. Not calling fetchCourseData.");
         setError("El ID del curso no está presente en la URL.");
-        setIsLoading(false);
-        setCourseData(null);
+        setIsLoading(false); // Asegurarse de que isLoading se actualice
+        setCourseData(null); // Limpiar datos del curso si no hay ID
     }
-    if (currentUser) { 
+
+    if (currentUser) {
         console.log("[CourseDetailPage] Main useEffect: currentUser is present, calling refreshUserProfile.");
         refreshUserProfile().catch(err => console.error("Failed to refresh user profile on course detail page:", err));
     }
-  }, [courseId, fetchCourseData, currentUser, refreshUserProfile]);
+  }, [courseId, fetchCourseData, currentUser, refreshUserProfile]); // refreshUserProfile (estable), fetchCourseData (memoizado)
 
   const handleFreeEnrollment = async () => {
     if (!currentUser || !courseId || !courseData) {
@@ -149,7 +152,7 @@ export default function CourseDetailPage() {
         }
         
         toast({ title: "¡Inscripción Exitosa!", description: `Te has inscrito correctamente en "${courseData.course.nombre}".` });
-        await refreshUserProfile(); 
+        await refreshUserProfile();
     } catch (err: any) {
         toast({ title: "Error de Inscripción", description: err.message, variant: "destructive" });
         console.error("Error enrolling in free course:", err);
@@ -188,7 +191,7 @@ export default function CourseDetailPage() {
         }
         const { sessionId, sessionUrl } = await response.json();
         
-        if (!sessionUrl) { 
+        if (!sessionUrl) {
             throw new Error('No se pudo obtener la URL de la sesión de pago.');
         }
 
@@ -288,20 +291,21 @@ export default function CourseDetailPage() {
 
   if (!courseData) {
     console.log("[CourseDetailPage] Rendering 'No se encontraron datos...' message.");
+    // Esto podría ocurrir si fetchCourseData se completa, pero no encuentra datos (o hubo un error seteando error).
     return <div className="container py-12 text-center">No se encontraron datos para este curso o el ID no es válido.</div>;
   }
 
   const { course, modules } = courseData;
   const totalLessons = modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
-  const firstLessonId = modules[0]?.lessons[0]?.id || 'start'; 
+  const firstLessonId = modules[0]?.lessons[0]?.id || 'start';
   const isCourseFree = course.precio <= 0;
 
   const creatorDisplay = {
     id: course.creadorUid,
-    nombre: `Creator ${course.creadorUid.substring(0, 6)}`, 
+    nombre: `Creator ${course.creadorUid.substring(0, 6)}`,
     avatarUrl: `https://placehold.co/80x80.png?text=${course.creadorUid.substring(0,2).toUpperCase()}`,
     dataAiHint: "instructor avatar",
-    bio: 'Instructor apasionado con experiencia en la industria.', 
+    bio: 'Instructor apasionado con experiencia en la industria.',
   };
 
   const renderActionButton = () => {
@@ -347,13 +351,13 @@ export default function CourseDetailPage() {
 
 
   return (
-    <motion.div 
+    <motion.div
       className="bg-secondary/30 min-h-screen"
       initial="hidden"
       animate="visible"
       variants={{ visible: { transition: { staggerChildren: 0.1 }}}}
     >
-      <motion.div 
+      <motion.div
         className="bg-gradient-to-br from-primary via-primary/90 to-blue-600 text-primary-foreground py-16 md:py-24 shadow-inner"
         variants={itemVariants}
       >
@@ -391,7 +395,7 @@ export default function CourseDetailPage() {
 
             <motion.div className="lg:col-span-1 sticky top-24" variants={itemVariants}>
               <Card className="shadow-xl rounded-xl overflow-hidden bg-background text-foreground">
-                <motion.div 
+                <motion.div
                   className="relative aspect-video w-full overflow-hidden"
                   whileHover={{ scale: 1.03 }}
                   transition={{ type: "spring", stiffness: 300 }}
@@ -527,14 +531,14 @@ export default function CourseDetailPage() {
               </CardContent>
             </Card>
 
-            {course.requisitos && course.requisitos.length > 0 && ( 
+            {course.requisitos && course.requisitos.length > 0 && (
               <Card className="shadow-lg rounded-xl">
                 <CardHeader>
                   <CardTitle className="text-xl font-headline">Materiales Adicionales</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2.5">
-                    {course.requisitos.map((material, index) => ( 
+                    {course.requisitos.map((material, index) => (
                       <li key={index}>
                         <Button variant="link" asChild className="p-0 h-auto text-primary hover:underline flex items-center text-sm">
                           <Link href="#" download>
@@ -554,4 +558,5 @@ export default function CourseDetailPage() {
     </motion.div>
   );
 }
+
     

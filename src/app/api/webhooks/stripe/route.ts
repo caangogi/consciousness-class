@@ -1,158 +1,136 @@
 
-// src/app/api/webhooks/stripe/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import Stripe from 'stripe';
-import { adminDb } from '@/lib/firebase/admin'; // Necesario para instanciar repositorios
+import { adminDb } from '@/lib/firebase/admin';
 import { FirebaseUserRepository } from '@/features/user/infrastructure/repositories/firebase-user.repository';
 import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
 import { EnrollmentService } from '@/features/enrollment/application/enrollment.service';
 
+// Collection for storing webhook logs
+const LOGS_COLLECTION = 'webhookLogs';
+
+// Helper to write log steps into Firestore (root collection for visibility)
+async function writeWebhookLog(eventId: string, step: string, details: any) {
+  const timestamp = new Date().toISOString();
+  try {
+    // Ensure adminDb is initialized before trying to use it
+    if (!adminDb) {
+      console.error('[Stripe Webhook Log] CRITICAL: adminDb is not initialized. Cannot write webhook log.');
+      return; // Exit if adminDb is not available
+    }
+    await adminDb
+      .collection(LOGS_COLLECTION)
+      .add({ eventId, timestamp, step, details });
+    console.log(`[Stripe Webhook Log] Logged: ${step} for event ${eventId}`);
+  } catch (err) {
+    console.error('[Stripe Webhook Log] writeWebhookLog failed:', err);
+  }
+}
+
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2024-06-20', // Ensure this is up-to-date
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Required for Stripe webhook verification
   },
 };
 
 export async function POST(request: NextRequest) {
+  console.log('[Stripe Webhook] Received a request.');
   if (!webhookSecret) {
-    console.error('[Stripe Webhook] CRITICAL: Stripe webhook secret no está configurado.');
-    return NextResponse.json({ error: 'Server configuration error: Stripe webhook secret missing.' }, { status: 500 });
+    console.error('[Stripe Webhook] Server error: Stripe webhook secret missing.');
+    return NextResponse.json({ error: 'Server error: Stripe webhook secret missing.' }, { status: 500 });
   }
   if (!adminDb) {
-    console.error('[Stripe Webhook] CRITICAL: Firebase Admin SDK (adminDb) not initialized. Webhook cannot process.');
-    return NextResponse.json({ error: 'Server configuration error: Firebase Admin not available.' }, { status: 503 });
+    console.error('[Stripe Webhook] Server error: Firebase Admin (adminDb) not initialized.');
+    return NextResponse.json({ error: 'Server error: Firebase Admin not initialized.' }, { status: 503 });
   }
 
   const sig = request.headers.get('stripe-signature');
-  let reqBuffer;
+  let rawBody: string;
   try {
-    reqBuffer = await request.text();
-  } catch (bufferError) {
-    console.error('[Stripe Webhook] Error reading request body:', bufferError);
-    return NextResponse.json({ error: 'Webhook Error: Could not read request body' }, { status: 400 });
+    rawBody = await request.text();
+  } catch (err) {
+    console.error('[Stripe Webhook] Error reading request body:', err);
+    return NextResponse.json({ error: 'Webhook Error: could not read body' }, { status: 400 });
   }
 
   let event: Stripe.Event;
-
   try {
     if (!sig) {
-      console.warn('[Stripe Webhook] Sin firma (stripe-signature) recibida.');
-      return NextResponse.json({ error: 'Webhook Error: Missing stripe-signature header' }, { status: 400 });
+      console.error('[Stripe Webhook] Webhook Error: Missing signature header');
+      return NextResponse.json({ error: 'Webhook Error: Missing signature header' }, { status: 400 });
     }
-    event = stripe.webhooks.constructEvent(reqBuffer, sig, webhookSecret);
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    console.log(`[Stripe Webhook] Event constructed successfully. Type: ${event.type}, ID: ${event.id}`);
   } catch (err: any) {
-    console.error(`[Stripe Webhook] Error al verificar la firma: ${err.message}`);
-    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
+    console.error(`[Stripe Webhook] Webhook signature verification failed: ${err.message}`);
+    return NextResponse.json({ error: `Webhook signature verification failed: ${err.message}` }, { status: 400 });
   }
+  
+  const eventId = event.id; // For logging
+  await writeWebhookLog(eventId, 'received_event', { type: event.type, id: event.id });
 
-  console.log(`[Stripe Webhook] Evento recibido: ${event.type}`);
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        console.log(`[Stripe Webhook] Processing 'checkout.session.completed'. Session ID: ${session.id}, Payment Status: ${session.payment_status}`);
+        await writeWebhookLog(eventId, 'checkout.session.completed_received', { sessionId: session.id, payment_status: session.payment_status, metadata: session.metadata });
 
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const session = event.data.object as Stripe.Checkout.Session;
-      console.log(`[Stripe Webhook] Handling 'checkout.session.completed'. Session ID: ${session.id}, Payment Status: ${session.payment_status}`);
+        if (session.payment_status === 'paid') {
+          console.log('[Stripe Webhook] Payment status is "paid". Extracting metadata...');
+          
+          const userId = session.metadata?.userId ?? session.metadata?.userid;
+          const courseId = session.metadata?.courseId ?? session.metadata?.courseid;
+          
+          console.log('[Stripe Webhook] Metadata received:', session.metadata);
+          console.log(`[Stripe Webhook] Extracted - User ID: ${userId}, Course ID: ${courseId}`);
+          await writeWebhookLog(eventId, 'extracted_metadata', { userId, courseId, rawMetadata: session.metadata });
 
-      if (session.payment_status === 'paid') {
-        const userId = session.metadata?.userId ?? session.metadata?.userid;
-        const courseId = session.metadata?.courseId ?? session.metadata?.courseid;
-        console.log('[Stripe Webhook] Metadata recibida:', session.metadata);
 
-        console.log(`[Stripe Webhook] Payment successful. Extracted metadata: userId='${userId}', courseId='${courseId}'`);
+          if (!userId || !courseId) {
+            console.error(`[Stripe Webhook] CRITICAL: Missing metadata. User ID: ${userId}, Course ID: ${courseId}. Cannot proceed with enrollment for session ${session.id}.`);
+            await writeWebhookLog(eventId, 'missing_metadata_error', { userId, courseId, rawMetadata: session.metadata });
+            // Still return 200 to Stripe to acknowledge receipt, but log error critically.
+            // Alternatively, return 400 if Stripe should retry for metadata issues, but this is unlikely if session was created correctly.
+            return NextResponse.json({ error: 'Webhook Error: Missing essential metadata (userId or courseId).' }, { status: 400 }); // Consider if 200 is better if it's a permanent issue
+          }
 
-        if (!userId || !courseId) {
-          console.error('[Stripe Webhook] ERROR: Faltan metadatos críticos (userId o courseId) en la sesión de Stripe:', session.id, 'Metadata:', session.metadata);
-          return NextResponse.json({ error: 'Webhook Error: Missing critical metadata (userId or courseId) from Stripe session.' }, { status: 400 });
-        }
-        
-        try {
-          console.log(`[Stripe Webhook] Attempting to enroll User: ${userId} in Course: ${courseId}`);
+          console.log(`[Stripe Webhook] Metadata OK. Calling EnrollmentService for User: ${userId}, Course: ${courseId}`);
           const userRepository = new FirebaseUserRepository();
           const courseRepository = new FirebaseCourseRepository();
           const enrollmentService = new EnrollmentService(userRepository, courseRepository);
-
+          
           await enrollmentService.enrollStudentToCourse(userId, courseId);
-          console.log(`[Stripe Webhook] SUCCESS: EnrollmentService completed for User: ${userId}, Course: ${courseId}.`);
-        } catch (enrollmentError: any) {
-          console.error(`[Stripe Webhook] ERROR during enrollment for User: ${userId}, Course: ${courseId}. Details:`, enrollmentError.message, enrollmentError.stack);
-          const errorId = `enrollErr_${new Date().getTime()}`;
-          console.error(`[Stripe Webhook] Error ID: ${errorId}. Full error object:`, enrollmentError);
-          return NextResponse.json({ 
-            error: 'Enrollment processing failed.', 
-            details: enrollmentError.message,
-            errorCode: enrollmentError.code, 
-            errorId: errorId,
-            stack: process.env.NODE_ENV === 'development' ? enrollmentError.stack : undefined
-          }, { status: 500 });
+          console.log(`[Stripe Webhook] EnrollmentService.enrollStudentToCourse completed for User: ${userId}, Course: ${courseId}.`);
+          await writeWebhookLog(eventId, 'enrollment_service_success', { userId, courseId });
+
+        } else {
+          console.log(`[Stripe Webhook] Payment status is '${session.payment_status}', not 'paid'. No enrollment action taken for session ${session.id}.`);
+          await writeWebhookLog(eventId, 'payment_not_paid', { sessionId: session.id, payment_status: session.payment_status });
         }
-      } else {
-        console.log(`[Stripe Webhook] Checkout session ${session.id} completed but payment_status is '${session.payment_status}'. No enrollment action taken.`);
+        break;
       }
-      break;
+      // Add other event types as needed
+      default:
+        console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
+        await writeWebhookLog(eventId, 'unhandled_event_type', { type: event.type });
+    }
 
-    case 'checkout.session.async_payment_succeeded':
-      const asyncSuccessSession = event.data.object as Stripe.Checkout.Session;
-      console.log(`[Stripe Webhook] Checkout session async_payment_succeeded: ${asyncSuccessSession.id}`);
-      // Similar logic for enrollment if this event is primary for some payment methods
-      // Ensure to handle idempotency if 'checkout.session.completed' might also fire
-      break;
+    console.log(`[Stripe Webhook] Event ${event.id} (Type: ${event.type}) processed successfully. Responding 200 OK.`);
+    await writeWebhookLog(eventId, 'processing_complete_200_ok', { type: event.type });
+    return NextResponse.json({ received: true }, { status: 200 });
 
-    case 'checkout.session.async_payment_failed':
-      const asyncFailedSession = event.data.object as Stripe.Checkout.Session;
-      console.log(`[Stripe Webhook] Checkout session async_payment_failed: ${asyncFailedSession.id}. Razón: ${asyncFailedSession.last_payment_error?.message || 'No especificada'}`);
-      break;
-
-    case 'checkout.session.expired':
-      const expiredSession = event.data.object as Stripe.Checkout.Session;
-      console.log(`[Stripe Webhook] Checkout session expired: ${expiredSession.id}.`);
-      break;
-
-    case 'customer.subscription.created':
-      const subscriptionCreated = event.data.object as Stripe.Subscription;
-      console.log(`[Stripe Webhook] Customer subscription created: ${subscriptionCreated.id}, Customer: ${subscriptionCreated.customer}, Status: ${subscriptionCreated.status}`);
-      break;
-
-    case 'customer.subscription.updated':
-      const subscriptionUpdated = event.data.object as Stripe.Subscription;
-      console.log(`[Stripe Webhook] Customer subscription updated: ${subscriptionUpdated.id}, Status: ${subscriptionUpdated.status}`);
-      break;
-
-    case 'customer.subscription.deleted':
-      const subscriptionDeleted = event.data.object as Stripe.Subscription;
-      console.log(`[Stripe Webhook] Customer subscription deleted: ${subscriptionDeleted.id}, Customer: ${subscriptionDeleted.customer}`);
-      break;
-
-    case 'invoice.payment_succeeded':
-      const invoicePaymentSucceeded = event.data.object as Stripe.Invoice;
-      console.log(`[Stripe Webhook] Invoice payment_succeeded: ${invoicePaymentSucceeded.id}, Subscription: ${invoicePaymentSucceeded.subscription}, Customer: ${invoicePaymentSucceeded.customer}`);
-      if (invoicePaymentSucceeded.billing_reason === 'subscription_cycle' && invoicePaymentSucceeded.subscription) {
-        console.log(`[Stripe Webhook] Subscription renewal ${invoicePaymentSucceeded.subscription} paid successfully. Ensuring access continues.`);
-      }
-      break;
-
-    case 'invoice.paid':
-      const invoicePaid = event.data.object as Stripe.Invoice;
-      console.log(`[Stripe Webhook] Invoice paid: ${invoicePaid.id}, Subscription: ${invoicePaid.subscription}, Customer: ${invoicePaid.customer}`);
-      break;
-
-    case 'invoice.payment_failed':
-      const invoicePaymentFailed = event.data.object as Stripe.Invoice;
-      console.log(`[Stripe Webhook] Invoice payment_failed: ${invoicePaymentFailed.id}, Subscription: ${invoicePaymentFailed.subscription}, Customer: ${invoicePaymentFailed.customer}`);
-      break;
-
-    case 'invoice.upcoming':
-      const invoiceUpcoming = event.data.object as Stripe.Invoice;
-      console.log(`[Stripe Webhook] Invoice upcoming: ${invoiceUpcoming.id}, Subscription: ${invoiceUpcoming.subscription}, Customer: ${invoiceUpcoming.customer}, Due Date: ${invoiceUpcoming.due_date ? new Date(invoiceUpcoming.due_date * 1000) : 'N/A'}`);
-      break;
-
-    default:
-      console.log(`[Stripe Webhook] Evento no manejado recibido: ${event.type}`);
+  } catch (error: any) {
+    console.error(`[Stripe Webhook] CRITICAL ERROR processing event ${event.id} (Type: ${event.type}):`, error.message, error.stack);
+    await writeWebhookLog(eventId, 'critical_processing_error_500', { type: event.type, error: error.message, stack: error.stack });
+    // Respond with 500 to indicate to Stripe that the webhook failed and should be retried (if applicable for the error type)
+    return NextResponse.json({ error: 'Webhook processing failed.', details: error.message }, { status: 500 });
   }
-
-  return NextResponse.json({ received: true }, { status: 200 });
 }

@@ -62,9 +62,9 @@ export class FirebaseCourseRepository implements ICourseRepository {
     try {
       const snapshot = await this.coursesCollection
         .where('estado', '==', 'publicado')
-        .orderBy('fechaPublicacion', 'desc')
+        .orderBy('fechaPublicacion', 'desc') 
         .get();
-      console.log(`[FirebaseCourseRepository] findAllPublic query found ${snapshot.docs.length} documents.`);
+      // console.log(`[FirebaseCourseRepository] findAllPublic query found ${snapshot.docs.length} documents.`);
       if (snapshot.empty) {
         return [];
       }
@@ -77,42 +77,24 @@ export class FirebaseCourseRepository implements ICourseRepository {
   }
 
   async incrementStudentCount(courseId: string): Promise<void> {
-    console.log(`[FirebaseCourseRepository] incrementStudentCount - Attempting for Course ID: ${courseId}`);
     const courseRef = this.coursesCollection.doc(courseId);
-    try {
-      // Ensure adminDb is initialized
-      if (!adminDb) {
-        const errorMessage = 'Firebase Admin SDK (adminDb) not initialized in incrementStudentCount.';
-        console.error(`[FirebaseCourseRepository] incrementStudentCount - CRITICAL: ${errorMessage}`);
-        throw new Error(errorMessage);
-      }
-
-      console.log(`[FirebaseCourseRepository] incrementStudentCount - About to update course '${courseId}' to increment totalEstudiantes using FieldValue.increment(1).`);
-      await courseRef.update({
+    const updatePayload = {
         totalEstudiantes: FieldValue.increment(1),
         fechaActualizacion: new Date().toISOString(),
-      });
-      console.log(`[FirebaseCourseRepository] incrementStudentCount - Firestore update call with increment completed for course '${courseId}'.`);
-
-      // Optional: Re-read for verification
-      const updatedCourseSnap = await courseRef.get();
-      const updatedCourseData = updatedCourseSnap.data() as CourseProperties | undefined;
-      const currentStudentCount = updatedCourseData?.totalEstudiantes; // This would be the count *after* increment
-
-      if (updatedCourseData && typeof currentStudentCount === 'number') { // Basic check that it's a number
-        console.log(`[FirebaseCourseRepository] incrementStudentCount - SUCCESS: Student count for course ${courseId} is now ${currentStudentCount} AFTER increment update.`);
-      } else {
-        console.warn(`[FirebaseCourseRepository] incrementStudentCount - VERIFICATION NOTE: totalEstudiantes for course ${courseId} read back as: ${currentStudentCount}. If this is unexpected, further investigation needed.`);
-        // Not throwing a CRITICAL FAILURE here as FieldValue.increment is generally reliable.
-        // The main concern is if the update call itself fails, which would be caught by the catch block.
+    };
+    console.log(`[FirebaseCourseRepository - incrementStudentCount] Attempting to update course '${courseId}' with payload:`, JSON.stringify(updatePayload));
+    try {
+      if (!adminDb) {
+        const errorMessage = 'Firebase Admin SDK (adminDb) not initialized in incrementStudentCount.';
+        console.error(`[FirebaseCourseRepository - incrementStudentCount] CRITICAL: ${errorMessage}`);
+        throw new Error(errorMessage);
       }
-
+      await courseRef.update(updatePayload);
+      console.log(`[FirebaseCourseRepository - incrementStudentCount] Firestore courseRef.update() call completed for Course ID: ${courseId}.`);
     } catch (error: any) {
       const firebaseError = error as FirebaseError;
-      console.error(`[FirebaseCourseRepository] incrementStudentCount - ERROR for course ID (${courseId}):`, firebaseError.message);
-      throw new Error(`Firestore incrementStudentCount operation for course failed: ${firebaseError.message}`);
+      console.error(`[FirebaseCourseRepository - incrementStudentCount] CRITICAL ERROR updating course '${courseId}' to increment student count:`, firebaseError.message, firebaseError.stack);
+      throw new Error(`Firestore incrementStudentCount operation failed for course ${courseId}: ${firebaseError.message}`);
     }
   }
 }
-
-    

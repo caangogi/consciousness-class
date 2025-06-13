@@ -42,7 +42,7 @@ export class FirebaseUserRepository implements IUserRepository {
         return null;
       }
       const data = docSnap.data() as UserProperties;
-      console.log(`[FirebaseUserRepository] findByUid - UID: ${uid}, Raw cursosInscritos from Firestore:`, JSON.stringify(data.cursosInscritos));
+      // console.log(`[FirebaseUserRepository] findByUid - UID: ${uid}, Raw cursosInscritos from Firestore:`, JSON.stringify(data.cursosInscritos));
       if (!Array.isArray(data.cursosInscritos)) {
         data.cursosInscritos = [];
       }
@@ -137,40 +137,20 @@ export class FirebaseUserRepository implements IUserRepository {
   }
 
   async addCourseToEnrolled(userId: string, courseId: string): Promise<void> {
-    console.log(`[FirebaseUserRepository] addCourseToEnrolled - Attempting for User UID: ${userId}, Course ID: ${courseId}`);
     const userRef = this.usersCollection.doc(userId);
-
-    try {
-      // Ensure adminDb is initialized
-      if (!adminDb) {
-        const errorMessage = 'Firebase Admin SDK (adminDb) not initialized in addCourseToEnrolled.';
-        console.error(`[FirebaseUserRepository] addCourseToEnrolled - CRITICAL: ${errorMessage}`);
-        throw new Error(errorMessage);
-      }
-      
-      console.log(`[FirebaseUserRepository] addCourseToEnrolled - About to update user '${userId}' to add course '${courseId}' using FieldValue.arrayUnion.`);
-      await userRef.update({
+    const updatePayload = {
         cursosInscritos: FieldValue.arrayUnion(courseId),
         updatedAt: new Date().toISOString(),
-      });
-      console.log(`[FirebaseUserRepository] addCourseToEnrolled - Firestore update call with arrayUnion completed for user '${userId}', course '${courseId}'.`);
-
-      // Optional: Re-read for verification (can be intensive, use with caution or for debugging)
-      const updatedUserSnap = await userRef.get();
-      const updatedUserData = updatedUserSnap.data() as UserProperties | undefined;
-
-      if (updatedUserData && Array.isArray(updatedUserData.cursosInscritos) && updatedUserData.cursosInscritos.includes(courseId)) {
-        console.log(`[FirebaseUserRepository] addCourseToEnrolled - SUCCESS: Course ID '${courseId}' confirmed in user '${userId}' enrolled courses AFTER arrayUnion update. Current array: ${JSON.stringify(updatedUserData.cursosInscritos)}`);
-      } else {
-        console.error(`[FirebaseUserRepository] addCourseToEnrolled - CRITICAL FAILURE: Firestore arrayUnion for cursosInscritos for user ${userId}, course ${courseId} DID NOT PERSIST or courseId not found in re-read. Read back array: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
-        // Do NOT throw error here if arrayUnion is trusted, to avoid Stripe retries on eventual consistency.
-        // If strict consistency is required, an error can be thrown.
-      }
-
+    };
+    console.log(`[FirebaseUserRepository - addCourseToEnrolled] Attempting to update user '${userId}' with payload:`, JSON.stringify(updatePayload));
+    try {
+      await userRef.update(updatePayload);
+      console.log(`[FirebaseUserRepository - addCourseToEnrolled] Firestore userRef.update() call completed for User ID: ${userId}, Course ID: ${courseId}.`);
     } catch (error: any) {
       const firebaseError = error as FirebaseError;
-      console.error(`[FirebaseUserRepository] addCourseToEnrolled - ERROR adding course '${courseId}' to user '${userId}':`, firebaseError.message, firebaseError.stack);
-      throw new Error(`Firestore addCourseToEnrolled (arrayUnion) operation failed: ${firebaseError.message}`);
+      console.error(`[FirebaseUserRepository - addCourseToEnrolled] CRITICAL ERROR updating user '${userId}' to add course '${courseId}':`, firebaseError.message, firebaseError.stack);
+      // Propagate the error to be handled by the service/webhook
+      throw new Error(`Firestore addCourseToEnrolled (arrayUnion) operation failed for user ${userId}: ${firebaseError.message}`);
     }
   }
 
@@ -243,5 +223,3 @@ export class FirebaseUserRepository implements IUserRepository {
     }
   }
 }
-
-    

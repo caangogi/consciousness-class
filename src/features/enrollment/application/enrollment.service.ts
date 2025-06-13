@@ -32,13 +32,15 @@ export class EnrollmentService {
         console.warn(`[EnrollmentService] Course "${course.nombre}" (ID: ${courseId}) is not 'publicado' (status: ${course.estado}). Enrollment denied.`);
         throw new Error(`Course "${course.nombre}" is not currently available for enrollment.`);
       }
+      console.log(`[EnrollmentService] Course ${courseId} is published. Proceeding with enrollment checks.`);
 
       if (user.cursosInscritos.includes(courseId)) {
-        console.log(`[EnrollmentService] IDEMPOTENCY HANDLED: User ${userId} is already enrolled in course ${courseId}. This is an expected scenario (e.g., webhook retry or repeat purchase). The event is acknowledged as successfully processed, and no database update is necessary.`);
+        console.log(`[EnrollmentService] IDEMPOTENCY HANDLED: User ${userId} is ALREADY enrolled in course ${courseId}. This is an expected scenario (e.g., webhook retry or repeat purchase). The event is acknowledged as successfully processed, and no database update is necessary.`);
         return; 
       }
+      console.log(`[EnrollmentService] User ${userId} is NOT YET enrolled in course ${courseId}. Proceeding with enrollment.`);
 
-      console.log(`[EnrollmentService] Proceeding with enrollment. Calling userRepository.addCourseToEnrolled for User: ${userId}, Course: ${courseId}`);
+      console.log(`[EnrollmentService] Calling userRepository.addCourseToEnrolled for User: ${userId}, Course: ${courseId}`);
       await this.userRepository.addCourseToEnrolled(userId, courseId);
       console.log(`[EnrollmentService] userRepository.addCourseToEnrolled COMPLETED for User: ${userId}, Course: ${courseId}`);
       

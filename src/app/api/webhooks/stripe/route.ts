@@ -40,17 +40,27 @@ export const config = {
 };
 
 export async function POST(request: NextRequest) {
-  console.log('[Stripe Webhook] Received a request.');
+  console.log('[Stripe Webhook] Received a request - START.');
+
   if (!webhookSecret) {
     console.error('[Stripe Webhook] Server error: Stripe webhook secret missing. STRIPE_WEBHOOK_SECRET env var must be set.');
     return NextResponse.json({ error: 'Server error: Stripe webhook secret missing.' }, { status: 500 });
   }
+  console.log('[Stripe Webhook] Webhook secret is present.');
+
   if (!adminDb) {
     console.error('[Stripe Webhook] Server error: Firebase Admin (adminDb) not initialized. Check server startup logs for Firebase Admin SDK issues.');
     return NextResponse.json({ error: 'Server error: Firebase Admin not initialized.' }, { status: 503 });
   }
+  console.log('[Stripe Webhook] Firebase Admin (adminDb) is initialized.');
 
   const sig = request.headers.get('stripe-signature');
+  if (!sig) {
+    console.error('[Stripe Webhook] Webhook Error: Missing "stripe-signature" header. Cannot verify event.');
+    return NextResponse.json({ error: 'Webhook Error: Missing signature header' }, { status: 400 });
+  }
+  console.log('[Stripe Webhook] Stripe signature header is present.');
+
   let rawBody: string;
   try {
     rawBody = await request.text();
@@ -60,16 +70,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook Error: could not read body' }, { status: 400 });
   }
 
+  // --- SIMPLIFICATION POINT ---
+  // For now, we will just log that we received the request with a signature and body,
+  // and return 200 OK. This helps isolate if the 302 redirect is happening
+  // before or during Stripe's event construction or our business logic.
+  console.log('[Stripe Webhook] SIMPLIFIED: Read signature and body. Attempting to return 200 OK immediately.');
+  await writeWebhookLog("SIMPLIFIED_TEST", 'received_and_attempting_minimal_ok', { signaturePresent: !!sig, bodyLength: rawBody.length });
+  return NextResponse.json({ received_minimal_ok: true, message: "Simplified webhook logic for 302 debug." }, { status: 200 });
+
+  // --- ORIGINAL LOGIC (COMMENTED OUT FOR NOW) ---
+  /*
   let event: Stripe.Event;
   try {
-    if (!sig) {
-      console.error('[Stripe Webhook] Webhook Error: Missing "stripe-signature" header. Cannot verify event.');
-      return NextResponse.json({ error: 'Webhook Error: Missing signature header' }, { status: 400 });
-    }
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
     console.log(`[Stripe Webhook] Event constructed successfully. Type: ${event.type}, ID: ${event.id}`);
   } catch (err: any) {
     console.error(`[Stripe Webhook] Webhook signature verification FAILED: ${err.message}. Ensure webhook secret matches Stripe Dashboard.`);
+    await writeWebhookLog("SIGNATURE_VERIFICATION_FAILED", 'signature_verification_failed', { error: err.message });
     return NextResponse.json({ error: `Webhook signature verification failed: ${err.message}` }, { status: 400 });
   }
   
@@ -89,10 +106,9 @@ export async function POST(request: NextRequest) {
           const userId = session.metadata?.userId ?? session.metadata?.userid;
           const courseId = session.metadata?.courseId ?? session.metadata?.courseid;
           
-          console.log('[Stripe Webhook] Raw Metadata from Stripe session:', JSON.stringify(session.metadata)); // Log raw metadata
+          console.log('[Stripe Webhook] Raw Metadata from Stripe session:', JSON.stringify(session.metadata)); 
           console.log(`[Stripe Webhook] Extracted - User ID: ${userId}, Course ID: ${courseId}`);
           await writeWebhookLog(eventId, 'extracted_metadata', { userId, courseId, rawMetadata: session.metadata });
-
 
           if (!userId || !courseId) {
             console.error(`[Stripe Webhook] CRITICAL: Missing essential metadata. User ID: ${userId}, Course ID: ${courseId}. Cannot proceed with enrollment for session ${session.id}.`);
@@ -130,4 +146,5 @@ export async function POST(request: NextRequest) {
     console.log(`[Stripe Webhook] Responding to Stripe with 500 ERROR after processing failure for event ${event.id}`);
     return NextResponse.json({ error: 'Webhook processing failed.', details: error.message }, { status: 500 });
   }
+  */
 }

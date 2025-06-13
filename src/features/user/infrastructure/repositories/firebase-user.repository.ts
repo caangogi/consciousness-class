@@ -138,8 +138,9 @@ export class FirebaseUserRepository implements IUserRepository {
   }
 
   async addCourseToEnrolled(userId: string, courseId: string): Promise<void> {
-    console.log(`[FirebaseUserRepository] addCourseToEnrolled - User UID: ${userId}, Course ID: ${courseId}`);
+    console.log(`[FirebaseUserRepository] addCourseToEnrolled - Attempting for User UID: ${userId}, Course ID: ${courseId}`);
     const userRef = this.usersCollection.doc(userId);
+
     try {
       const userDoc = await userRef.get();
       if (!userDoc.exists) {
@@ -149,41 +150,51 @@ export class FirebaseUserRepository implements IUserRepository {
 
       const userData = userDoc.data() as UserProperties;
       let currentEnrolledCourses: string[] = [];
-      if (Array.isArray(userData.cursosInscritos)) {
-        currentEnrolledCourses = userData.cursosInscritos;
-      } else if (userData.cursosInscritos) {
-        console.warn(`[FirebaseUserRepository] addCourseToEnrolled - cursosInscritos for user ${userId} is not an array, re-initializing. Value:`, userData.cursosInscritos);
-      }
-      console.log(`[FirebaseUserRepository] addCourseToEnrolled - Current cursosInscritos: ${JSON.stringify(currentEnrolledCourses)}`);
 
+      if (Array.isArray(userData.cursosInscritos)) {
+        currentEnrolledCourses = [...userData.cursosInscritos]; // Create a new array copy
+      } else if (userData.cursosInscritos) {
+        console.warn(`[FirebaseUserRepository] addCourseToEnrolled - cursosInscritos for user ${userId} was not an array, re-initializing. Value:`, userData.cursosInscritos);
+      }
+      console.log(`[FirebaseUserRepository] addCourseToEnrolled - Current cursosInscritos for user ${userId} (before add): ${JSON.stringify(currentEnrolledCourses)}`);
+
+      let modified = false;
       if (!currentEnrolledCourses.includes(courseId)) {
         currentEnrolledCourses.push(courseId);
-        console.log(`[FirebaseUserRepository] addCourseToEnrolled - Adding courseId. New cursosInscritos: ${JSON.stringify(currentEnrolledCourses)}`);
+        modified = true;
+        console.log(`[FirebaseUserRepository] addCourseToEnrolled - CourseId ${courseId} added to local array. New local array for user ${userId}: ${JSON.stringify(currentEnrolledCourses)}`);
+      } else {
+        console.log(`[FirebaseUserRepository] addCourseToEnrolled - CourseId ${courseId} already present in user ${userId}'s cursosInscritos. No change to local array.`);
+      }
+
+      if (modified) {
+        console.log(`[FirebaseUserRepository] addCourseToEnrolled - Attempting Firestore update for user ${userId} with new cursosInscritos: ${JSON.stringify(currentEnrolledCourses)}`);
         await userRef.update({
           cursosInscritos: currentEnrolledCourses,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          // lastEnrollmentAttempt: new Date().toISOString() // Optional: keep for debugging if needed
         });
-        console.log(`[FirebaseUserRepository] addCourseToEnrolled - Firestore update called for user '${userId}' with new cursosInscritos array.`);
+        console.log(`[FirebaseUserRepository] addCourseToEnrolled - Firestore update called for user '${userId}'.`);
       } else {
-        console.log(`[FirebaseUserRepository] addCourseToEnrolled - CourseId ${courseId} already present in user ${userId}'s cursosInscritos.`);
+         console.log(`[FirebaseUserRepository] addCourseToEnrolled - No Firestore update needed as course was already in the list for user ${userId}.`);
       }
       
       // Verification step
+      console.log(`[FirebaseUserRepository] addCourseToEnrolled - VERIFICATION STEP: Re-reading user document for ${userId}...`);
       const updatedUserSnap = await userRef.get();
       const updatedUserData = updatedUserSnap.data() as UserProperties | undefined;
 
       if (updatedUserData && Array.isArray(updatedUserData.cursosInscritos) && updatedUserData.cursosInscritos.includes(courseId)) {
-        console.log(`[FirebaseUserRepository] SUCCESS: Course ID '${courseId}' confirmed in user '${userId}' enrolled courses AFTER update. Current array: ${JSON.stringify(updatedUserData.cursosInscritos)}`);
+        console.log(`[FirebaseUserRepository] addCourseToEnrolled - SUCCESS: Course ID '${courseId}' confirmed in user '${userId}' enrolled courses AFTER update. Current array: ${JSON.stringify(updatedUserData.cursosInscritos)}`);
       } else {
-        console.error(`[FirebaseUserRepository] CRITICAL FAILURE: Firestore update for cursosInscritos DID NOT PERSIST or courseId not found for user ${userId}, course ${courseId}. Read back array: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
-        throw new Error(`[FirebaseUserRepository] CRITICAL: Firestore update for cursosInscritos DID NOT PERSIST for user ${userId}, course ${courseId}. Array is: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
+        console.error(`[FirebaseUserRepository] addCourseToEnrolled - CRITICAL FAILURE: Firestore update for cursosInscritos for user ${userId}, course ${courseId} DID NOT PERSIST or courseId not found. Read back array: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
+        throw new Error(`DB_CONFIRMATION_FAILED: User enrollment for course ${courseId} not reflected after update. Firestore array is: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
       }
 
     } catch (error: any) {
       const firebaseError = error as FirebaseError;
-      console.error(`[FirebaseUserRepository] ERROR adding course '${courseId}' to user '${userId}':`, firebaseError.message, firebaseError.stack);
-      // Re-throw specific error or the original one
-      if (error.message.startsWith('[FirebaseUserRepository] CRITICAL:')) {
+      console.error(`[FirebaseUserRepository] addCourseToEnrolled - ERROR adding course '${courseId}' to user '${userId}':`, firebaseError.message, firebaseError.stack);
+      if (error.message.startsWith('DB_CONFIRMATION_FAILED:')) {
         throw error;
       }
       throw new Error(`Firestore addCourseToEnrolled operation failed: ${firebaseError.message}`);

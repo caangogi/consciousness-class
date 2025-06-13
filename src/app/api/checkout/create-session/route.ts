@@ -68,27 +68,21 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${origin}/payment/success?session_id={CHECKOUT_SESSION_ID}&courseId=${courseId}`, // We'll create this page later
+      success_url: `${origin}/payment/success?session_id={CHECKOUT_SESSION_ID}&courseId=${courseId}`,
       cancel_url: `${origin}/courses/${courseId}?canceled=true`,
       customer_email: userEmail, // Pre-fill customer email
       metadata: {
         courseId: course.id,
         userId: userId,
       },
-      // payment_intent_data: { // If you need to store additional info with the payment intent
-      //   metadata: {
-      //     courseId: course.id,
-      //     userId: userId,
-      //   }
-      // }
     });
 
-    if (!session.id) {
-      console.error("Stripe session ID is null or undefined after creation.");
-      throw new Error("Failed to create Stripe checkout session ID.");
+    if (!session.id || !session.url) {
+      console.error("Stripe session ID or URL is null or undefined after creation.");
+      throw new Error("Failed to create Stripe checkout session ID or URL.");
     }
 
-    return NextResponse.json({ sessionId: session.id }, { status: 200 });
+    return NextResponse.json({ sessionId: session.id, sessionUrl: session.url }, { status: 200 });
 
   } catch (error: any) {
     console.error('Error creating Stripe checkout session:', error);

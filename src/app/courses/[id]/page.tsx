@@ -18,7 +18,8 @@ import type { LessonProperties } from '@/features/course/domain/entities/lesson.
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/config';
-import { loadStripe, type Stripe } from '@stripe/stripe-js';
+// loadStripe and Stripe type are no longer directly needed for redirectToCheckout if using manual URL navigation
+// import { loadStripe, type Stripe } from '@stripe/stripe-js'; 
 import { motion } from 'framer-motion';
 
 interface ModuleWithLessons extends ModuleProperties {
@@ -35,18 +36,19 @@ const placeholderReviews = [
   { id: 'c2', usuario: { nombre: 'Laura M.', avatarUrl: 'https://placehold.co/40x40.png?text=LM' }, texto: 'Me ayudó mucho a entender GraphQL. Lo recomiendo.', rating: 5, fecha: '2024-06-28' },
 ];
 
-let stripePromise: Promise<Stripe | null> | null = null;
-const getStripe = () => {
-  if (!stripePromise) {
-    if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-      stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
-    } else {
-      console.error("Stripe publishable key is not set in environment variables.");
-      stripePromise = Promise.resolve(null);
-    }
-  }
-  return stripePromise;
-};
+// StripePromise is not strictly needed if we navigate via URL manually
+// let stripePromise: Promise<Stripe | null> | null = null;
+// const getStripe = () => {
+//   if (!stripePromise) {
+//     if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+//       stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+//     } else {
+//       console.error("Stripe publishable key is not set in environment variables.");
+//       stripePromise = Promise.resolve(null);
+//     }
+//   }
+//   return stripePromise;
+// };
 
 
 export default function CourseDetailPage() {
@@ -146,6 +148,7 @@ export default function CourseDetailPage() {
         return;
     }
     if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+      // This check is good to keep, even if not using redirectToCheckout, as it indicates Stripe isn't fully set up.
       toast({ title: "Error de Configuración", description: "La pasarela de pago no está configurada correctamente (Clave Pública).", variant: "destructive" });
       return;
     }
@@ -167,22 +170,22 @@ export default function CourseDetailPage() {
             const errorData = await response.json();
             throw new Error(errorData.details || errorData.error || 'Error al iniciar el proceso de pago.');
         }
-        const { sessionId } = await response.json();
-        if (!sessionId) {
-            throw new Error('No se pudo obtener el ID de la sesión de pago.');
+        const { sessionId, sessionUrl } = await response.json();
+        
+        if (!sessionUrl) { // Check for sessionUrl specifically
+            throw new Error('No se pudo obtener la URL de la sesión de pago.');
         }
 
-        const stripe = await getStripe();
-        if (!stripe) {
-          throw new Error('Stripe.js no se ha cargado.');
+        // Navigate to Stripe Checkout URL
+        // Attempt to navigate the top-level window if in an iframe
+        if (window.top && window.top !== window.self) {
+            console.log("Attempting to redirect top-level window to Stripe:", sessionUrl);
+            window.top.location.href = sessionUrl;
+        } else {
+            console.log("Attempting to redirect current window to Stripe:", sessionUrl);
+            window.location.href = sessionUrl;
         }
         
-        const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
-        
-        if (stripeError) {
-            console.error("Stripe redirectToCheckout error:", stripeError);
-            toast({ title: "Error de Pago", description: stripeError.message || "Ocurrió un error al redirigir al pago.", variant: "destructive" });
-        }
     } catch (err: any) {
         toast({ title: "Error de Compra", description: err.message, variant: "destructive" });
         console.error("Error processing paid checkout:", err);
@@ -273,15 +276,15 @@ export default function CourseDetailPage() {
 
   const { course, modules } = courseData;
   const totalLessons = modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
-  const firstLessonId = modules[0]?.lessons[0]?.id || 'start'; // Placeholder, consider redirect to course if no lessons
+  const firstLessonId = modules[0]?.lessons[0]?.id || 'start'; 
   const isCourseFree = course.precio <= 0;
 
   const creatorDisplay = {
     id: course.creadorUid,
-    nombre: `Creator ${course.creadorUid.substring(0, 6)}`, // Placeholder, fetch real name if available
+    nombre: `Creator ${course.creadorUid.substring(0, 6)}`, 
     avatarUrl: `https://placehold.co/80x80.png?text=${course.creadorUid.substring(0,2).toUpperCase()}`,
     dataAiHint: "instructor avatar",
-    bio: 'Instructor apasionado con experiencia en la industria.', // Placeholder bio
+    bio: 'Instructor apasionado con experiencia en la industria.', 
   };
 
   const renderActionButton = () => {
@@ -333,7 +336,6 @@ export default function CourseDetailPage() {
       animate="visible"
       variants={{ visible: { transition: { staggerChildren: 0.1 }}}}
     >
-      {/* Hero Section */}
       <motion.div 
         className="bg-gradient-to-br from-primary via-primary/90 to-blue-600 text-primary-foreground py-16 md:py-24 shadow-inner"
         variants={itemVariants}
@@ -370,7 +372,7 @@ export default function CourseDetailPage() {
               </div>
             </motion.div>
 
-            <motion.div className="lg:col-span-1 sticky top-24" variants={itemVariants}> {/* Added sticky top for desktop action card */}
+            <motion.div className="lg:col-span-1 sticky top-24" variants={itemVariants}>
               <Card className="shadow-xl rounded-xl overflow-hidden bg-background text-foreground">
                 <motion.div 
                   className="relative aspect-video w-full overflow-hidden"
@@ -400,7 +402,6 @@ export default function CourseDetailPage() {
         </div>
       </motion.div>
 
-      {/* Main Content Area */}
       <div className="container mx-auto px-4 md:px-6 py-12">
         <div className="grid lg:grid-cols-3 gap-12">
           <motion.div className="lg:col-span-2 space-y-10" variants={itemVariants}>
@@ -492,7 +493,7 @@ export default function CourseDetailPage() {
           </motion.div>
 
           <motion.div className="lg:col-span-1 space-y-10" variants={itemVariants}>
-            <Card className="shadow-lg rounded-xl sticky top-24"> {/* Made "Sobre el Creator" card sticky as well */}
+            <Card className="shadow-lg rounded-xl sticky top-24">
               <CardHeader>
                 <CardTitle className="text-xl font-headline">Sobre el Creator</CardTitle>
               </CardHeader>
@@ -536,5 +537,3 @@ export default function CourseDetailPage() {
     </motion.div>
   );
 }
-
-    

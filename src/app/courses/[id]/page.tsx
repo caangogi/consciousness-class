@@ -18,8 +18,6 @@ import type { LessonProperties } from '@/features/course/domain/entities/lesson.
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/config';
-// loadStripe and Stripe type are no longer directly needed for redirectToCheckout if using manual URL navigation
-// import { loadStripe, type Stripe } from '@stripe/stripe-js'; 
 import { motion } from 'framer-motion';
 
 interface ModuleWithLessons extends ModuleProperties {
@@ -36,20 +34,6 @@ const placeholderReviews = [
   { id: 'c2', usuario: { nombre: 'Laura M.', avatarUrl: 'https://placehold.co/40x40.png?text=LM' }, texto: 'Me ayudó mucho a entender GraphQL. Lo recomiendo.', rating: 5, fecha: '2024-06-28' },
 ];
 
-// StripePromise is not strictly needed if we navigate via URL manually
-// let stripePromise: Promise<Stripe | null> | null = null;
-// const getStripe = () => {
-//   if (!stripePromise) {
-//     if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-//       stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
-//     } else {
-//       console.error("Stripe publishable key is not set in environment variables.");
-//       stripePromise = Promise.resolve(null);
-//     }
-//   }
-//   return stripePromise;
-// };
-
 
 export default function CourseDetailPage() {
   const params = useParams<{ id: string }>();
@@ -65,7 +49,8 @@ export default function CourseDetailPage() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isUserEnrolled = currentUser?.cursosInscritos?.includes(courseId) ?? false;
+  // Recalculate isUserEnrolled whenever currentUser or courseId changes.
+  const isUserEnrolled = !!currentUser?.cursosInscritos?.includes(courseId);
 
   useEffect(() => {
     if (searchParams.get('canceled') === 'true') {
@@ -75,6 +60,7 @@ export default function CourseDetailPage() {
         variant: 'default',
         duration: 5000,
       });
+      // Remove the query parameter from the URL without reloading the page content
       router.replace(`/courses/${courseId}`, { scroll: false });
     }
   }, [searchParams, courseId, router, toast]);
@@ -105,7 +91,10 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     fetchCourseData();
-  }, [fetchCourseData]);
+    if (currentUser) { // If user is logged in, refresh their profile to get latest enrollment status
+        refreshUserProfile().catch(err => console.error("Failed to refresh user profile on course detail page:", err));
+    }
+  }, [fetchCourseData, currentUser, refreshUserProfile]);
 
   const handleFreeEnrollment = async () => {
     if (!currentUser || !courseId || !courseData) {
@@ -132,7 +121,7 @@ export default function CourseDetailPage() {
         }
         
         toast({ title: "¡Inscripción Exitosa!", description: `Te has inscrito correctamente en "${courseData.course.nombre}".` });
-        await refreshUserProfile();
+        await refreshUserProfile(); // Refresh profile to update currentUser.cursosInscritos
     } catch (err: any) {
         toast({ title: "Error de Inscripción", description: err.message, variant: "destructive" });
         console.error("Error enrolling in free course:", err);
@@ -148,7 +137,6 @@ export default function CourseDetailPage() {
         return;
     }
     if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-      // This check is good to keep, even if not using redirectToCheckout, as it indicates Stripe isn't fully set up.
       toast({ title: "Error de Configuración", description: "La pasarela de pago no está configurada correctamente (Clave Pública).", variant: "destructive" });
       return;
     }
@@ -172,12 +160,10 @@ export default function CourseDetailPage() {
         }
         const { sessionId, sessionUrl } = await response.json();
         
-        if (!sessionUrl) { // Check for sessionUrl specifically
+        if (!sessionUrl) { 
             throw new Error('No se pudo obtener la URL de la sesión de pago.');
         }
 
-        // Navigate to Stripe Checkout URL
-        // Attempt to navigate the top-level window if in an iframe
         if (window.top && window.top !== window.self) {
             console.log("Attempting to redirect top-level window to Stripe:", sessionUrl);
             window.top.location.href = sessionUrl;

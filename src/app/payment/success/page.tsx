@@ -10,6 +10,7 @@ import { useEffect, useState, useCallback } from 'react';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
 import type { LessonProperties } from '@/features/course/domain/entities/lesson.entity';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
@@ -24,6 +25,7 @@ export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const courseId = searchParams.get('courseId');
+  const { refreshUserProfile } = useAuth(); // Get refreshUserProfile
   
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [isLoadingCourseData, setIsLoadingCourseData] = useState(false);
@@ -59,17 +61,21 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     if (sessionId && courseId) {
       console.log('Payment success for session:', sessionId, 'and course:', courseId);
-      // Here you might trigger a backend call to verify session and enroll user
-      // For now, we assume success based on reaching this page with session_id
+      // Attempt to refresh user profile to get latest enrollment status
+      refreshUserProfile().then(() => {
+        console.log("User profile refreshed on payment success page.");
+      }).catch(err => {
+        console.error("Error refreshing user profile on payment success:", err);
+      });
+      
       setIsLoadingSession(false);
-      fetchCourseDataForLink(); // Fetch course data to get the first lesson ID
+      fetchCourseDataForLink(); 
     } else {
-      // Handle missing parameters, though Stripe should always provide session_id
       console.warn('Payment success page reached without session_id or courseId.');
       setIsLoadingSession(false);
       setError("Faltan parámetros para confirmar la compra.");
     }
-  }, [sessionId, courseId, fetchCourseDataForLink]);
+  }, [sessionId, courseId, fetchCourseDataForLink, refreshUserProfile]);
 
 
   return (

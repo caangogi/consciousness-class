@@ -68,10 +68,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
           updatedAt: data.updatedAt,
           referralCodeGenerated: data.referralCodeGenerated,
           referredBy: data.referredBy,
-          cursosInscritos: data.cursosInscritos || [], // Ensure cursosInscritos is fetched
+          cursosInscritos: data.cursosInscritos || [], // Explicitly ensure cursosInscritos is an array
           referidosExitosos: data.referidosExitosos,
           balanceCredito: data.balanceCredito,
         };
+        console.log(`[AuthContext] Fetched user profile for ${user.uid}:`, { role: fetchedRole, cursosInscritos: userProfileData.cursosInscritos });
+      } else {
+         console.warn(`[AuthContext] User document for ${user.uid} not found in Firestore. Defaulting role to student and empty enrollments.`);
       }
       
       const combinedUser: UserProfile = {
@@ -80,6 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         photoURL: userProfileData.photoURL !== undefined ? userProfileData.photoURL : user.photoURL, 
         ...userProfileData, 
         role: fetchedRole,
+        cursosInscritos: userProfileData.cursosInscritos || [], // Ensure it's always an array
       };
       
       setCurrentUser(combinedUser);
@@ -94,6 +98,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
+      console.log("[AuthContext] Auth state changed. User:", user ? user.uid : null);
       await fetchAndSetUserProfile(user);
       setLoading(false);
     });
@@ -105,16 +110,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true);
     try {
       await auth.signOut();
+      // User state will be cleared by onAuthStateChanged listener
+      console.log("[AuthContext] User signed out.");
     } catch (error) {
-      console.error("Error signing out: ", error);
+      console.error("[AuthContext] Error signing out: ", error);
+    } finally {
+        // setLoading(false); // No need, onAuthStateChanged will handle loading false
     }
   };
 
   const refreshUserProfile = useCallback(async () => {
     if (auth.currentUser) {
-      setLoading(true);
+      console.log("[AuthContext] Refreshing user profile for UID:", auth.currentUser.uid);
+      setLoading(true); // Indicate loading during refresh
       await fetchAndSetUserProfile(auth.currentUser);
       setLoading(false);
+    } else {
+        console.log("[AuthContext] No current user to refresh.");
     }
   }, [fetchAndSetUserProfile]);
   

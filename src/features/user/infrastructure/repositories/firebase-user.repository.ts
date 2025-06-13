@@ -41,7 +41,12 @@ export class FirebaseUserRepository implements IUserRepository {
         console.log(`[FirebaseUserRepository] User not found for UID: ${uid}`);
         return null;
       }
-      return new UserEntity(docSnap.data() as UserProperties);
+      const data = docSnap.data() as UserProperties;
+      // Ensure cursosInscritos is always an array
+      if (!Array.isArray(data.cursosInscritos)) {
+        data.cursosInscritos = [];
+      }
+      return new UserEntity(data);
     } catch (error: any) {
       const firebaseError = error as FirebaseError;
       console.error(`[FirebaseUserRepository] Error finding user by UID (${uid}):`, firebaseError.message, firebaseError.code, firebaseError.stack);
@@ -56,7 +61,12 @@ export class FirebaseUserRepository implements IUserRepository {
         console.log(`[FirebaseUserRepository] User not found for email: ${email}`);
         return null;
       }
-      return new UserEntity(snapshot.docs[0].data() as UserProperties);
+      const data = snapshot.docs[0].data() as UserProperties;
+      // Ensure cursosInscritos is always an array
+      if (!Array.isArray(data.cursosInscritos)) {
+        data.cursosInscritos = [];
+      }
+      return new UserEntity(data);
     } catch (error: any) {
       const firebaseError = error as FirebaseError;
       console.error(`[FirebaseUserRepository] Error finding user by email (${email}):`, firebaseError.message, firebaseError.code, firebaseError.stack);
@@ -89,6 +99,13 @@ export class FirebaseUserRepository implements IUserRepository {
          updateData.photoURL = null; 
       }
 
+      // Ensure cursosInscritos remains an array during update if present
+      if (data.cursosInscritos !== undefined && !Array.isArray(data.cursosInscritos)) {
+        console.warn(`[FirebaseUserRepository] cursosInscritos for UID ${uid} was not an array during update, initializing as empty array.`);
+        updateData.cursosInscritos = [];
+      }
+
+
       await userRef.update(updateData);
       const updatedDocSnap = await userRef.get();
       if (!updatedDocSnap.exists) {
@@ -96,7 +113,12 @@ export class FirebaseUserRepository implements IUserRepository {
         return null;
       }
       console.log(`[FirebaseUserRepository] User updated successfully in Firestore for UID: ${uid} with data:`, JSON.stringify(updateData));
-      return new UserEntity(updatedDocSnap.data() as UserProperties);
+      
+      const finalData = updatedDocSnap.data() as UserProperties;
+      if (!Array.isArray(finalData.cursosInscritos)) {
+        finalData.cursosInscritos = [];
+      }
+      return new UserEntity(finalData);
     } catch (error: any) {
       const firebaseError = error as FirebaseError;
       console.error(`[FirebaseUserRepository] Error updating user (UID: ${uid}):`, firebaseError.message, firebaseError.code, firebaseError.stack);
@@ -144,6 +166,9 @@ export class FirebaseUserRepository implements IUserRepository {
       }
 
       const userData = userDocSnap.data() as UserProperties;
+      if (!Array.isArray(userData.cursosInscritos)) {
+        userData.cursosInscritos = []; // Ensure it's an array before creating entity
+      }
       const userEntity = new UserEntity(userData);
       
       const enrolledCourseIds: string[] = userEntity.cursosInscritos || [];
@@ -183,7 +208,11 @@ export class FirebaseUserRepository implements IUserRepository {
         });
       }
       
-      return { ...userEntity.toPlainObject(), enrolledCoursesDetails } as UserWithEnrolledCourses;
+      const userEntityPlain = userEntity.toPlainObject();
+      if (!Array.isArray(userEntityPlain.cursosInscritos)) {
+          userEntityPlain.cursosInscritos = [];
+      }
+      return { ...userEntityPlain, enrolledCoursesDetails } as UserWithEnrolledCourses;
 
     } catch (error: any) {
       const firebaseError = error as FirebaseError;

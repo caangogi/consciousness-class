@@ -226,7 +226,7 @@ export default function NewCoursePage() {
     let currentCourseData: CourseProperties | null = null;
 
     try {
-      const courseDetailsResponse = await fetch(\`/api/courses/\${courseId}\`);
+      const courseDetailsResponse = await fetch(`/api/courses/${courseId}`);
       if (!courseDetailsResponse.ok) {
         const errorData = await courseDetailsResponse.json();
         toast({ title: "Error al Cargar Detalles del Curso", description: errorData.details || errorData.error || "No se pudieron cargar los detalles del curso.", variant: "destructive" });
@@ -246,7 +246,7 @@ export default function NewCoursePage() {
         throw new Error("Course details not found.");
       }
       
-      const modulesResponse = await fetch(\`/api/courses/\${courseId}/modules\`);
+      const modulesResponse = await fetch(`/api/courses/${courseId}/modules`);
       if (!modulesResponse.ok) {
         const errorData = await modulesResponse.json();
         toast({ title: "Error al Cargar Módulos", description: errorData.details || errorData.error || "Error al cargar módulos.", variant: "destructive" });
@@ -293,7 +293,7 @@ export default function NewCoursePage() {
     if (!courseId || !moduleId) return;
     setIsLessonLoading(prev => ({ ...prev, [moduleId]: true }));
     try {
-      const response = await fetch(\`/api/courses/\${courseId}/modules/\${moduleId}/lessons\`);
+      const response = await fetch(`/api/courses/${courseId}/modules/${moduleId}/lessons`);
       if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.details || errorData.error || "Error al cargar lecciones.");
@@ -319,7 +319,7 @@ export default function NewCoursePage() {
 
       setLessonsByModule(prev => ({ ...prev, [moduleId]: fetchedLessons }));
     } catch (error: any) {
-      toast({ title: \`Error al Cargar Lecciones (Módulo \${moduleData?.nombre || moduleId})\`, description: error.message, variant: "destructive" });
+      toast({ title: `Error al Cargar Lecciones (Módulo ${moduleData?.nombre || moduleId})`, description: error.message, variant: "destructive" });
       setLessonsByModule(prev => ({ ...prev, [moduleId]: [] }));
     } finally {
       setIsLessonLoading(prev => ({ ...prev, [moduleId]: false }));
@@ -356,14 +356,14 @@ export default function NewCoursePage() {
     setIsLoading(true);
     try {
       const idToken = await auth.currentUser.getIdToken(true);
-      const endpoint = createdCourseId ? \`/api/courses/update/\${createdCourseId}\` : '/api/courses/create';
+      const endpoint = createdCourseId ? `/api/courses/update/${createdCourseId}` : '/api/courses/create';
       const method = "POST";
       
       const dto: CreateCourseDto | UpdateCourseDto = { ...values, tipoAcceso: values.tipoAcceso as CourseAccessType };
       
       const response = await fetch(endpoint, {
         method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${idToken}\`},
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
         body: JSON.stringify(dto),
       });
 
@@ -400,9 +400,9 @@ export default function NewCoursePage() {
     try {
       const idToken = await auth.currentUser.getIdToken(true);
       const dto: CreateModuleDto = { nombre: values.moduleName, descripcion: values.moduleDescription };
-      const response = await fetch(\`/api/courses/\${createdCourseId}/modules\`, {
+      const response = await fetch(`/api/courses/${createdCourseId}/modules`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${idToken}\`},
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
         body: JSON.stringify(dto),
       });
       if (!response.ok) {
@@ -429,9 +429,9 @@ export default function NewCoursePage() {
     try {
       const idToken = await auth.currentUser.getIdToken(true);
       const dto: UpdateModuleDto = { nombre: values.moduleName, descripcion: values.moduleDescription };
-      const response = await fetch(\`/api/courses/\${createdCourseId}/modules/\${currentEditingModule.id}\`, {
+      const response = await fetch(`/api/courses/${createdCourseId}/modules/${currentEditingModule.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${idToken}\` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify(dto),
       });
       if (!response.ok) {
@@ -465,7 +465,7 @@ export default function NewCoursePage() {
     if (isFileType && lessonContentFile) {
         toast({
             title: "Subida Pendiente (Solo en Edición)",
-            description: \`Para nuevas lecciones con archivo, primero crea la lección. Luego, edítala para subir "\${lessonContentFile.name}".\`,
+            description: `Para nuevas lecciones con archivo, primero crea la lección. Luego, edítala para subir "${lessonContentFile.name}".`,
             duration: 7000,
         });
     }
@@ -483,9 +483,9 @@ export default function NewCoursePage() {
         duracionEstimada: values.lessonDuration,
         esVistaPrevia: values.lessonIsPreview,
       };
-      const response = await fetch(\`/api/courses/\${createdCourseId}/modules/\${moduleId}/lessons\`, {
+      const response = await fetch(`/api/courses/${createdCourseId}/modules/${moduleId}/lessons`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${idToken}\`},
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
         body: JSON.stringify(dto),
       });
       if (!response.ok) {
@@ -495,7 +495,7 @@ export default function NewCoursePage() {
       const responseData = await response.json();
       const createdLesson = responseData.lesson;
       
-      toast({title: "Lección Creada", description: \`Lección "\${values.lessonName}" añadida. Edítala para subir archivos si es necesario.\`});
+      toast({title: "Lección Creada", description: `Lección "${values.lessonName}" añadida. Edítala para subir archivos si es necesario.`});
       lessonForm.reset({ 
         lessonName: '',
         lessonContentType: undefined,
@@ -532,7 +532,7 @@ export default function NewCoursePage() {
 
       if (isFileType && lessonContentFile) {
         setIsUploadingContent(true);
-        const storagePath = \`cursos/\${createdCourseId}/modulos/\${currentEditingLesson.moduleId}/lecciones/\${currentEditingLesson.id}/contenido/\${lessonContentFile.name}\`;
+        const storagePath = `cursos/${createdCourseId}/modulos/${currentEditingLesson.moduleId}/lecciones/${currentEditingLesson.id}/contenido/${lessonContentFile.name}`;
         const fileRef = ref(storage, storagePath);
         await uploadBytes(fileRef, lessonContentFile);
         downloadURL = await getDownloadURL(fileRef);
@@ -563,9 +563,9 @@ export default function NewCoursePage() {
         esVistaPrevia: values.lessonIsPreview,
       };
       
-      const response = await fetch(\`/api/courses/\${createdCourseId}/modules/\${currentEditingLesson.moduleId}/lessons/\${currentEditingLesson.id}\`, {
+      const response = await fetch(`/api/courses/${createdCourseId}/modules/${currentEditingLesson.moduleId}/lessons/${currentEditingLesson.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${idToken}\` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify(dto),
       });
 
@@ -595,15 +595,15 @@ export default function NewCoursePage() {
     setIsModuleLoading(true); 
     try {
       const idToken = await auth.currentUser.getIdToken(true);
-      const response = await fetch(\`/api/courses/\${createdCourseId}/modules/\${moduleToDelete.id}\`, {
+      const response = await fetch(`/api/courses/${createdCourseId}/modules/${moduleToDelete.id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': \`Bearer \${idToken}\`},
+        headers: { 'Authorization': `Bearer ${idToken}`},
       });
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || "Error al eliminar el módulo.");
       }
-      toast({ title: "Módulo Eliminado", description: \`El módulo "\${moduleToDelete.nombre}" ha sido eliminado.\` });
+      toast({ title: "Módulo Eliminado", description: `El módulo "${moduleToDelete.nombre}" ha sido eliminado.` });
       
       setModuleToDelete(null);
       await fetchCourseStructure(createdCourseId); 
@@ -627,15 +627,15 @@ export default function NewCoursePage() {
     setIsDeletingLesson(true);
     try {
       const idToken = await auth.currentUser.getIdToken(true);
-      const response = await fetch(\`/api/courses/\${createdCourseId}/modules/\${lessonToDelete.moduleId}/lessons/\${lessonToDelete.id}\`, {
+      const response = await fetch(`/api/courses/${createdCourseId}/modules/${lessonToDelete.moduleId}/lessons/${lessonToDelete.id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': \`Bearer \${idToken}\`},
+        headers: { 'Authorization': `Bearer ${idToken}`},
       });
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || "Error al eliminar la lección.");
       }
-      toast({ title: "Lección Eliminada", description: \`La lección "\${lessonToDelete.nombre}" ha sido eliminada.\` });
+      toast({ title: "Lección Eliminada", description: `La lección "${lessonToDelete.nombre}" ha sido eliminada.` });
       
       setLessonToDelete(null);
       const moduleToUpdateLessons = modules.find(m => m.id === lessonToDelete!.moduleId);
@@ -701,7 +701,7 @@ export default function NewCoursePage() {
 
       if (coverImageFile) {
         const fileExtension = coverImageFile.name.split('.').pop()?.toLowerCase() || 'png';
-        const storagePath = \`cursos/\${createdCourseId}/portada/cover.\${fileExtension}\`;
+        const storagePath = `cursos/${createdCourseId}/portada/cover.${fileExtension}`;
         const imageRef = ref(storage, storagePath);
         
         await uploadBytes(imageRef, coverImageFile);
@@ -719,9 +719,9 @@ export default function NewCoursePage() {
         estado: selectedStatus,
       };
 
-      const response = await fetch(\`/api/courses/update/\${createdCourseId}\`, {
+      const response = await fetch(`/api/courses/update/${createdCourseId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${idToken}\`},
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
         body: JSON.stringify(dto),
       });
 
@@ -751,8 +751,8 @@ export default function NewCoursePage() {
     if (currentStep === "structure" && tabValue === "info") return baseClass;
     if (currentStep === "settings" && (tabValue === "info" || tabValue === "structure")) return baseClass;
 
-    if (tabValue === "structure" && !createdCourseId) return \`\${baseClass} opacity-50 cursor-not-allowed\`;
-    if (tabValue === "settings" && !createdCourseId) return \`\${baseClass} opacity-50 cursor-not-allowed\`;
+    if (tabValue === "structure" && !createdCourseId) return `${baseClass} opacity-50 cursor-not-allowed`;
+    if (tabValue === "settings" && !createdCourseId) return `${baseClass} opacity-50 cursor-not-allowed`;
     
     return baseClass;
   };
@@ -840,9 +840,9 @@ export default function NewCoursePage() {
 
         const orderedModuleIds = reorderedModules.map(mod => mod.id);
         try {
-            const response = await fetch(\`/api/courses/\${createdCourseId}/modules/reorder\`, {
+            const response = await fetch(`/api/courses/${createdCourseId}/modules/reorder`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${idToken}\` },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
                 body: JSON.stringify({ orderedModuleIds }),
             });
             if (!response.ok) {
@@ -896,9 +896,9 @@ export default function NewCoursePage() {
         const orderedLessonIds = lessonsInModule.map(lesson => lesson.id);
 
         try {
-            const response = await fetch(\`/api/courses/\${createdCourseId}/modules/\${moduleId}/lessons/reorder\`, {
+            const response = await fetch(`/api/courses/${createdCourseId}/modules/${moduleId}/lessons/reorder`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${idToken}\` },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
                 body: JSON.stringify({ orderedLessonIds }),
             });
 
@@ -916,7 +916,7 @@ export default function NewCoursePage() {
                 // For robustness, fetchLessonsForModule is safer if backend module data drives lesson display.
                  await fetchLessonsForModule(createdCourseId, moduleId, updatedModuleData.module);
             }
-             toast({ title: "Lecciones Reordenadas", description: \`El orden de las lecciones en el módulo ha sido actualizado.\` });
+             toast({ title: "Lecciones Reordenadas", description: `El orden de las lecciones en el módulo ha sido actualizado.` });
         } catch (error: any) {
             toast({ title: "Error al Reordenar Lecciones", description: error.message, variant: "destructive" });
             const originalModule = modules.find(m => m.id === moduleId);
@@ -946,7 +946,7 @@ export default function NewCoursePage() {
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
                 className="rounded-md border"
-                title={\`Vista previa: \${lessonToPreview.nombre}\`}
+                title={`Vista previa: ${lessonToPreview.nombre}`}
               ></iframe>
             </div>
           );
@@ -954,7 +954,7 @@ export default function NewCoursePage() {
         return <video controls src={url} className="w-full rounded-md aspect-video bg-black"><track kind="captions" /></video>;
       case 'documento_pdf':
         if (!url) return <p className="text-muted-foreground">URL del PDF no disponible.</p>;
-        return <iframe src={url} className="w-full h-[70vh] rounded-md border" title={\`Vista previa: \${lessonToPreview.nombre}\`}></iframe>;
+        return <iframe src={url} className="w-full h-[70vh] rounded-md border" title={`Vista previa: ${lessonToPreview.nombre}`}></iframe>;
       case 'audio':
         if (!url) return <p className="text-muted-foreground">URL del audio no disponible.</p>;
         return <audio controls src={url} className="w-full"><track kind="captions" /></audio>;
@@ -974,7 +974,7 @@ export default function NewCoursePage() {
     <div className="container mx-auto py-8 px-4 md:px:6">
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className="text-3xl font-headline">{createdCourseId ? \`Editando Curso: \${courseDetails?.nombre || ''}\` : "Crear Nuevo Curso"}</CardTitle>
+          <CardTitle className="text-3xl font-headline">{createdCourseId ? `Editando Curso: ${courseDetails?.nombre || ''}` : "Crear Nuevo Curso"}</CardTitle>
           <CardDescription>Completa los siguientes pasos para configurar tu curso.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -1035,7 +1035,7 @@ export default function NewCoursePage() {
                 <CardContent>
                   {createdCourseId ? (
                      <DragDropContext onDragEnd={onDragEnd}>
-                      <p className="mb-4 text-sm text-muted-foreground">Editando estructura para: {courseDetails?.nombre || \`ID: \${createdCourseId}\`}</p>
+                      <p className="mb-4 text-sm text-muted-foreground">Editando estructura para: {courseDetails?.nombre || `ID: ${createdCourseId}`}</p>
                       
                       <Form {...moduleForm}>
                         <form onSubmit={moduleForm.handleSubmit(onAddModule)} className="space-y-4 mb-6 p-4 border rounded-md shadow-sm">
@@ -1172,7 +1172,7 @@ export default function NewCoursePage() {
                                                   <div className="space-y-2 mt-4">
                                                     <h6 className="text-xs font-semibold text-muted-foreground">Lecciones Existentes:</h6>
                                                      <Droppable 
-                                                          droppableId={\`lessons-\${module.id}\`} 
+                                                          droppableId={`lessons-${module.id}`} 
                                                           type="LESSON"
                                                           isDropDisabled={!!(isLessonLoading[module.id] || isReorderingLessons[module.id])}
                                                           isCombineEnabled={false}
@@ -1281,7 +1281,7 @@ export default function NewCoursePage() {
                 <CardContent>
                    {createdCourseId ? (
                     <div className="space-y-8">
-                       <p className="mb-1 text-sm text-muted-foreground">Ajustes para: {courseDetails?.nombre || \`ID: \${createdCourseId}\`}</p>
+                       <p className="mb-1 text-sm text-muted-foreground">Ajustes para: {courseDetails?.nombre || `ID: ${createdCourseId}`}</p>
                       <Card className="p-4 shadow-sm">
                           <div className="flex items-center gap-2 mb-3">
                               <ImageIcon className="h-5 w-5 text-primary"/>
@@ -1362,7 +1362,7 @@ export default function NewCoursePage() {
                          type="button" 
                          onClick={() => {
                            if (createdCourseId) {
-                             router.push(\`/dashboard/creator/courses\`); 
+                             router.push(`/dashboard/creator/courses`); 
                            } else {
                              router.push('/dashboard/creator/courses');
                            }

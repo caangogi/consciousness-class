@@ -126,12 +126,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshUserProfile = useCallback(async () => {
     if (auth.currentUser) {
-      console.log("[AuthContext] Refreshing user profile for UID:", auth.currentUser.uid);
+      console.log(`[AuthContext] refreshUserProfile START for UID: ${auth.currentUser.uid}. Current cursosInscritos in context (before fetch):`, JSON.stringify(currentUser?.cursosInscritos));
       await fetchAndSetUserProfile(auth.currentUser);
+      console.log(`[AuthContext] refreshUserProfile END for UID: ${auth.currentUser.uid}. Current cursosInscritos in context (after fetch):`, JSON.stringify(currentUser?.cursosInscritos));
     } else {
         console.log("[AuthContext] No current user to refresh.");
     }
-  }, [fetchAndSetUserProfile]);
+  }, [fetchAndSetUserProfile, currentUser]); 
   
   const value = {
     currentUser,

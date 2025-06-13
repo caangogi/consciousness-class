@@ -42,6 +42,7 @@ export class FirebaseUserRepository implements IUserRepository {
         return null;
       }
       const data = docSnap.data() as UserProperties;
+      console.log(`[FirebaseUserRepository] findByUid - UID: ${uid}, Raw cursosInscritos from Firestore:`, JSON.stringify(data.cursosInscritos));
       // Ensure cursosInscritos is always an array
       if (!Array.isArray(data.cursosInscritos)) {
         data.cursosInscritos = [];

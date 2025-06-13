@@ -61,15 +61,20 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     if (sessionId && courseId) {
       console.log('Payment success for session:', sessionId, 'and course:', courseId);
-      // Attempt to refresh user profile to get latest enrollment status
+      
       refreshUserProfile().then(() => {
-        console.log("User profile refreshed on payment success page.");
+        console.log("[PaymentSuccessPage] User profile refresh COMPLETED.");
+        // Fetch course data for the link after profile refresh is confirmed
+        fetchCourseDataForLink(); 
       }).catch(err => {
-        console.error("Error refreshing user profile on payment success:", err);
+        console.error("[PaymentSuccessPage] Error refreshing user profile on payment success:", err);
+        // Still try to fetch course data for link even if profile refresh has an issue,
+        // as the link itself might still be useful.
+        fetchCourseDataForLink();
       });
       
       setIsLoadingSession(false);
-      fetchCourseDataForLink(); 
+      // Moved fetchCourseDataForLink inside .then() of refreshUserProfile
     } else {
       console.warn('Payment success page reached without session_id or courseId.');
       setIsLoadingSession(false);

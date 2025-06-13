@@ -38,7 +38,7 @@ const placeholderReviews = [
 export default function CourseDetailPage() {
   const params = useParams<{ id: string }>();
   const courseId = params.id;
-  console.log("[CourseDetailPage] Render. params.id:", params.id, "courseId var:", courseId); // Log para depuración
+  console.log("[CourseDetailPage] Render. params.id:", params.id, "courseId var:", courseId);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser, loading: authLoading, refreshUserProfile } = useAuth();
@@ -76,7 +76,7 @@ export default function CourseDetailPage() {
     console.log(`[CourseDetailPage] fetchCourseData called for courseId: ${courseId}`);
     setIsLoading(true);
     setError(null);
-    setCourseData(null); // Limpiar datos previos antes de un nuevo fetch
+    setCourseData(null); 
 
     try {
       const response = await fetch(`/api/learn/course-structure/${courseId}`);
@@ -95,23 +95,31 @@ export default function CourseDetailPage() {
       const data: CourseStructureData = await response.json();
       console.log(`[CourseDetailPage] API success response data for ${courseId}:`, data);
       setCourseData(data);
-      setError(null); // Limpiar cualquier error anterior si el fetch es exitoso
+      setError(null); 
     } catch (err: any) {
       console.error(`[CourseDetailPage] Error in fetchCourseData for ${courseId}:`, err);
       setError(err.message);
-      setCourseData(null); // Asegurar que courseData esté null si hay error
+      setCourseData(null); 
     } finally {
       console.log(`[CourseDetailPage] fetchCourseData finally block for ${courseId}. Setting isLoading to false.`);
       setIsLoading(false);
     }
-  }, [courseId, params.id, toast]); // Añadido params.id y toast
+  }, [courseId, params.id, toast]);
 
 
   useEffect(() => {
-    if (courseId) { // Solo llamar si courseId está definido
+    console.log("[CourseDetailPage] Main useEffect triggered. Current courseId:", courseId);
+    if (courseId) { 
+        console.log("[CourseDetailPage] Main useEffect: courseId is present, calling fetchCourseData.");
         fetchCourseData();
+    } else {
+        console.warn("[CourseDetailPage] Main useEffect: courseId is NOT present. Not calling fetchCourseData.");
+        setError("El ID del curso no está presente en la URL.");
+        setIsLoading(false);
+        setCourseData(null);
     }
     if (currentUser) { 
+        console.log("[CourseDetailPage] Main useEffect: currentUser is present, calling refreshUserProfile.");
         refreshUserProfile().catch(err => console.error("Failed to refresh user profile on course detail page:", err));
     }
   }, [courseId, fetchCourseData, currentUser, refreshUserProfile]);
@@ -201,6 +209,7 @@ export default function CourseDetailPage() {
   };
 
   if (isLoading || authLoading) {
+    console.log("[CourseDetailPage] Rendering SKELETON. isLoading:", isLoading, "authLoading:", authLoading);
     return (
       <div className="bg-secondary/30 min-h-screen">
         <div className="bg-primary/80 py-16 md:py-24">
@@ -249,6 +258,7 @@ export default function CourseDetailPage() {
   }
 
   if (error) {
+    console.log("[CourseDetailPage] Rendering ERROR message:", error);
     return (
         <div className="container mx-auto py-12 px-4 md:px-6 text-center min-h-[60vh] flex items-center justify-center">
             <Card className="max-w-md mx-auto shadow-lg p-6 rounded-xl">
@@ -277,6 +287,7 @@ export default function CourseDetailPage() {
   }
 
   if (!courseData) {
+    console.log("[CourseDetailPage] Rendering 'No se encontraron datos...' message.");
     return <div className="container py-12 text-center">No se encontraron datos para este curso o el ID no es válido.</div>;
   }
 
@@ -543,6 +554,4 @@ export default function CourseDetailPage() {
     </motion.div>
   );
 }
-    
-
     

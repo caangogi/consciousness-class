@@ -138,16 +138,17 @@ export class FirebaseUserRepository implements IUserRepository {
   }
 
   async addCourseToEnrolled(userId: string, courseId: string): Promise<void> {
+    console.log(`[FirebaseUserRepository] Attempting to add Course ID: '${courseId}' to User ID: '${userId}' enrolled courses.`);
     try {
         const userRef = this.usersCollection.doc(userId);
         await userRef.update({
             cursosInscritos: FieldValue.arrayUnion(courseId),
             updatedAt: new Date().toISOString()
         });
-        console.log(`[FirebaseUserRepository] Course ID ${courseId} added to user ${userId}'s enrolled courses.`);
+        console.log(`[FirebaseUserRepository] SUCCESS: Course ID '${courseId}' added to user '${userId}' enrolled courses. Firestore update successful.`);
     } catch (error: any) {
         const firebaseError = error as FirebaseError;
-        console.error(`[FirebaseUserRepository] Error adding course ${courseId} to user ${userId}:`, firebaseError.message);
+        console.error(`[FirebaseUserRepository] ERROR adding course '${courseId}' to user '${userId}':`, firebaseError.message, firebaseError.stack);
         throw new Error(`Firestore addCourseToEnrolled operation failed: ${firebaseError.message}`);
     }
   }

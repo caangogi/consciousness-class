@@ -12,42 +12,42 @@ export class EnrollmentService {
   ) {}
 
   async enrollStudentToCourse(userId: string, courseId: string): Promise<void> {
+    console.log(`[EnrollmentService] Attempting to enroll User ID: '${userId}' in Course ID: '${courseId}'`);
     try {
       const user = await this.userRepository.findByUid(userId);
       if (!user) {
+        console.error(`[EnrollmentService] User with ID ${userId} not found.`);
         throw new Error(`User with ID ${userId} not found.`);
       }
+      console.log(`[EnrollmentService] User ${userId} found. Role: ${user.role}`);
 
       const course = await this.courseRepository.findById(courseId);
       if (!course) {
+        console.error(`[EnrollmentService] Course with ID ${courseId} not found.`);
         throw new Error(`Course with ID ${courseId} not found.`);
       }
+      console.log(`[EnrollmentService] Course ${courseId} found: "${course.nombre}", Status: ${course.estado}`);
       
-      // For basic enrollment, assume all public courses are enrollable if not already enrolled.
-      // Add more checks here if needed (e.g., course capacity, prerequisites, payment status for future)
       if (course.estado !== 'publicado') {
+        console.warn(`[EnrollmentService] Course "${course.nombre}" (ID: ${courseId}) is not 'publicado' (status: ${course.estado}). Enrollment denied.`);
         throw new Error(`Course "${course.nombre}" is not currently available for enrollment.`);
       }
 
       if (user.cursosInscritos.includes(courseId)) {
-        console.warn(`[EnrollmentService] User ${userId} is already enrolled in course ${courseId}.`);
-        // Depending on desired behavior, could throw an error or just return successfully
-        // For now, let's consider it a successful state if already enrolled, no action needed.
+        console.warn(`[EnrollmentService] User ${userId} is ALREADY enrolled in course ${courseId}. No action taken.`);
         return; 
       }
 
-      // Perform enrollment operations
-      // 1. Add courseId to user's 'cursosInscritos' array
+      console.log(`[EnrollmentService] Calling userRepository.addCourseToEnrolled for User: ${userId}, Course: ${courseId}`);
       await this.userRepository.addCourseToEnrolled(userId, courseId);
       
-      // 2. Increment 'totalEstudiantes' in the course document
+      console.log(`[EnrollmentService] Calling courseRepository.incrementStudentCount for Course: ${courseId}`);
       await this.courseRepository.incrementStudentCount(courseId);
 
-      console.log(`[EnrollmentService] User ${userId} successfully enrolled in course ${courseId}.`);
+      console.log(`[EnrollmentService] SUCCESS: User ${userId} successfully enrolled in course ${courseId}.`);
 
     } catch (error: any) {
-      console.error(`[EnrollmentService] Error enrolling user ${userId} in course ${courseId}:`, error.message);
-      // Re-throw the error so the API handler can catch it and send an appropriate response
+      console.error(`[EnrollmentService] ERROR during enrollment for User: ${userId}, Course: ${courseId}. Details:`, error.message, error.stack);
       throw error; 
     }
   }

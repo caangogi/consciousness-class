@@ -1,13 +1,17 @@
 
 // src/features/user/infrastructure/repositories/firebase-user.repository.ts
-import type { IUserRepository } from '@/features/user/domain/repositories/user.repository';
+import type { IUserRepository, EnrolledCourseWithProgress, UserWithEnrolledCourses } from '@/features/user/domain/repositories/user.repository';
 import { UserEntity, type UserProperties } from '@/features/user/domain/entities/user.entity';
 import { adminDb } from '@/lib/firebase/admin';
 import type { FirebaseError } from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
+import type { UserCourseProgressProperties } from '@/features/progress/domain/entities/user-course-progress.entity';
 
 
 const USERS_COLLECTION = 'usuarios';
+const COURSES_COLLECTION = 'cursos'; // Added for fetching course details
+const PROGRESS_SUBCOLLECTION = 'progresoCursos'; // For user progress
 
 export class FirebaseUserRepository implements IUserRepository {
   private get usersCollection() {
@@ -123,6 +127,68 @@ export class FirebaseUserRepository implements IUserRepository {
         const firebaseError = error as FirebaseError;
         console.error(`[FirebaseUserRepository] Error adding course ${courseId} to user ${userId}:`, firebaseError.message);
         throw new Error(`Firestore addCourseToEnrolled operation failed: ${firebaseError.message}`);
+    }
+  }
+
+  async findUserWithEnrolledCoursesAndProgress(uid: string): Promise<UserWithEnrolledCourses | null> {
+    if (!adminDb) {
+      throw new Error('Firebase Admin SDK (adminDb) not initialized.');
+    }
+    try {
+      const userDocRef = this.usersCollection.doc(uid);
+      const userDocSnap = await userDocRef.get();
+
+      if (!userDocSnap.exists) {
+        console.log(`[FirebaseUserRepository] User not found for UID: ${uid}`);
+        return null;
+      }
+
+      const userData = userDocSnap.data() as UserProperties;
+      const userEntity = new UserEntity(userData);
+      
+      const enrolledCourseIds: string[] = userEntity.cursosInscritos || [];
+      const enrolledCoursesDetails: EnrolledCourseWithProgress[] = [];
+
+      if (enrolledCourseIds.length > 0) {
+        const coursePromises = enrolledCourseIds.map(courseId =>
+          adminDb.collection(COURSES_COLLECTION).doc(courseId).get()
+        );
+        const courseSnapshots = await Promise.all(coursePromises);
+
+        const progressPromises = enrolledCourseIds.map(courseId =>
+          userDocRef.collection(PROGRESS_SUBCOLLECTION).doc(courseId).get()
+        );
+        const progressSnapshots = await Promise.all(progressPromises);
+
+        courseSnapshots.forEach((courseSnap, index) => {
+          if (courseSnap.exists) {
+            const courseData = courseSnap.data() as CourseProperties;
+            const progressSnap = progressSnapshots[index];
+            let courseDetail: EnrolledCourseWithProgress = { ...courseData };
+            if (progressSnap.exists) {
+              courseDetail.progress = progressSnap.data() as UserCourseProgressProperties;
+            } else {
+              courseDetail.progress = { 
+                userId: uid, 
+                courseId: courseData.id, 
+                lessonIdsCompletadas: [], 
+                porcentajeCompletado: 0, 
+                fechaUltimaActualizacion: new Date().toISOString()
+              };
+            }
+            enrolledCoursesDetails.push(courseDetail);
+          } else {
+            console.warn(`[FirebaseUserRepository] Course with ID ${enrolledCourseIds[index]} not found, but user ${uid} is enrolled.`);
+          }
+        });
+      }
+      
+      return { ...userEntity.toPlainObject(), enrolledCoursesDetails } as UserWithEnrolledCourses;
+
+    } catch (error: any) {
+      const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseUserRepository] Error in findUserWithEnrolledCoursesAndProgress for UID (${uid}):`, firebaseError.message);
+      throw new Error(`Firestore findUserWithEnrolledCoursesAndProgress operation failed: ${firebaseError.message}`);
     }
   }
 }

@@ -8,14 +8,14 @@ import { FirebaseCourseRepository } from '@/features/course/infrastructure/repos
 import { EnrollmentService } from '@/features/enrollment/application/enrollment.service';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20', 
+  apiVersion: '2024-06-20',
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export const config = {
   api: {
-    bodyParser: false, 
+    bodyParser: false,
   },
 };
 
@@ -30,7 +30,13 @@ export async function POST(request: NextRequest) {
   }
 
   const sig = request.headers.get('stripe-signature');
-  const reqBuffer = await request.text(); 
+  let reqBuffer;
+  try {
+    reqBuffer = await request.text();
+  } catch (bufferError) {
+    console.error('[Stripe Webhook] Error reading request body:', bufferError);
+    return NextResponse.json({ error: 'Webhook Error: Could not read request body' }, { status: 400 });
+  }
 
   let event: Stripe.Event;
 
@@ -62,47 +68,8 @@ export async function POST(request: NextRequest) {
           console.error('[Stripe Webhook] ERROR: Faltan metadatos críticos (userId o courseId) en la sesión de Stripe:', session.id, 'Metadata:', session.metadata);
           return NextResponse.json({ error: 'Webhook Error: Missing critical metadata (userId or courseId) from Stripe session.' }, { status: 400 });
         }
-
-        // *** PRUEBA DE ESCRITURA DIRECTA ***
-        console.log(`[Webhook] Attempting DIAGNOSTIC WRITE for user ${userId}`);
-        const userDocRef = adminDb.collection('usuarios').doc(userId);
-        const diagnosticData = {
-          webhookWriteTest: {
-            timestamp: new Date().toISOString(),
-            status: 'attempted',
-            courseIdAttempted: courseId, // Include courseId for context
-          },
-        };
-
-        try {
-          await userDocRef.set(diagnosticData, { merge: true });
-          console.log(`[Webhook] DIAGNOSTIC WRITE 'set' operation completed for user ${userId}. Reading back...`);
-          
-          // Pequeña pausa intencional (solo para depuración extrema, eliminar en producción)
-          // await new Promise(resolve => setTimeout(resolve, 500));
-
-          const readBackSnap = await userDocRef.get();
-          if (readBackSnap.exists) {
-            const data = readBackSnap.data();
-            if (data && data.webhookWriteTest && data.webhookWriteTest.status === 'attempted') {
-              console.log(`[Webhook] DIAGNOSTIC READ-BACK SUCCEEDED for user ${userId}. Test field found:`, data.webhookWriteTest);
-              // Opcional: Actualizar el estado a 'verified' si se desea
-              // await userDocRef.update({ 'webhookWriteTest.status': 'verified' });
-            } else {
-              console.error(`[Webhook] DIAGNOSTIC READ-BACK FAILED for user ${userId}. Test field 'webhookWriteTest.status' not 'attempted' or missing. Data:`, data);
-              return NextResponse.json({ error: 'Diagnostic write to Firestore failed verification (field mismatch).', details: `Read back data: ${JSON.stringify(data)}` }, { status: 500 });
-            }
-          } else {
-            console.error(`[Webhook] DIAGNOSTIC READ-BACK FAILED for user ${userId}. Document does not exist after write.`);
-            return NextResponse.json({ error: 'Diagnostic write to Firestore failed verification (doc not found).'}, { status: 500 });
-          }
-          console.log(`[Webhook] DIAGNOSTIC WRITE AND READ-BACK VERIFIED for user ${userId}. Proceeding with enrollment...`);
-        } catch (diagError: any) {
-          console.error(`[Webhook] CRITICAL ERROR during DIAGNOSTIC WRITE/READ for user ${userId}:`, diagError.message, diagError.stack);
-          return NextResponse.json({ error: 'Diagnostic write to Firestore failed critically.', details: diagError.message }, { status: 500 });
-        }
-        // *** FIN DE PRUEBA DE ESCRITURA DIRECTA ***
-
+        
+        // *** La "PRUEBA DE ESCRITURA DIRECTA" ha sido eliminada de aquí ***
 
         try {
           console.log(`[Stripe Webhook] Attempting to enroll User: ${userId} in Course: ${courseId}`);
@@ -114,7 +81,16 @@ export async function POST(request: NextRequest) {
           console.log(`[Stripe Webhook] SUCCESS: EnrollmentService completed for User: ${userId}, Course: ${courseId}.`);
         } catch (enrollmentError: any) {
           console.error(`[Stripe Webhook] ERROR during enrollment for User: ${userId}, Course: ${courseId}. Details:`, enrollmentError.message, enrollmentError.stack);
-          return NextResponse.json({ error: 'Enrollment processing failed.', details: enrollmentError.message }, { status: 500 });
+          // Incluir más detalles del error si es posible, y un identificador único para el error.
+          const errorId = `enrollErr_${new Date().getTime()}`;
+          console.error(`[Stripe Webhook] Error ID: ${errorId}. Full error object:`, enrollmentError);
+          return NextResponse.json({ 
+            error: 'Enrollment processing failed.', 
+            details: enrollmentError.message,
+            errorCode: enrollmentError.code, // Si el error tiene un código
+            errorId: errorId,
+            stack: process.env.NODE_ENV === 'development' ? enrollmentError.stack : undefined
+          }, { status: 500 });
         }
       } else {
         console.log(`[Stripe Webhook] Checkout session ${session.id} completed but payment_status is '${session.payment_status}'. No enrollment action taken.`);
@@ -133,7 +109,7 @@ export async function POST(request: NextRequest) {
       const asyncFailedSession = event.data.object as Stripe.Checkout.Session;
       console.log(`[Stripe Webhook] Checkout session async_payment_failed: ${asyncFailedSession.id}. Razón: ${asyncFailedSession.last_payment_error?.message || 'No especificada'}`);
       break;
-      
+
     case 'checkout.session.expired':
       const expiredSession = event.data.object as Stripe.Checkout.Session;
       console.log(`[Stripe Webhook] Checkout session expired: ${expiredSession.id}.`);
@@ -167,7 +143,7 @@ export async function POST(request: NextRequest) {
         // Potentially update user's subscription end date or confirm active status
       }
       break;
-      
+
     case 'invoice.paid':
       const invoicePaid = event.data.object as Stripe.Invoice;
       console.log(`[Stripe Webhook] Invoice paid: ${invoicePaid.id}, Subscription: ${invoicePaid.subscription}, Customer: ${invoicePaid.customer}`);
@@ -179,7 +155,7 @@ export async function POST(request: NextRequest) {
       console.log(`[Stripe Webhook] Invoice payment_failed: ${invoicePaymentFailed.id}, Subscription: ${invoicePaymentFailed.subscription}, Customer: ${invoicePaymentFailed.customer}`);
       // Handle failed subscription payments (e.g., notify user, mark subscription as past_due, eventually revoke access)
       break;
-      
+
     case 'invoice.upcoming':
       const invoiceUpcoming = event.data.object as Stripe.Invoice;
       console.log(`[Stripe Webhook] Invoice upcoming: ${invoiceUpcoming.id}, Subscription: ${invoiceUpcoming.subscription}, Customer: ${invoiceUpcoming.customer}, Due Date: ${invoiceUpcoming.due_date ? new Date(invoiceUpcoming.due_date * 1000) : 'N/A'}`);
@@ -193,3 +169,4 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ received: true }, { status: 200 });
 }
 
+    

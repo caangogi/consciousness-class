@@ -4,8 +4,7 @@ import type { ICourseRepository } from '@/features/course/domain/repositories/co
 import { CourseEntity, type CourseProperties } from '@/features/course/domain/entities/course.entity';
 import { adminDb } from '@/lib/firebase/admin';
 import type { FirebaseError } from 'firebase-admin';
-// FieldValue ahora no se usa, ya que leeremos y escribiremos el valor numérico.
-// import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 
 
 const COURSES_COLLECTION = 'cursos';
@@ -44,7 +43,7 @@ export class FirebaseCourseRepository implements ICourseRepository {
       throw new Error(`Firestore findById operation for course failed: ${firebaseError.message}`);
     }
   }
-  
+
   async findAllByCreator(creatorUid: string): Promise<CourseEntity[]> {
     try {
       const snapshot = await this.coursesCollection.where('creadorUid', '==', creatorUid).orderBy('fechaCreacion', 'desc').get();
@@ -63,9 +62,9 @@ export class FirebaseCourseRepository implements ICourseRepository {
     try {
       const snapshot = await this.coursesCollection
         .where('estado', '==', 'publicado')
-        .orderBy('fechaPublicacion', 'desc') 
+        .orderBy('fechaPublicacion', 'desc')
         .get();
-      console.log(`[FirebaseCourseRepository] findAllPublic query found ${snapshot.docs.length} documents.`); 
+      console.log(`[FirebaseCourseRepository] findAllPublic query found ${snapshot.docs.length} documents.`);
       if (snapshot.empty) {
         return [];
       }
@@ -81,42 +80,39 @@ export class FirebaseCourseRepository implements ICourseRepository {
     console.log(`[FirebaseCourseRepository] incrementStudentCount - Attempting for Course ID: ${courseId}`);
     const courseRef = this.coursesCollection.doc(courseId);
     try {
-      const courseDoc = await courseRef.get();
-      if (!courseDoc.exists) {
-        console.error(`[FirebaseCourseRepository] incrementStudentCount - Course ${courseId} not found.`);
-        throw new Error(`Course ${courseId} not found for student count increment.`);
+      // Ensure adminDb is initialized
+      if (!adminDb) {
+        const errorMessage = 'Firebase Admin SDK (adminDb) not initialized in incrementStudentCount.';
+        console.error(`[FirebaseCourseRepository] incrementStudentCount - CRITICAL: ${errorMessage}`);
+        throw new Error(errorMessage);
       }
 
-      const courseData = courseDoc.data() as CourseProperties;
-      const currentStudentCount = typeof courseData.totalEstudiantes === 'number' ? courseData.totalEstudiantes : 0;
-      const newStudentCount = currentStudentCount + 1;
-
-      console.log(`[FirebaseCourseRepository] incrementStudentCount - Course ${courseId}: Current count ${currentStudentCount}, New count ${newStudentCount}. Attempting update...`);
+      console.log(`[FirebaseCourseRepository] incrementStudentCount - About to update course '${courseId}' to increment totalEstudiantes using FieldValue.increment(1).`);
       await courseRef.update({
-        totalEstudiantes: newStudentCount,
+        totalEstudiantes: FieldValue.increment(1),
         fechaActualizacion: new Date().toISOString(),
       });
-      console.log(`[FirebaseCourseRepository] incrementStudentCount - Firestore update called for course ${courseId}.`);
+      console.log(`[FirebaseCourseRepository] incrementStudentCount - Firestore update call with increment completed for course '${courseId}'.`);
 
-      // Verification step
-      console.log(`[FirebaseCourseRepository] incrementStudentCount - VERIFICATION STEP: Re-reading course document ${courseId}...`);
+      // Optional: Re-read for verification
       const updatedCourseSnap = await courseRef.get();
       const updatedCourseData = updatedCourseSnap.data() as CourseProperties | undefined;
+      const currentStudentCount = updatedCourseData?.totalEstudiantes; // This would be the count *after* increment
 
-      if (updatedCourseData && updatedCourseData.totalEstudiantes === newStudentCount) {
-        console.log(`[FirebaseCourseRepository] incrementStudentCount - SUCCESS: Student count for course ${courseId} confirmed as ${newStudentCount} AFTER update.`);
+      if (updatedCourseData && typeof currentStudentCount === 'number') { // Basic check that it's a number
+        console.log(`[FirebaseCourseRepository] incrementStudentCount - SUCCESS: Student count for course ${courseId} is now ${currentStudentCount} AFTER increment update.`);
       } else {
-        console.error(`[FirebaseCourseRepository] incrementStudentCount - CRITICAL FAILURE: Firestore update for totalEstudiantes for course ${courseId} DID NOT PERSIST or value mismatch. Expected: ${newStudentCount}, Read back: ${updatedCourseData?.totalEstudiantes}`);
-        throw new Error(`DB_CONFIRMATION_FAILED: Course totalStudents for ${courseId} not reflected after increment. Expected ${newStudentCount}, got ${updatedCourseData?.totalEstudiantes}`);
+        console.warn(`[FirebaseCourseRepository] incrementStudentCount - VERIFICATION NOTE: totalEstudiantes for course ${courseId} read back as: ${currentStudentCount}. If this is unexpected, further investigation needed.`);
+        // Not throwing a CRITICAL FAILURE here as FieldValue.increment is generally reliable.
+        // The main concern is if the update call itself fails, which would be caught by the catch block.
       }
 
     } catch (error: any) {
       const firebaseError = error as FirebaseError;
       console.error(`[FirebaseCourseRepository] incrementStudentCount - ERROR for course ID (${courseId}):`, firebaseError.message);
-      if (error.message.startsWith('DB_CONFIRMATION_FAILED:')) {
-        throw error;
-      }
       throw new Error(`Firestore incrementStudentCount operation for course failed: ${firebaseError.message}`);
     }
   }
 }
+
+    

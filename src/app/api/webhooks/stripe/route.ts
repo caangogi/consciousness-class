@@ -15,7 +15,7 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export const config = {
   api: {
-    bodyParser: false, // Necesitamos el cuerpo raw para la verificación de la firma
+    bodyParser: false, 
   },
 };
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   }
 
   const sig = request.headers.get('stripe-signature');
-  const reqBuffer = await request.text(); // Leer el cuerpo como texto
+  const reqBuffer = await request.text(); 
 
   let event: Stripe.Event;
 
@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
   }
 
-  // Manejar el evento
   console.log(`[Stripe Webhook] Evento recibido: ${event.type}`);
 
   switch (event.type) {
@@ -61,9 +60,49 @@ export async function POST(request: NextRequest) {
 
         if (!userId || !courseId) {
           console.error('[Stripe Webhook] ERROR: Faltan metadatos críticos (userId o courseId) en la sesión de Stripe:', session.id, 'Metadata:', session.metadata);
-          // Devolver 400 a Stripe para indicar que el problema es con los datos recibidos y no debería reintentarse tal cual.
           return NextResponse.json({ error: 'Webhook Error: Missing critical metadata (userId or courseId) from Stripe session.' }, { status: 400 });
         }
+
+        // *** PRUEBA DE ESCRITURA DIRECTA ***
+        console.log(`[Webhook] Attempting DIAGNOSTIC WRITE for user ${userId}`);
+        const userDocRef = adminDb.collection('usuarios').doc(userId);
+        const diagnosticData = {
+          webhookWriteTest: {
+            timestamp: new Date().toISOString(),
+            status: 'attempted',
+            courseIdAttempted: courseId, // Include courseId for context
+          },
+        };
+
+        try {
+          await userDocRef.set(diagnosticData, { merge: true });
+          console.log(`[Webhook] DIAGNOSTIC WRITE 'set' operation completed for user ${userId}. Reading back...`);
+          
+          // Pequeña pausa intencional (solo para depuración extrema, eliminar en producción)
+          // await new Promise(resolve => setTimeout(resolve, 500));
+
+          const readBackSnap = await userDocRef.get();
+          if (readBackSnap.exists) {
+            const data = readBackSnap.data();
+            if (data && data.webhookWriteTest && data.webhookWriteTest.status === 'attempted') {
+              console.log(`[Webhook] DIAGNOSTIC READ-BACK SUCCEEDED for user ${userId}. Test field found:`, data.webhookWriteTest);
+              // Opcional: Actualizar el estado a 'verified' si se desea
+              // await userDocRef.update({ 'webhookWriteTest.status': 'verified' });
+            } else {
+              console.error(`[Webhook] DIAGNOSTIC READ-BACK FAILED for user ${userId}. Test field 'webhookWriteTest.status' not 'attempted' or missing. Data:`, data);
+              return NextResponse.json({ error: 'Diagnostic write to Firestore failed verification (field mismatch).', details: `Read back data: ${JSON.stringify(data)}` }, { status: 500 });
+            }
+          } else {
+            console.error(`[Webhook] DIAGNOSTIC READ-BACK FAILED for user ${userId}. Document does not exist after write.`);
+            return NextResponse.json({ error: 'Diagnostic write to Firestore failed verification (doc not found).'}, { status: 500 });
+          }
+          console.log(`[Webhook] DIAGNOSTIC WRITE AND READ-BACK VERIFIED for user ${userId}. Proceeding with enrollment...`);
+        } catch (diagError: any) {
+          console.error(`[Webhook] CRITICAL ERROR during DIAGNOSTIC WRITE/READ for user ${userId}:`, diagError.message, diagError.stack);
+          return NextResponse.json({ error: 'Diagnostic write to Firestore failed critically.', details: diagError.message }, { status: 500 });
+        }
+        // *** FIN DE PRUEBA DE ESCRITURA DIRECTA ***
+
 
         try {
           console.log(`[Stripe Webhook] Attempting to enroll User: ${userId} in Course: ${courseId}`);
@@ -75,7 +114,6 @@ export async function POST(request: NextRequest) {
           console.log(`[Stripe Webhook] SUCCESS: EnrollmentService completed for User: ${userId}, Course: ${courseId}.`);
         } catch (enrollmentError: any) {
           console.error(`[Stripe Webhook] ERROR during enrollment for User: ${userId}, Course: ${courseId}. Details:`, enrollmentError.message, enrollmentError.stack);
-          // Devolver 500 a Stripe para indicar un error en el servidor al procesar la inscripción.
           return NextResponse.json({ error: 'Enrollment processing failed.', details: enrollmentError.message }, { status: 500 });
         }
       } else {
@@ -83,11 +121,12 @@ export async function POST(request: NextRequest) {
       }
       break;
 
+    // ... (otros cases del switch)
     case 'checkout.session.async_payment_succeeded':
       const asyncSuccessSession = event.data.object as Stripe.Checkout.Session;
       console.log(`[Stripe Webhook] Checkout session async_payment_succeeded: ${asyncSuccessSession.id}`);
-      // Implementar lógica similar a 'checkout.session.completed' si es necesario.
-      // Verificar si la inscripción ya se realizó o si este evento es el primario para ciertos métodos de pago.
+      // Similar logic for enrollment if this event is primary for some payment methods
+      // Ensure to handle idempotency if 'checkout.session.completed' might also fire
       break;
 
     case 'checkout.session.async_payment_failed':
@@ -109,11 +148,14 @@ export async function POST(request: NextRequest) {
     case 'customer.subscription.updated':
       const subscriptionUpdated = event.data.object as Stripe.Subscription;
       console.log(`[Stripe Webhook] Customer subscription updated: ${subscriptionUpdated.id}, Status: ${subscriptionUpdated.status}`);
+      // Handle subscription status changes (e.g., active, past_due, canceled)
+      // Update user access to subscription-based courses accordingly
       break;
 
     case 'customer.subscription.deleted':
       const subscriptionDeleted = event.data.object as Stripe.Subscription;
       console.log(`[Stripe Webhook] Customer subscription deleted: ${subscriptionDeleted.id}, Customer: ${subscriptionDeleted.customer}`);
+      // Revoke access to subscription-based courses
       break;
 
     // --- Eventos de Facturación ---
@@ -121,23 +163,27 @@ export async function POST(request: NextRequest) {
       const invoicePaymentSucceeded = event.data.object as Stripe.Invoice;
       console.log(`[Stripe Webhook] Invoice payment_succeeded: ${invoicePaymentSucceeded.id}, Subscription: ${invoicePaymentSucceeded.subscription}, Customer: ${invoicePaymentSucceeded.customer}`);
       if (invoicePaymentSucceeded.billing_reason === 'subscription_cycle' && invoicePaymentSucceeded.subscription) {
-        console.log(`[Stripe Webhook] Subscription renewal ${invoicePaymentSucceeded.subscription} paid successfully.`);
+        console.log(`[Stripe Webhook] Subscription renewal ${invoicePaymentSucceeded.subscription} paid successfully. Ensuring access continues.`);
+        // Potentially update user's subscription end date or confirm active status
       }
       break;
       
     case 'invoice.paid':
       const invoicePaid = event.data.object as Stripe.Invoice;
       console.log(`[Stripe Webhook] Invoice paid: ${invoicePaid.id}, Subscription: ${invoicePaid.subscription}, Customer: ${invoicePaid.customer}`);
+      // Similar to invoice.payment_succeeded, often redundant if the other is handled
       break;
 
     case 'invoice.payment_failed':
       const invoicePaymentFailed = event.data.object as Stripe.Invoice;
       console.log(`[Stripe Webhook] Invoice payment_failed: ${invoicePaymentFailed.id}, Subscription: ${invoicePaymentFailed.subscription}, Customer: ${invoicePaymentFailed.customer}`);
+      // Handle failed subscription payments (e.g., notify user, mark subscription as past_due, eventually revoke access)
       break;
       
     case 'invoice.upcoming':
       const invoiceUpcoming = event.data.object as Stripe.Invoice;
       console.log(`[Stripe Webhook] Invoice upcoming: ${invoiceUpcoming.id}, Subscription: ${invoiceUpcoming.subscription}, Customer: ${invoiceUpcoming.customer}, Due Date: ${invoiceUpcoming.due_date ? new Date(invoiceUpcoming.due_date * 1000) : 'N/A'}`);
+      // Optionally notify user about upcoming payment
       break;
 
     default:
@@ -146,3 +192,4 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ received: true }, { status: 200 });
 }
+

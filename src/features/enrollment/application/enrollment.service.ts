@@ -19,7 +19,7 @@ export class EnrollmentService {
         console.error(`[EnrollmentService] User with ID ${userId} not found. Enrollment cannot proceed.`);
         throw new Error(`User with ID ${userId} not found.`);
       }
-      console.log(`[EnrollmentService] User ${userId} found. Role: ${user.role}, Enrolled Courses (before this enrollment): ${user.cursosInscritos.join(', ') || 'None'}`);
+      console.log(`[EnrollmentService] User ${userId} found. Role: ${user.role}, Enrolled Courses (before this enrollment): ${JSON.stringify(user.cursosInscritos)}`);
 
       const course = await this.courseRepository.findById(courseId);
       if (!course) {

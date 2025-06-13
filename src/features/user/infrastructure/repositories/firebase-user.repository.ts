@@ -44,6 +44,7 @@ export class FirebaseUserRepository implements IUserRepository {
       const data = docSnap.data() as UserProperties;
       // console.log(`[FirebaseUserRepository] findByUid - UID: ${uid}, Raw cursosInscritos from Firestore:`, JSON.stringify(data.cursosInscritos));
       if (!Array.isArray(data.cursosInscritos)) {
+        console.warn(`[FirebaseUserRepository] findByUid - UID: ${uid}, cursosInscritos was not an array. Initializing as empty. Original value:`, data.cursosInscritos);
         data.cursosInscritos = [];
       }
       return new UserEntity(data);
@@ -63,6 +64,7 @@ export class FirebaseUserRepository implements IUserRepository {
       }
       const data = snapshot.docs[0].data() as UserProperties;
       if (!Array.isArray(data.cursosInscritos)) {
+        console.warn(`[FirebaseUserRepository] findByEmail - Email: ${email}, cursosInscritos was not an array. Initializing as empty. Original value:`, data.cursosInscritos);
         data.cursosInscritos = [];
       }
       return new UserEntity(data);
@@ -114,6 +116,7 @@ export class FirebaseUserRepository implements IUserRepository {
 
       const finalData = updatedDocSnap.data() as UserProperties;
       if (!Array.isArray(finalData.cursosInscritos)) {
+         console.warn(`[FirebaseUserRepository] User document for UID ${uid} after update has non-array cursosInscritos. Initializing as empty.`);
         finalData.cursosInscritos = [];
       }
       return new UserEntity(finalData);
@@ -144,7 +147,7 @@ export class FirebaseUserRepository implements IUserRepository {
     };
     console.log(`[FirebaseUserRepository - addCourseToEnrolled] Attempting to update user '${userId}' with payload:`, JSON.stringify(updatePayload));
     try {
-      if (!adminDb) { // Double check, though usersCollection getter does it too
+      if (!adminDb) { 
         const errorMessage = 'Firebase Admin SDK (adminDb) not initialized in addCourseToEnrolled.';
         console.error(`[FirebaseUserRepository - addCourseToEnrolled] CRITICAL: ${errorMessage}`);
         throw new Error(errorMessage);
@@ -175,6 +178,7 @@ export class FirebaseUserRepository implements IUserRepository {
 
       const userData = userDocSnap.data() as UserProperties;
       if (!Array.isArray(userData.cursosInscritos)) {
+         console.warn(`[FirebaseUserRepository] findUserWithEnrolledCoursesAndProgress - UID: ${uid}, cursosInscritos was not an array. Initializing as empty. Original value:`, userData.cursosInscritos);
         userData.cursosInscritos = [];
       }
       const userEntity = new UserEntity(userData);
@@ -218,6 +222,7 @@ export class FirebaseUserRepository implements IUserRepository {
 
       const userEntityPlain = userEntity.toPlainObject();
       if (!Array.isArray(userEntityPlain.cursosInscritos)) {
+          console.warn(`[FirebaseUserRepository] User entity plain object for UID ${uid} had non-array cursosInscritos. Initializing as empty.`);
           userEntityPlain.cursosInscritos = [];
       }
       return { ...userEntityPlain, enrolledCoursesDetails } as UserWithEnrolledCourses;

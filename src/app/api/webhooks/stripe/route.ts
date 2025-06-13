@@ -13,10 +13,9 @@ const LOGS_COLLECTION = 'webhookLogs';
 async function writeWebhookLog(eventId: string, step: string, details: any) {
   const timestamp = new Date().toISOString();
   try {
-    // Ensure adminDb is initialized before trying to use it
     if (!adminDb) {
       console.error('[Stripe Webhook Log] CRITICAL: adminDb is not initialized. Cannot write webhook log.');
-      return; // Exit if adminDb is not available
+      return; 
     }
     await adminDb
       .collection(LOGS_COLLECTION)
@@ -29,25 +28,25 @@ async function writeWebhookLog(eventId: string, step: string, details: any) {
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20', // Ensure this is up-to-date
+  apiVersion: '2024-06-20', 
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export const config = {
   api: {
-    bodyParser: false, // Required for Stripe webhook verification
+    bodyParser: false, 
   },
 };
 
 export async function POST(request: NextRequest) {
   console.log('[Stripe Webhook] Received a request.');
   if (!webhookSecret) {
-    console.error('[Stripe Webhook] Server error: Stripe webhook secret missing.');
+    console.error('[Stripe Webhook] Server error: Stripe webhook secret missing. STRIPE_WEBHOOK_SECRET env var must be set.');
     return NextResponse.json({ error: 'Server error: Stripe webhook secret missing.' }, { status: 500 });
   }
   if (!adminDb) {
-    console.error('[Stripe Webhook] Server error: Firebase Admin (adminDb) not initialized.');
+    console.error('[Stripe Webhook] Server error: Firebase Admin (adminDb) not initialized. Check server startup logs for Firebase Admin SDK issues.');
     return NextResponse.json({ error: 'Server error: Firebase Admin not initialized.' }, { status: 503 });
   }
 
@@ -55,6 +54,7 @@ export async function POST(request: NextRequest) {
   let rawBody: string;
   try {
     rawBody = await request.text();
+    console.log('[Stripe Webhook] Successfully read request body.');
   } catch (err) {
     console.error('[Stripe Webhook] Error reading request body:', err);
     return NextResponse.json({ error: 'Webhook Error: could not read body' }, { status: 400 });
@@ -63,18 +63,18 @@ export async function POST(request: NextRequest) {
   let event: Stripe.Event;
   try {
     if (!sig) {
-      console.error('[Stripe Webhook] Webhook Error: Missing signature header');
+      console.error('[Stripe Webhook] Webhook Error: Missing "stripe-signature" header. Cannot verify event.');
       return NextResponse.json({ error: 'Webhook Error: Missing signature header' }, { status: 400 });
     }
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
     console.log(`[Stripe Webhook] Event constructed successfully. Type: ${event.type}, ID: ${event.id}`);
   } catch (err: any) {
-    console.error(`[Stripe Webhook] Webhook signature verification failed: ${err.message}`);
+    console.error(`[Stripe Webhook] Webhook signature verification FAILED: ${err.message}. Ensure webhook secret matches Stripe Dashboard.`);
     return NextResponse.json({ error: `Webhook signature verification failed: ${err.message}` }, { status: 400 });
   }
   
-  const eventId = event.id; // For logging
-  await writeWebhookLog(eventId, 'received_event', { type: event.type, id: event.id });
+  const eventId = event.id; 
+  await writeWebhookLog(eventId, 'received_and_verified_event', { type: event.type, id: event.id });
 
   try {
     switch (event.type) {
@@ -89,13 +89,13 @@ export async function POST(request: NextRequest) {
           const userId = session.metadata?.userId ?? session.metadata?.userid;
           const courseId = session.metadata?.courseId ?? session.metadata?.courseid;
           
-          console.log('[Stripe Webhook] Metadata recibida:', session.metadata);
+          console.log('[Stripe Webhook] Raw Metadata from Stripe session:', JSON.stringify(session.metadata)); // Log raw metadata
           console.log(`[Stripe Webhook] Extracted - User ID: ${userId}, Course ID: ${courseId}`);
           await writeWebhookLog(eventId, 'extracted_metadata', { userId, courseId, rawMetadata: session.metadata });
 
 
           if (!userId || !courseId) {
-            console.error(`[Stripe Webhook] CRITICAL: Missing metadata. User ID: ${userId}, Course ID: ${courseId}. Cannot proceed with enrollment for session ${session.id}.`);
+            console.error(`[Stripe Webhook] CRITICAL: Missing essential metadata. User ID: ${userId}, Course ID: ${courseId}. Cannot proceed with enrollment for session ${session.id}.`);
             await writeWebhookLog(eventId, 'missing_metadata_error', { userId, courseId, rawMetadata: session.metadata });
             return NextResponse.json({ error: 'Webhook Error: Missing essential metadata (userId or courseId).' }, { status: 400 });
           }
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
           const enrollmentService = new EnrollmentService(userRepository, courseRepository);
           
           await enrollmentService.enrollStudentToCourse(userId, courseId);
-          console.log(`[Stripe Webhook] EnrollmentService.enrollStudentToCourse completed for User: ${userId}, Course: ${courseId}.`);
+          console.log(`[Stripe Webhook] EnrollmentService.enrollStudentToCourse completed successfully for User: ${userId}, Course: ${courseId}.`);
           await writeWebhookLog(eventId, 'enrollment_service_success', { userId, courseId });
 
         } else {
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         break;
       }
       default:
-        console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
+        console.log(`[Stripe Webhook] Unhandled event type: ${event.type}. Event ID: ${eventId}`);
         await writeWebhookLog(eventId, 'unhandled_event_type', { type: event.type });
     }
 

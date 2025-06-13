@@ -25,9 +25,9 @@ export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const courseId = searchParams.get('courseId');
-  const { refreshUserProfile } = useAuth(); // Get refreshUserProfile
+  const { currentUser, loading: authLoading, refreshUserProfile } = useAuth(); // Get currentUser and loading
   
-  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [isLoadingSession, setIsLoadingSession] = useState(true); // Renamed to avoid confusion with authLoading
   const [isLoadingCourseData, setIsLoadingCourseData] = useState(false);
   const [firstLessonId, setFirstLessonId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,12 +47,12 @@ export default function PaymentSuccessPage() {
         setFirstLessonId(data.modules[0].lessons[0].id);
       } else {
         console.warn(`Curso ${courseId} no tiene lecciones, no se puede generar enlace directo a la primera lección.`);
-        setFirstLessonId(null); // No hay lecciones
+        setFirstLessonId(null); 
       }
     } catch (err: any) {
       setError(err.message);
       console.error("Error fetching course data for success page link:", err);
-      setFirstLessonId(null); // Error, no se puede generar enlace
+      setFirstLessonId(null); 
     } finally {
       setIsLoadingCourseData(false);
     }
@@ -60,27 +60,29 @@ export default function PaymentSuccessPage() {
 
   useEffect(() => {
     if (sessionId && courseId) {
-      console.log('Payment success for session:', sessionId, 'and course:', courseId);
-      
-      refreshUserProfile().then(() => {
-        console.log("[PaymentSuccessPage] User profile refresh COMPLETED.");
-        // Fetch course data for the link after profile refresh is confirmed
-        fetchCourseDataForLink(); 
-      }).catch(err => {
-        console.error("[PaymentSuccessPage] Error refreshing user profile on payment success:", err);
-        // Still try to fetch course data for link even if profile refresh has an issue,
-        // as the link itself might still be useful.
-        fetchCourseDataForLink();
-      });
-      
-      setIsLoadingSession(false);
-      // Moved fetchCourseDataForLink inside .then() of refreshUserProfile
+      if (!authLoading && currentUser) {
+        console.log(`[PaymentSuccessPage] Auth loaded and user present (UID: ${currentUser.uid}). Attempting to refresh profile and fetch course data...`);
+        setIsLoadingSession(false); // No longer loading session details specifically, auth handles user loading
+        refreshUserProfile().then(() => {
+          console.log("[PaymentSuccessPage] User profile refresh COMPLETED.");
+          fetchCourseDataForLink(); 
+        }).catch(err => {
+          console.error("[PaymentSuccessPage] Error refreshing user profile on payment success:", err);
+          // Still try to fetch course data for link even if profile refresh has an issue.
+          fetchCourseDataForLink();
+        });
+      } else {
+        console.log(`[PaymentSuccessPage] Waiting for auth to load (authLoading: ${authLoading}) or user to be present (currentUser: ${!!currentUser}). Session ID: ${sessionId}, Course ID: ${courseId}`);
+        // setIsLoadingSession(true) could be set here if we want the "Verifying your purchase..." message
+        // For now, if auth is loading, the main page loader might be sufficient, or we can keep a specific one
+         if (authLoading) setIsLoadingSession(true); else setIsLoadingSession(false);
+      }
     } else {
-      console.warn('Payment success page reached without session_id or courseId.');
+      console.warn('[PaymentSuccessPage] Reached without session_id or courseId.');
       setIsLoadingSession(false);
       setError("Faltan parámetros para confirmar la compra.");
     }
-  }, [sessionId, courseId, fetchCourseDataForLink, refreshUserProfile]);
+  }, [sessionId, courseId, fetchCourseDataForLink, refreshUserProfile, currentUser, authLoading]);
 
 
   return (
@@ -96,7 +98,7 @@ export default function PaymentSuccessPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isLoadingSession ? (
+          {isLoadingSession ? ( // Changed to use isLoadingSession for clarity
              <p className="text-muted-foreground flex items-center justify-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verificando tu compra...</p>
           ) : error ? (
             <p className="text-destructive">{error}</p>

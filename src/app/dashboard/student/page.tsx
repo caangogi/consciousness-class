@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
-import Image from "next/image";
+import Image from 'next/image';
 import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton"; 
@@ -67,6 +67,7 @@ export default function StudentDashboardPage() {
       setIsLoadingCourses(false);
       return;
     }
+    console.log('[StudentDashboard] fetchEnrolledCourses called. CurrentUser:', currentUser?.uid, 'Cursos inscritos en currentUser:', currentUser.cursosInscritos);
     setIsLoadingCourses(true);
     setCoursesError(null);
     try {
@@ -81,20 +82,30 @@ export default function StudentDashboardPage() {
         throw new Error(errorData.details || errorData.error || 'Error al cargar los cursos inscritos.');
       }
       const data = await response.json();
+      console.log('[StudentDashboard] fetchEnrolledCourses API response:', data);
       setEnrolledCoursesApiData(data.enrolledCourses || []);
     } catch (err: any) {
       setCoursesError(err.message);
-      console.error("Error fetching enrolled courses:", err);
+      console.error("[StudentDashboard] Error fetching enrolled courses:", err);
       toast({ title: "Error al Cargar Cursos", description: err.message, variant: "destructive" });
     } finally {
       setIsLoadingCourses(false);
     }
-  }, [currentUser, toast]);
+  }, [currentUser, toast]); // currentUser es dependencia clave aquí
 
   useEffect(() => {
-    if (!authLoading && currentUser) {
+    if (!authLoading && currentUser?.uid) {
+      console.log('[StudentDashboard] useEffect for fetchEnrolledCourses triggered. UID:', currentUser.uid, 'cursosInscritos:', currentUser.cursosInscritos, 'length:', currentUser.cursosInscritos?.length);
       fetchEnrolledCourses();
+    } else if (!authLoading && !currentUser) {
+      console.log('[StudentDashboard] useEffect: No user or auth still loading, clearing courses.');
+      setEnrolledCoursesApiData([]);
+      setIsLoadingCourses(false); // Ensure loading is false if no user
     }
+  }, [authLoading, currentUser?.uid, currentUser?.cursosInscritos?.length, fetchEnrolledCourses]);
+
+
+  useEffect(() => {
     if (currentUser && isEditDialogOpen) {
       form.reset({
         nombre: currentUser.nombre || '',
@@ -103,7 +114,7 @@ export default function StudentDashboardPage() {
       setImagePreviewUrl(currentUser.photoURL || null); 
       setImageFile(null); 
     }
-  }, [currentUser, authLoading, fetchEnrolledCourses, isEditDialogOpen, form]);
+  }, [currentUser, isEditDialogOpen, form]);
 
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -325,8 +336,8 @@ export default function StudentDashboardPage() {
                 <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-3" />
                 <h3 className="text-lg font-semibold text-destructive">Error al Cargar Cursos</h3>
                 <p className="text-muted-foreground text-sm mb-3">{coursesError}</p>
-                <Button onClick={fetchEnrolledCourses} variant="outline" size="sm">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Button onClick={fetchEnrolledCourses} variant="outline" size="sm" disabled={isLoadingCourses}>
+                    {isLoadingCourses ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Reintentar
                 </Button>
             </div>
@@ -334,14 +345,16 @@ export default function StudentDashboardPage() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {enrolledCoursesApiData.map(course => (
                 <Card key={course.id} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col">
-                  <Image 
-                    src={course.imagenPortadaUrl || 'https://placehold.co/300x180.png'} 
-                    alt={course.nombre} 
-                    width={300} 
-                    height={180} 
-                    className="w-full aspect-[16/10] object-cover" 
-                    data-ai-hint={course.dataAiHintImagenPortada || 'course student dashboard'}
-                  />
+                  <Link href={`/courses/${course.id}`} className="block relative aspect-[16/10] w-full">
+                    <Image 
+                      src={course.imagenPortadaUrl || 'https://placehold.co/300x180.png'} 
+                      alt={course.nombre} 
+                      fill
+                      className="object-cover" 
+                      data-ai-hint={course.dataAiHintImagenPortada || 'course student dashboard'}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                  </Link>
                   <CardContent className="p-4 flex-grow">
                     <h3 className="font-semibold mb-1 truncate text-md leading-tight">{course.nombre}</h3>
                     {course.progress !== undefined && (
@@ -350,10 +363,13 @@ export default function StudentDashboardPage() {
                         <p className="text-xs text-muted-foreground mb-3">{course.progress.porcentajeCompletado}% completado</p>
                       </>
                     )}
+                     {course.progress === undefined && (
+                        <p className="text-xs text-muted-foreground mb-3">Progreso no disponible</p>
+                     )}
                   </CardContent>
                   <CardFooter className="p-4 border-t">
                     <Button variant="default" size="sm" asChild className="w-full">
-                      <Link href={`/courses/${course.id}`}>Ir al Curso</Link>
+                      <Link href={`/learn/${course.id}/${course.modules && course.modules[0]?.lessons && course.modules[0].lessons[0]?.id || 'start'}`}>Ir al Curso</Link>
                     </Button>
                   </CardFooter>
                 </Card>
@@ -545,4 +561,3 @@ export default function StudentDashboardPage() {
     </div>
   );
 }
-    

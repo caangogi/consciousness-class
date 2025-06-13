@@ -72,7 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           referidosExitosos: data.referidosExitosos,
           balanceCredito: data.balanceCredito,
         };
-        console.log(`[AuthContext] Fetched user profile for ${user.uid}:`, { role: fetchedRole, cursosInscritos: userProfileData.cursosInscritos });
+        // console.log(`[AuthContext] Fetched user profile for ${user.uid}:`, { role: fetchedRole, cursosInscritos: userProfileData.cursosInscritos });
       } else {
          console.warn(`[AuthContext] User document for ${user.uid} not found in Firestore. Defaulting role to student and empty enrollments.`);
       }
@@ -86,6 +86,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         cursosInscritos: userProfileData.cursosInscritos || [], 
       };
       
+      console.log('[AuthContext] fetchAndSetUserProfile - combinedUser to be set:', { 
+          uid: combinedUser.uid, 
+          email: combinedUser.email, 
+          role: combinedUser.role, 
+          cursosInscritos: combinedUser.cursosInscritos 
+      });
       setCurrentUser(combinedUser);
       setUserRole(fetchedRole);
     } else {
@@ -114,14 +120,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error("[AuthContext] Error signing out: ", error);
     }
+    // No necesitas setCurrentUser(null) aquí; onAuthStateChanged lo manejará.
+    // setLoading(false) también se maneja por onAuthStateChanged.
   };
 
   const refreshUserProfile = useCallback(async () => {
     if (auth.currentUser) {
       console.log("[AuthContext] Refreshing user profile for UID:", auth.currentUser.uid);
-      // setLoading(true); // Avoid setting loading true here if it causes UI flicker, onAuthStateChanged handles initial load
       await fetchAndSetUserProfile(auth.currentUser);
-      // setLoading(false); // Correspondingly, don't set to false if not set true above
     } else {
         console.log("[AuthContext] No current user to refresh.");
     }

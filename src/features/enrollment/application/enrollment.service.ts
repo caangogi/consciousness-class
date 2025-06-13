@@ -16,14 +16,14 @@ export class EnrollmentService {
     try {
       const user = await this.userRepository.findByUid(userId);
       if (!user) {
-        console.error(`[EnrollmentService] User with ID ${userId} not found.`);
+        console.error(`[EnrollmentService] User with ID ${userId} not found for enrollment.`);
         throw new Error(`User with ID ${userId} not found.`);
       }
-      console.log(`[EnrollmentService] User ${userId} found. Role: ${user.role}`);
+      console.log(`[EnrollmentService] User ${userId} found. Role: ${user.role}, Enrolled Courses: ${user.cursosInscritos.join(', ')}`);
 
       const course = await this.courseRepository.findById(courseId);
       if (!course) {
-        console.error(`[EnrollmentService] Course with ID ${courseId} not found.`);
+        console.error(`[EnrollmentService] Course with ID ${courseId} not found for enrollment.`);
         throw new Error(`Course with ID ${courseId} not found.`);
       }
       console.log(`[EnrollmentService] Course ${courseId} found: "${course.nombre}", Status: ${course.estado}`);
@@ -35,6 +35,7 @@ export class EnrollmentService {
 
       if (user.cursosInscritos.includes(courseId)) {
         console.warn(`[EnrollmentService] User ${userId} is ALREADY enrolled in course ${courseId}. No action taken.`);
+        // Consider if this should be an error or just a soft return. For now, soft return.
         return; 
       }
 
@@ -48,6 +49,7 @@ export class EnrollmentService {
 
     } catch (error: any) {
       console.error(`[EnrollmentService] ERROR during enrollment for User: ${userId}, Course: ${courseId}. Details:`, error.message, error.stack);
+      // Propagate the error so the webhook handler can react (e.g., return 500 to Stripe)
       throw error; 
     }
   }

@@ -138,14 +138,26 @@ export class FirebaseUserRepository implements IUserRepository {
   }
 
   async addCourseToEnrolled(userId: string, courseId: string): Promise<void> {
-    console.log(`[FirebaseUserRepository] Attempting to add Course ID: '${courseId}' to User ID: '${userId}' enrolled courses.`);
+    console.log(`[FirebaseUserRepository] Attempting to add Course ID: '${courseId}' to User ID: '${userId}' enrolled courses (cursosInscritos).`);
     try {
         const userRef = this.usersCollection.doc(userId);
         await userRef.update({
             cursosInscritos: FieldValue.arrayUnion(courseId),
             updatedAt: new Date().toISOString()
         });
-        console.log(`[FirebaseUserRepository] SUCCESS: Course ID '${courseId}' added to user '${userId}' enrolled courses. Firestore update successful.`);
+        console.log(`[FirebaseUserRepository] Firestore update called for user '${userId}' to add course '${courseId}'.`);
+
+        // Verification step
+        const updatedUserSnap = await userRef.get();
+        const updatedUserData = updatedUserSnap.data() as UserProperties | undefined;
+
+        if (updatedUserData && Array.isArray(updatedUserData.cursosInscritos) && updatedUserData.cursosInscritos.includes(courseId)) {
+            console.log(`[FirebaseUserRepository] SUCCESS: Course ID '${courseId}' confirmed in user '${userId}' enrolled courses after update.`);
+        } else {
+            console.error(`[FirebaseUserRepository] CRITICAL: Firestore update for cursosInscritos DID NOT PERSIST or was not found for user ${userId}, course ${courseId}. Current cursosInscritos: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
+            throw new Error(`[FirebaseUserRepository] CRITICAL: Firestore update for cursosInscritos DID NOT PERSIST for user ${userId}, course ${courseId}. Array is: ${JSON.stringify(updatedUserData?.cursosInscritos)}`);
+        }
+
     } catch (error: any) {
         const firebaseError = error as FirebaseError;
         console.error(`[FirebaseUserRepository] ERROR adding course '${courseId}' to user '${userId}':`, firebaseError.message, firebaseError.stack);

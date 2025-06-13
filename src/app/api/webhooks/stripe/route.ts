@@ -60,10 +60,9 @@ export async function POST(request: NextRequest) {
         console.log(`[Stripe Webhook] Payment successful. Extracted metadata: userId='${userId}', courseId='${courseId}'`);
 
         if (!userId || !courseId) {
-          console.error('[Stripe Webhook] ERROR: Faltan metadatos (userId o courseId) en la sesión de Stripe:', session.id, 'Metadata:', session.metadata);
-          // Devolver 200 a Stripe para evitar reintentos, pero registrar el error.
-          // Esto indica un problema en la creación de la sesión de checkout, no en el webhook en sí.
-          return NextResponse.json({ received: true, error: 'Missing metadata (userId or courseId) from Stripe session.' }, { status: 200 });
+          console.error('[Stripe Webhook] ERROR: Faltan metadatos críticos (userId o courseId) en la sesión de Stripe:', session.id, 'Metadata:', session.metadata);
+          // Devolver 400 a Stripe para indicar que el problema es con los datos recibidos y no debería reintentarse tal cual.
+          return NextResponse.json({ error: 'Webhook Error: Missing critical metadata (userId or courseId) from Stripe session.' }, { status: 400 });
         }
 
         try {
@@ -76,8 +75,8 @@ export async function POST(request: NextRequest) {
           console.log(`[Stripe Webhook] SUCCESS: EnrollmentService completed for User: ${userId}, Course: ${courseId}.`);
         } catch (enrollmentError: any) {
           console.error(`[Stripe Webhook] ERROR during enrollment for User: ${userId}, Course: ${courseId}. Details:`, enrollmentError.message, enrollmentError.stack);
-          // Devolver 200 a Stripe para evitar reintentos, pero loguear el error severamente.
-          return NextResponse.json({ received: true, error: 'Enrollment failed post-payment.', details: enrollmentError.message }, { status: 200 });
+          // Devolver 500 a Stripe para indicar un error en el servidor al procesar la inscripción.
+          return NextResponse.json({ error: 'Enrollment processing failed.', details: enrollmentError.message }, { status: 500 });
         }
       } else {
         console.log(`[Stripe Webhook] Checkout session ${session.id} completed but payment_status is '${session.payment_status}'. No enrollment action taken.`);

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { DashboardSidebar, navItems } from '@/components/dashboard/DashboardSidebar'; // Import navItems
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet'; // Added SheetDescription
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from '@/components/ui/sheet'; // Added SheetHeader
 import { Menu as MenuIcon, LogOut } from 'lucide-react'; // Removed unused icons
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';

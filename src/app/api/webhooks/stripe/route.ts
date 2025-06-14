@@ -57,9 +57,10 @@ export async function POST(request: NextRequest) {
   const sig = request.headers.get('stripe-signature');
   if (!sig) {
     console.error('[Stripe Webhook] Webhook Error: Missing "stripe-signature" header. Cannot verify event.');
-    return NextResponse.json({ error: 'Webhook Error: Missing signature header' }, { status: 400 });
+    // No early return here yet, to allow body reading for simplified test
+  } else {
+    console.log('[Stripe Webhook] Stripe signature header is present.');
   }
-  console.log('[Stripe Webhook] Stripe signature header is present.');
 
   let rawBody: string;
   try {
@@ -75,14 +76,22 @@ export async function POST(request: NextRequest) {
   let eventForLogOnly: Stripe.Event | null = null;
   let eventIdForLog: string = "UNKNOWN_EVENT_ID_PRE_CONSTRUCTION";
   try {
-    eventForLogOnly = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-    eventIdForLog = eventForLogOnly.id;
-    console.log(`[Stripe Webhook] SIMPLIFIED: Event constructed for logging. Type: ${eventForLogOnly.type}, ID: ${eventIdForLog}`);
+    if (!sig) {
+        // If signature is missing, we can't construct, but still log and return simplified OK for testing purposes
+        eventIdForLog = "NO_SIGNATURE_RECEIVED";
+        console.warn(`[Stripe Webhook] SIMPLIFIED: No signature header. Proceeding with minimal OK response for debugging external redirection.`);
+    } else {
+        eventForLogOnly = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+        eventIdForLog = eventForLogOnly.id;
+        console.log(`[Stripe Webhook] SIMPLIFIED: Event constructed for logging. Type: ${eventForLogOnly.type}, ID: ${eventIdForLog}`);
+    }
   } catch (err: any) {
     console.error(`[Stripe Webhook] SIMPLIFIED: Webhook signature verification FAILED during pre-check: ${err.message}.`);
     // Still attempt to log this failure before returning an error
     await writeWebhookLog("SIGNATURE_VERIFICATION_FAILED_SIMPLIFIED", 'signature_verification_failed_simplified_pre_check', { error: err.message, signaturePresent: !!sig, bodyLength: rawBody.length });
-    return NextResponse.json({ error: `Webhook signature verification failed (simplified pre-check): ${err.message}` }, { status: 400 });
+    // For the purpose of testing the 302, we might still want to return 200 if the goal is to see if *any* 200 gets through
+    // However, a more robust approach would be to return 400 here. Let's stick to returning 200 for this specific debug phase.
+    // return NextResponse.json({ error: `Webhook signature verification failed (simplified pre-check): ${err.message}` }, { status: 400 });
   }
 
   console.log(`[Stripe Webhook] SIMPLIFIED: Read signature and body. Attempting to return 200 OK immediately for event ID: ${eventIdForLog}.`);
@@ -94,6 +103,10 @@ export async function POST(request: NextRequest) {
   /*
   let event: Stripe.Event;
   try {
+    if (!sig) {
+      console.error('[Stripe Webhook] Webhook Error: Missing "stripe-signature" header. Cannot verify event.');
+      return NextResponse.json({ error: 'Webhook Error: Missing signature header' }, { status: 400 });
+    }
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
     console.log(`[Stripe Webhook] Event constructed successfully. Type: ${event.type}, ID: ${event.id}`);
   } catch (err: any) {
@@ -160,3 +173,4 @@ export async function POST(request: NextRequest) {
   }
   */
 }
+

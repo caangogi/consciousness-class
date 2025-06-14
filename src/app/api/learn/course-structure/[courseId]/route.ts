@@ -19,7 +19,7 @@ interface RouteParams {
   params: { courseId: string };
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) { // Made GET async
+export async function GET(request: NextRequest, { params }: RouteParams) { 
   const courseId = params.courseId; // Correctly access courseId from destructured params
   console.log(`[API /learn/course-structure] Received request for courseId: ${courseId}`);
   try {

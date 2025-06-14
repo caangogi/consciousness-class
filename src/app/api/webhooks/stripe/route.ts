@@ -70,13 +70,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook Error: could not read body' }, { status: 400 });
   }
 
-  // --- SIMPLIFICATION POINT ---
-  // For now, we will just log that we received the request with a signature and body,
-  // and return 200 OK. This helps isolate if the 302 redirect is happening
-  // before or during Stripe's event construction or our business logic.
-  console.log('[Stripe Webhook] SIMPLIFIED: Read signature and body. Attempting to return 200 OK immediately.');
-  await writeWebhookLog("SIMPLIFIED_TEST", 'received_and_attempting_minimal_ok', { signaturePresent: !!sig, bodyLength: rawBody.length });
-  return NextResponse.json({ received_minimal_ok: true, message: "Simplified webhook logic for 302 debug." }, { status: 200 });
+  // --- SIMPLIFIED LOGIC FOR 302 DEBUG ---
+  // We will try to construct the event to get its ID for logging, but won't process it further yet.
+  let eventForLogOnly: Stripe.Event | null = null;
+  let eventIdForLog: string = "UNKNOWN_EVENT_ID_PRE_CONSTRUCTION";
+  try {
+    eventForLogOnly = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    eventIdForLog = eventForLogOnly.id;
+    console.log(`[Stripe Webhook] SIMPLIFIED: Event constructed for logging. Type: ${eventForLogOnly.type}, ID: ${eventIdForLog}`);
+  } catch (err: any) {
+    console.error(`[Stripe Webhook] SIMPLIFIED: Webhook signature verification FAILED during pre-check: ${err.message}.`);
+    // Still attempt to log this failure before returning an error
+    await writeWebhookLog("SIGNATURE_VERIFICATION_FAILED_SIMPLIFIED", 'signature_verification_failed_simplified_pre_check', { error: err.message, signaturePresent: !!sig, bodyLength: rawBody.length });
+    return NextResponse.json({ error: `Webhook signature verification failed (simplified pre-check): ${err.message}` }, { status: 400 });
+  }
+
+  console.log(`[Stripe Webhook] SIMPLIFIED: Read signature and body. Attempting to return 200 OK immediately for event ID: ${eventIdForLog}.`);
+  await writeWebhookLog(eventIdForLog, 'received_and_attempting_minimal_ok_simplified', { signaturePresent: !!sig, bodyLength: rawBody.length, eventType: eventForLogOnly?.type });
+  return NextResponse.json({ received_minimal_ok: true, message: "Simplified webhook logic for 302 debug. Event processed minimally." }, { status: 200 });
+
 
   // --- ORIGINAL LOGIC (COMMENTED OUT FOR NOW) ---
   /*

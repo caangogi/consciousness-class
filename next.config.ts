@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -23,6 +24,9 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    dangerouslyAllowSVG: true, // Permitir SVGs de dominios remotos
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 };
 

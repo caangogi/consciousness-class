@@ -43,11 +43,11 @@ const floatingItemVariants = (delay = 0) => ({
 });
 
 const partnerLogos = [
-  { name: 'Tech Innovators', src: 'https://placehold.co/100x40/cbd5e1/475569?text=Innovate', dataAiHint: 'tech logo' },
-  { name: 'Future Learn Co.', src: 'https://placehold.co/100x40/cbd5e1/475569?text=FutureLearn', dataAiHint: 'education logo' },
-  { name: 'Synergy Solutions', src: 'https://placehold.co/100x40/cbd5e1/475569?text=Synergy', dataAiHint: 'solutions logo' },
-  { name: 'Global Education', src: 'https://placehold.co/100x40/cbd5e1/475569?text=GlobalEdu', dataAiHint: 'global logo' },
-  { name: 'NextGen Skills', src: 'https://placehold.co/100x40/cbd5e1/475569?text=NextGen', dataAiHint: 'skills logo' },
+  { name: 'Tech Innovators', src: 'https://placehold.co/100x40.png', dataAiHint: 'tech logo' },
+  { name: 'Future Learn Co.', src: 'https://placehold.co/100x40.png', dataAiHint: 'education logo' },
+  { name: 'Synergy Solutions', src: 'https://placehold.co/100x40.png', dataAiHint: 'solutions logo' },
+  { name: 'Global Education', src: 'https://placehold.co/100x40.png', dataAiHint: 'global logo' },
+  { name: 'NextGen Skills', src: 'https://placehold.co/100x40.png', dataAiHint: 'skills logo' },
 ];
 
 const featuredCoursesData: CourseCardData[] = [
@@ -150,12 +150,12 @@ export default function HomePage() {
         animate="visible"
       >
         <motion.div 
-          className="absolute top-1/4 left-[10%] md:left-[15%] text-slate-200"
+          className="absolute top-1/4 left-[10%] md:left-[15%]"
           variants={floatingItemVariants(0.1)}
           initial="initial"
           animate="animate"
         >
-          <Image src="https://placehold.co/120x120/e0e7ff/a5b4fc.png?text=+" alt="Abstract Plus" width={100} height={100} data-ai-hint="abstract 3D plus" className="opacity-70" />
+          <Image src="https://placehold.co/120x120.png" alt="Abstract Plus" width={100} height={100} data-ai-hint="abstract 3D plus" className="opacity-70" />
         </motion.div>
 
         <motion.div 
@@ -164,7 +164,7 @@ export default function HomePage() {
           initial="initial"
           animate="animate"
         >
-          <Image src="https://placehold.co/150x150/e0e7ff/a5b4fc.png?text=Pin" alt="Abstract Location Pin" width={130} height={130} data-ai-hint="3D location pin" className="opacity-70" />
+          <Image src="https://placehold.co/150x150.png" alt="Abstract Location Pin" width={130} height={130} data-ai-hint="3D location pin" className="opacity-70" />
            <motion.div 
             className="absolute -bottom-5 -right-5 md:-bottom-2 md:-right-8 bg-foreground text-background text-xs px-3 py-1.5 rounded-full shadow-soft-xl flex items-center gap-1"
             variants={floatingItemVariants(0.7)}
@@ -181,7 +181,7 @@ export default function HomePage() {
            initial="initial"
            animate="animate"
         >
-          <Image src="https://placehold.co/250x250/e0e7ff/a5b4fc.png?text=👍" alt="Abstract Thumbs Up" width={250} height={250} data-ai-hint="3D thumbs up" className="opacity-60" />
+          <Image src="https://placehold.co/250x250.png" alt="Abstract Thumbs Up" width={250} height={250} data-ai-hint="3D thumbs up" className="opacity-60" />
         </motion.div>
 
         <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
@@ -434,7 +434,7 @@ export default function HomePage() {
             className="absolute -top-16 left-1/2 -translate-x-1/2  w-32 h-32 md:w-40 md:h-40 opacity-20"
             animate={{ rotate: 360, transition: { duration: 20, repeat: Infinity, ease: "linear" } }}
           >
-            <Image src="https://placehold.co/200x200/ffffff/ffffff.png?text=" alt="Decorative element" width={160} height={160} data-ai-hint="white swirl" />
+            <Image src="https://placehold.co/200x200.png" alt="Decorative element" width={160} height={160} data-ai-hint="white swirl" />
           </motion.div>
           <motion.h2 
             className="font-headline text-3xl md:text-5xl font-bold mb-6"

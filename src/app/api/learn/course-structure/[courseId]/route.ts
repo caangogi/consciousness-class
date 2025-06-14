@@ -15,12 +15,14 @@ interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
 }
 
-interface RouteParams {
-  params: { courseId: string };
-}
+// Interface for route parameters is now defined by Next.js itself for Route Handlers
+// We use a more direct type assertion or an interface specific to the params object
+// interface RouteParams {
+//   params: { courseId: string };
+// }
 
-export async function GET(request: NextRequest, { params }: RouteParams) { // Made GET async
-  const courseId = params.courseId; // Correctly access courseId from destructured params
+export async function GET(request: NextRequest, { params }: { params: { courseId: string } }) {
+  const courseId = params.courseId; 
   console.log(`[API /learn/course-structure] Received request for courseId: ${courseId}`);
   try {
     if (!courseId) {
@@ -94,4 +96,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) { // Ma
     return NextResponse.json({ error: errorMessage, details: errorDetails, stack }, { status: statusCode });
   }
 }
+    
+
     

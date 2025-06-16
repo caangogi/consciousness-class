@@ -59,21 +59,21 @@ export class UserService {
 
   async updateUserProfile(uid: string, dto: UpdateUserProfileDto): Promise<UserEntity | null> {
     try {
-      const dataToUpdate: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'role' | 'referredBy' | 'displayName' >> = {};
+      const dataToUpdate: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'role' | 'referredBy' | 'displayName' | 'cursosInscritos' | 'paymentInfo' | 'balanceComisionesPendientes' >> = {};
       
       if (dto.nombre !== undefined) dataToUpdate.nombre = dto.nombre;
       if (dto.apellido !== undefined) dataToUpdate.apellido = dto.apellido;
-      // photoURL can be a string (new URL) or null (to remove photo)
       if (dto.photoURL !== undefined) dataToUpdate.photoURL = dto.photoURL;
+
 
       if (Object.keys(dataToUpdate).length === 0) {
           console.warn("[UserService] No data provided for user profile update for UID: " + uid + ". Returning current profile.");
-          const currentUser = await this.userRepository.findByUid(uid);
-          if (!currentUser) {
+          const currentUserProfile = await this.userRepository.findByUid(uid);
+          if (!currentUserProfile) {
             console.error('[UserService] User not found when trying to return current profile for UID: ' + uid);
             throw new Error('User not found for update operation.');
           }
-          return currentUser;
+          return currentUserProfile;
       }
       
       console.log('[UserService] Attempting to update profile for UID: ' + uid + ' with data:', JSON.stringify(dataToUpdate));
@@ -83,7 +83,6 @@ export class UserService {
         console.log('[UserService] User profile updated successfully in Firestore for UID: ' + uid);
       } else {
         console.warn('[UserService] User profile update in Firestore failed or user not found for UID: ' + uid);
-        // This implies user was not found by repository or update itself failed at repo level
         throw new Error('User not found or Firestore update failed for UID: ' + uid);
       }
       return updatedUser; 
@@ -136,6 +135,15 @@ export class UserService {
         throw new Error('Failed to delete user profile: ' + error.message);
       }
       throw new Error('An unexpected error occurred while deleting user profile.');
+    }
+  }
+
+  async getAllUsers(limitCount: number = 5, orderByField: string = 'createdAt', orderDirection: 'asc' | 'desc' = 'desc'): Promise<UserEntity[]> {
+    try {
+      return await this.userRepository.findAllUsers(limitCount, orderByField, orderDirection);
+    } catch (error: any) {
+      console.error('[UserService] Error fetching all users:', error.message);
+      throw new Error('Failed to fetch all users: ' + error.message);
     }
   }
 }

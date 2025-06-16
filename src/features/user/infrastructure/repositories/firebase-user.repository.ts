@@ -91,7 +91,7 @@ export class FirebaseUserRepository implements IUserRepository {
     }
   }
 
-  async update(uid: string, data: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt'>>): Promise<UserEntity | null> {
+  async update(uid: string, data: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'referredBy' | 'displayName' | 'cursosInscritos' | 'photoURL' >>): Promise<UserEntity | null> {
     try {
       const userRef = this.usersCollection.doc(uid);
       const userSnap = await userRef.get();
@@ -101,7 +101,8 @@ export class FirebaseUserRepository implements IUserRepository {
       }
 
       const updateData: any = { ...data, updatedAt: new Date().toISOString() };
-
+      
+      // Specific handling for displayName and photoURL if they are part of 'data'
       const currentData = userSnap.data() as UserProperties;
       const newNombre = data.nombre !== undefined ? data.nombre : currentData.nombre;
       const newApellido = data.apellido !== undefined ? data.apellido : currentData.apellido;
@@ -110,19 +111,15 @@ export class FirebaseUserRepository implements IUserRepository {
           updateData.displayName = `${newNombre} ${newApellido}`.trim();
       }
 
-      if (data.photoURL !== undefined) {
-        updateData.photoURL = data.photoURL;
-      } else if (data.hasOwnProperty('photoURL') && data.photoURL === null) {
-         updateData.photoURL = null;
+      // Handle photoURL: allow setting to null or a new string URL
+      if (data.hasOwnProperty('photoURL')) { // Check if photoURL key exists in data
+        updateData.photoURL = data.photoURL; // This will correctly pass string or null
       }
 
+      // Ensure cursosInscritos is an array if provided, or default to empty array if not
       if (data.cursosInscritos !== undefined && !Array.isArray(data.cursosInscritos)) {
         updateData.cursosInscritos = [];
       }
-      if (data.balanceComisionesPendientes !== undefined) {
-        updateData.balanceComisionesPendientes = data.balanceComisionesPendientes;
-      }
-
 
       await userRef.update(updateData);
       const updatedDocSnap = await userRef.get();
@@ -279,6 +276,35 @@ export class FirebaseUserRepository implements IUserRepository {
         const firebaseError = error as FirebaseError;
         console.error(`[FirebaseUserRepository] Error updating referrer balance for user '${userId}':`, firebaseError.message);
         throw new Error(`Firestore updateReferrerBalance operation failed: ${firebaseError.message}`);
+    }
+  }
+
+  async findAllUsers(limitCount: number = 10, orderByField: string = 'createdAt', orderDirection: 'asc' | 'desc' = 'desc'): Promise<UserEntity[]> {
+    try {
+      let query: admin.firestore.Query = this.usersCollection;
+      if (orderByField) {
+        query = query.orderBy(orderByField, orderDirection);
+      }
+      if (limitCount > 0) {
+        query = query.limit(limitCount);
+      }
+      
+      const snapshot = await query.get();
+      if (snapshot.empty) {
+        console.log('[FirebaseUserRepository] No users found with current criteria.');
+        return [];
+      }
+      return snapshot.docs.map(doc => {
+        const data = doc.data() as UserProperties;
+        if (!Array.isArray(data.cursosInscritos)) {
+          data.cursosInscritos = [];
+        }
+        return new UserEntity(data);
+      });
+    } catch (error: any) {
+      const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseUserRepository] Error finding all users:`, firebaseError.message);
+      throw new Error(`Firestore findAllUsers operation failed: ${firebaseError.message}`);
     }
   }
 }

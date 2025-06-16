@@ -1,32 +1,153 @@
 
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Users, BookOpen, Settings, Ticket, ShieldCheck, Info, DollarSign } from "lucide-react"; 
+import { Users, BookOpen, Settings, DollarSign, Info, Loader2, AlertTriangle, RefreshCw } from "lucide-react"; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import type { UserProperties, UserRole } from '@/features/user/domain/entities/user.entity';
+import { Skeleton } from '@/components/ui/skeleton';
+import { auth } from '@/lib/firebase/config';
+import { cn } from '@/lib/utils';
 
-// Placeholder data
-const platformStats = {
-  totalUsers: 10520,
-  totalCourses: 150,
-  totalRevenue: 125600.75,
-  activeSubscriptions: 850,
+// Placeholder data for stats (actual implementation can be added later)
+const placeholderStats = {
+  totalUsers: 0, // Will be updated if possible, or remains placeholder
+  totalCourses: 150, // Placeholder
+  totalRevenue: 125600.75, // Placeholder
+  activeSubscriptions: 850, // Placeholder
 };
-
-const recentUsers = [
-  { id: 'u1', name: 'Alice Johnson', email: 'alice@example.com', role: 'student' as const, dateJoined: '2024-07-15' },
-  { id: 'u2', name: 'Bob Williams', email: 'bob@example.com', role: 'creator' as const, dateJoined: '2024-07-14' },
-  { id: 'u3', name: 'Carol Davis', email: 'carol@example.com', role: 'student' as const, dateJoined: '2024-07-14' },
-];
 
 const pendingApprovals = [
     { id: 'c4', title: 'Curso de Cocina Tailandesa', creator: 'Chef Rama', type: 'curso' },
     { id: 'u4', name: 'David Lee', email: 'david.lee@example.com', type: 'creator_request'},
 ];
 
-
 export default function SuperadminDashboardPage() {
+  const { currentUser } = useAuth(); // For auth token
+  const { toast } = useToast();
+  const [recentUsers, setRecentUsers] = useState<UserProperties[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [platformStats, setPlatformStats] = useState(placeholderStats);
+
+
+  const fetchRecentUsers = useCallback(async () => {
+    if (!currentUser || !auth.currentUser) {
+      setIsLoadingUsers(false);
+      setUsersError("Autenticación requerida para cargar usuarios.");
+      return;
+    }
+    setIsLoadingUsers(true);
+    setUsersError(null);
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+      const response = await fetch('/api/superadmin/users', {
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Error al cargar usuarios recientes.');
+      }
+      const data = await response.json();
+      setRecentUsers(data.users || []);
+      setPlatformStats(prev => ({ ...prev, totalUsers: data.users?.length || 0 })); // Update total users count
+    } catch (err: any) {
+      setUsersError(err.message);
+      toast({
+        title: 'Error al Cargar Usuarios',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  }, [currentUser, toast]);
+
+  useEffect(() => {
+    fetchRecentUsers();
+  }, [fetchRecentUsers]);
+
+  const getRoleBadgeVariant = (role: UserRole) => {
+    switch (role) {
+      case 'student': return 'outline';
+      case 'creator': return 'secondary';
+      case 'superadmin': return 'default';
+      default: return 'outline';
+    }
+  };
+  const getRoleBadgeClass = (role: UserRole) => {
+    switch (role) {
+        case 'student': return 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100';
+        case 'creator': return 'border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100';
+        case 'superadmin': return 'border-red-400 text-red-100 bg-red-600 hover:bg-red-700';
+        default: return 'border-gray-300 text-gray-600 bg-gray-50 hover:bg-gray-100';
+    }
+  };
+
+
+  const renderUserTableContent = () => {
+    if (isLoadingUsers) {
+      return (
+        <TableBody>
+          {[...Array(3)].map((_, i) => (
+            <TableRow key={`skeleton-user-${i}`}>
+              <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
+              <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-full" /></TableCell>
+              <TableCell className="text-center"><Skeleton className="h-6 w-20 mx-auto rounded-full" /></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      );
+    }
+
+    if (usersError) {
+      return (
+        <TableBody>
+          <TableRow>
+            <TableCell colSpan={3} className="text-center py-6">
+              <AlertTriangle className="mx-auto h-8 w-8 text-destructive mb-2" />
+              <p className="text-destructive text-sm">{usersError}</p>
+              <Button onClick={fetchRecentUsers} variant="link" size="sm" className="mt-2 text-primary">
+                <RefreshCw className="mr-2 h-3 w-3" /> Reintentar
+              </Button>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      );
+    }
+    
+    if (recentUsers.length === 0) {
+        return (
+             <TableBody><TableRow><TableCell colSpan={3} className="text-center py-6 text-muted-foreground">No se encontraron usuarios.</TableCell></TableRow></TableBody>
+        );
+    }
+
+    return (
+      <TableBody>
+        {recentUsers.map(user => (
+          <TableRow key={user.uid}>
+            <TableCell className="font-medium">{user.displayName || `${user.nombre} ${user.apellido}`}</TableCell>
+            <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
+            <TableCell className="text-center">
+              <Badge variant={getRoleBadgeVariant(user.role)} className={cn("capitalize", getRoleBadgeClass(user.role))}>
+                {user.role}
+              </Badge>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    );
+  };
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Panel de Superadministrador</h1>
@@ -40,8 +161,7 @@ export default function SuperadminDashboardPage() {
         </CardHeader>
         <CardContent>
             <p className="text-muted-foreground">
-                Esta sección está en desarrollo. Próximamente podrás gestionar usuarios, cursos, y ver estadísticas detalladas de la plataforma.
-                Por ahora, las estadísticas mostradas son datos de ejemplo.
+                Desde aquí puedes supervisar y gestionar aspectos clave de la plataforma consciousness-class.
             </p>
         </CardContent>
       </Card>
@@ -50,11 +170,12 @@ export default function SuperadminDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Usuarios Totales (Ejemplo)</CardTitle>
+            <CardTitle className="text-sm font-medium">Usuarios Registrados</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{platformStats.totalUsers.toLocaleString()}</div>
+            {isLoadingUsers ? <Skeleton className="h-7 w-16"/> : <div className="text-2xl font-bold">{platformStats.totalUsers.toLocaleString()}</div>}
+             <p className="text-xs text-muted-foreground">Total de usuarios en la plataforma.</p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -64,6 +185,7 @@ export default function SuperadminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{platformStats.totalCourses.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Cursos disponibles y en borrador.</p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -73,6 +195,7 @@ export default function SuperadminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{platformStats.totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} €</div>
+             <p className="text-xs text-muted-foreground">Ingresos generados por la plataforma.</p>
           </CardContent>
         </Card>
          <Card className="shadow-md">
@@ -82,6 +205,7 @@ export default function SuperadminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{platformStats.activeSubscriptions.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Suscripciones activas actualmente.</p>
           </CardContent>
         </Card>
       </div>
@@ -124,7 +248,7 @@ export default function SuperadminDashboardPage() {
       <div className="grid md:grid-cols-2 gap-8">
         <Card className="shadow-lg">
             <CardHeader>
-                <CardTitle className="text-xl font-headline">Usuarios Recientes (Ejemplo)</CardTitle>
+                <CardTitle className="text-xl font-headline">Usuarios Recientes</CardTitle>
                 <CardDescription>Últimos usuarios registrados en la plataforma.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -136,20 +260,10 @@ export default function SuperadminDashboardPage() {
                             <TableHead className="text-center">Rol</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
-                        {recentUsers.map(user => (
-                            <TableRow key={user.id}>
-                                <TableCell className="font-medium">{user.name}</TableCell>
-                                <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
-                                <TableCell className="text-center">
-                                    <Badge variant={user.role === 'creator' ? 'secondary' : 'outline' } className={user.role === 'creator' ? 'bg-blue-100 text-blue-700' : ''}>{user.role}</Badge>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
+                    {renderUserTableContent()}
                 </Table>
                 <Button variant="link" asChild className="mt-4 p-0 h-auto text-primary hover:underline">
-                    <Link href="/dashboard/superadmin/user-management" className="pointer-events-none opacity-50">Ver todos (Próximamente)</Link>
+                    <Link href="#" className="opacity-50 pointer-events-none">Ver todos (Próximamente)</Link>
                 </Button>
             </CardContent>
         </Card>

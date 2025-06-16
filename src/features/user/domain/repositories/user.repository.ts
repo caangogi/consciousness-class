@@ -19,13 +19,14 @@ export interface IUserRepository {
   save(user: UserEntity): Promise<void>;
   findByUid(uid: string): Promise<UserEntity | null>;
   findByEmail(email: string): Promise<UserEntity | null>;
-  findByReferralCode(referralCode: string): Promise<UserEntity | null>; // Nueva
-  update(uid: string, data: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt'>>): Promise<UserEntity | null>;
+  findByReferralCode(referralCode: string): Promise<UserEntity | null>; 
+  update(uid: string, data: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'referredBy' | 'displayName' | 'cursosInscritos' | 'photoURL'>>): Promise<UserEntity | null>;
   delete(uid: string): Promise<void>;
   addCourseToEnrolled(userId: string, courseId: string): Promise<void>; 
   findUserWithEnrolledCoursesAndProgress(uid: string): Promise<UserWithEnrolledCourses | null>;
-  incrementSuccessfulReferrals(userId: string): Promise<void>; // Nueva
-  updateReferrerBalance(userId: string, commissionAmount: number): Promise<void>; // Nueva
+  incrementSuccessfulReferrals(userId: string): Promise<void>; 
+  updateReferrerBalance(userId: string, commissionAmount: number): Promise<void>; 
+  findAllUsers(limitCount?: number, orderByField?: string, orderDirection?: 'asc' | 'desc'): Promise<UserEntity[]>; // Nuevo
 }
 
     

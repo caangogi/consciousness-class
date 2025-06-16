@@ -1,5 +1,5 @@
 
-'use client'; 
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from 'next/image';
-import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon, Share2, ExternalLink, DollarSign, RefreshCw } from "lucide-react"; // Added RefreshCw
+import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon, Share2, ExternalLink, DollarSign, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Skeleton } from "@/components/ui/skeleton"; 
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -19,7 +19,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { auth, storage } from '@/lib/firebase/config'; 
+import { auth, storage } from '@/lib/firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { UserCourseProgressProperties } from '@/features/progress/domain/entities/user-course-progress.entity';
@@ -47,7 +47,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function StudentDashboardPage() {
   const { currentUser, userRole, loading: authLoading, refreshUserProfile } = useAuth();
   const { toast } = useToast();
-  
+
   const [enrolledCoursesApiData, setEnrolledCoursesApiData] = useState<EnrolledCourseApiData[]>([]);
   const [isLoadingCourses, setIsLoadingCourses] = useState(true);
   const [coursesError, setCoursesError] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export default function StudentDashboardPage() {
   const [promotableCourses, setPromotableCourses] = useState<PromotableCourseData[]>([]);
   const [isLoadingPromotableCourses, setIsLoadingPromotableCourses] = useState(true);
   const [promotableCoursesError, setPromotableCoursesError] = useState<string | null>(null);
-  
+
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -106,7 +106,7 @@ export default function StudentDashboardPage() {
     } finally {
       setIsLoadingCourses(false);
     }
-  }, [currentUser, toast]); 
+  }, [currentUser, toast]);
 
   const fetchPromotableCourses = useCallback(async () => {
     setIsLoadingPromotableCourses(true);
@@ -133,7 +133,7 @@ export default function StudentDashboardPage() {
       fetchPromotableCourses();
     } else if (!authLoading && !currentUser) {
       setEnrolledCoursesApiData([]);
-      setIsLoadingCourses(false); 
+      setIsLoadingCourses(false);
       setPromotableCourses([]);
       setIsLoadingPromotableCourses(false);
     }
@@ -146,8 +146,8 @@ export default function StudentDashboardPage() {
         nombre: currentUser.nombre || '',
         apellido: currentUser.apellido || '',
       });
-      setImagePreviewUrl(currentUser.photoURL || null); 
-      setImageFile(null); 
+      setImagePreviewUrl(currentUser.photoURL || null);
+      setImageFile(null);
     }
   }, [currentUser, isEditDialogOpen, form]);
 
@@ -163,7 +163,7 @@ export default function StudentDashboardPage() {
       reader.readAsDataURL(file);
     } else {
       setImageFile(null);
-      setImagePreviewUrl(currentUser?.photoURL || null); 
+      setImagePreviewUrl(currentUser?.photoURL || null);
     }
   };
 
@@ -173,7 +173,7 @@ export default function StudentDashboardPage() {
       setIsSubmitting(false);
       return;
     }
-    const activeUser = auth.currentUser; 
+    const activeUser = auth.currentUser;
 
     setIsSubmitting(true);
     let uploadedPhotoURL: string | null = currentUser?.photoURL || null;
@@ -184,10 +184,10 @@ export default function StudentDashboardPage() {
         const originalFileName = imageFile.name;
         const lastDot = originalFileName.lastIndexOf('.');
         const fileExtension = lastDot > -1 ? originalFileName.substring(lastDot + 1).toLowerCase() : 'png';
-        
-        const finalFileNameInStorage = `profile.${fileExtension}`; 
+
+        const finalFileNameInStorage = `profile.${fileExtension}`;
         const storagePath = `users/${activeUser.uid}/${finalFileNameInStorage}`;
-        
+
         const fileMetadata = {
           contentType: imageFile.type
         };
@@ -204,12 +204,12 @@ export default function StudentDashboardPage() {
                 variant: "destructive",
             });
             setIsUploadingImage(false);
-            setIsSubmitting(false); 
-            return; 
+            setIsSubmitting(false);
+            return;
         }
         setIsUploadingImage(false);
       }
-      
+
       const idToken = await activeUser.getIdToken(true);
       const updateDto = {
         nombre: values.nombre,
@@ -231,7 +231,7 @@ export default function StudentDashboardPage() {
         throw new Error(errorData.details || errorData.error || "Error al actualizar el perfil.");
       }
 
-      await refreshUserProfile(); 
+      await refreshUserProfile();
       toast({ title: "Perfil Actualizado", description: "Tu información ha sido actualizada." });
       setIsEditDialogOpen(false);
 
@@ -242,7 +242,7 @@ export default function StudentDashboardPage() {
       setIsSubmitting(false);
     }
   }
-  
+
   const handleCopyReferralCode = () => {
     if (currentUser?.referralCodeGenerated) {
         navigator.clipboard.writeText(currentUser.referralCodeGenerated)
@@ -309,7 +309,7 @@ export default function StudentDashboardPage() {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || "Error al solicitar rol de creador.");
       }
-      
+
       await refreshUserProfile();
       toast({ title: "¡Rol Actualizado!", description: "Ahora eres un Creator. Explora las nuevas opciones en tu dashboard." });
     } catch (error: any) {
@@ -321,10 +321,12 @@ export default function StudentDashboardPage() {
 
   const handleRefreshStats = async () => {
     setIsRefreshingStats(true);
+    toast({ title: "Actualizando Datos...", description: "Estamos refrescando tus estadísticas de referidos." });
     try {
-      await refreshUserProfile();
+      await refreshUserProfile(); // This fetches the latest user profile from Firestore
       toast({ title: "Datos Actualizados", description: "Tus estadísticas de referidos han sido actualizadas." });
     } catch (error) {
+      console.error("Error refreshing user profile:", error);
       toast({ title: "Error al Actualizar", description: "No se pudieron refrescar los datos.", variant: "destructive" });
     } finally {
       setIsRefreshingStats(false);
@@ -334,7 +336,7 @@ export default function StudentDashboardPage() {
   const getInitials = (name?: string | null, surname?: string | null) => {
     if (name && surname) return `${name[0]}${surname[0]}`.toUpperCase();
     if (name) return name.substring(0, 2).toUpperCase();
-    return 'MB'; 
+    return 'MB';
   };
 
   if (authLoading) {
@@ -367,14 +369,12 @@ export default function StudentDashboardPage() {
       </div>
     );
   }
-  
+
   if (!currentUser) {
     return <p className="text-center text-lg">Por favor, <Link href="/login" className="text-primary hover:underline">inicia sesión</Link> para ver tu panel.</p>;
   }
 
   const referralCode = currentUser.referralCodeGenerated || 'GENERANDO...';
-  const successfulReferrals = currentUser.referidosExitosos || 0;
-  const pendingCommissions = `${(currentUser.balanceComisionesPendientes || 0).toFixed(2)} €`;
 
 
   return (
@@ -419,11 +419,11 @@ export default function StudentDashboardPage() {
               {enrolledCoursesApiData.map(course => (
                 <Card key={course.id} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col">
                   <Link href={`/courses/${course.id}`} className="block relative aspect-[16/10] w-full">
-                    <Image 
-                      src={course.imagenPortadaUrl || 'https://placehold.co/300x180.png'} 
-                      alt={course.nombre} 
+                    <Image
+                      src={course.imagenPortadaUrl || 'https://placehold.co/300x180.png'}
+                      alt={course.nombre}
                       fill
-                      className="object-cover" 
+                      className="object-cover"
                       data-ai-hint={course.dataAiHintImagenPortada || 'course student dashboard'}
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
@@ -493,11 +493,11 @@ export default function StudentDashboardPage() {
                                 <AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback>
                             </Avatar>
                             <div className="relative w-full max-w-xs mx-auto">
-                                <Input 
-                                    id="picture" 
-                                    type="file" 
+                                <Input
+                                    id="picture"
+                                    type="file"
                                     accept="image/png, image/jpeg, image/webp, image/gif"
-                                    onChange={handleImageChange} 
+                                    onChange={handleImageChange}
                                     className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
                                     disabled={isUploadingImage || isSubmitting}
                                 />
@@ -620,21 +620,21 @@ export default function StudentDashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t mt-4">
                 <div>
                     <p className="text-sm font-medium text-muted-foreground">Referidos Exitosos:</p>
-                    <p className="text-2xl font-semibold">{successfulReferrals}</p>
+                    <p className="text-2xl font-semibold">{currentUser?.referidosExitosos || 0}</p>
                 </div>
                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Comisiones Pendientes (Próximamente):</p>
-                    <p className="text-2xl font-semibold flex items-center">{pendingCommissions} <DollarSign className="h-5 w-5 ml-1 text-muted-foreground"/></p>
+                    <p className="text-sm font-medium text-muted-foreground">Comisiones Pendientes:</p>
+                    <p className="text-2xl font-semibold flex items-center">{(currentUser?.balanceComisionesPendientes || 0).toFixed(2)} € <DollarSign className="h-5 w-5 ml-1 text-muted-foreground"/></p>
                  </div>
             </div>
              <div className="mt-3 p-3 bg-secondary/50 rounded-md text-xs text-secondary-foreground flex items-start gap-2">
                 <Info className="h-4 w-4 shrink-0 mt-0.5"/>
-                <p>El seguimiento detallado de comisiones y su pago se habilitará próximamente. Por ahora, puedes ver tus referidos exitosos y el balance de comisiones pendientes.</p>
+                <p>El seguimiento detallado de comisiones y su pago se habilitará próximamente. Por ahora, puedes ver tus referidos exitosos y el balance de comisiones pendientes (actualiza con el botón superior para ver los últimos cambios).</p>
              </div>
           </CardContent>
         </Card>
       </div>
-      
+
       <Card className="shadow-lg">
         <CardHeader>
             <div className="flex items-center gap-2">
@@ -670,7 +670,7 @@ export default function StudentDashboardPage() {
                     {promotableCourses.map(course => (
                         <Card key={course.id} className="p-4">
                             <div className="flex gap-4 items-start mb-3">
-                                <Image 
+                                <Image
                                     src={course.imagenPortadaUrl || 'https://placehold.co/100x60.png'}
                                     alt={course.nombre}
                                     width={100}
@@ -684,9 +684,9 @@ export default function StudentDashboardPage() {
                                     <p className="text-xs font-medium text-primary mt-1">Comisión: {course.comisionReferidoPorcentaje}%</p>
                                 </div>
                             </div>
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 className="w-full"
                                 onClick={() => handleCopyReferralLink('course', course.id)}
                                 disabled={!currentUser.referralCodeGenerated || !baseUrl || !navigator.clipboard}
@@ -721,4 +721,5 @@ export default function StudentDashboardPage() {
     </div>
   );
 }
+    
     

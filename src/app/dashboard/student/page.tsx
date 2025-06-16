@@ -56,7 +56,6 @@ interface CommissionData {
 const profileFormSchema = z.object({
   nombre: z.string().min(1, { message: "El nombre es requerido." }),
   apellido: z.string().min(1, { message: "El apellido es requerido." }),
-  paymentInfo: z.string().optional(), // Nuevo campo para información de pago
 });
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
@@ -93,7 +92,7 @@ export default function StudentDashboardPage() {
   }, []);
 
   useEffect(() => {
-    console.log('[StudentDashboardPage] currentUser changed or initial render:', currentUser);
+    // Log to see what the dashboard page sees when currentUser changes
     console.log('[StudentDashboardPage] currentUser.balanceComisionesPendientes on render:', currentUser?.balanceComisionesPendientes);
   }, [currentUser]);
 
@@ -103,7 +102,6 @@ export default function StudentDashboardPage() {
     defaultValues: {
       nombre: '',
       apellido: '',
-      paymentInfo: '',
     },
   });
 
@@ -203,7 +201,6 @@ export default function StudentDashboardPage() {
       form.reset({
         nombre: currentUser.nombre || '',
         apellido: currentUser.apellido || '',
-        paymentInfo: (currentUser as any).paymentInfo || '', // Asumiendo que 'paymentInfo' se añade al UserProfile
       });
       setImagePreviewUrl(currentUser.photoURL || null);
       setImageFile(null);
@@ -270,14 +267,11 @@ export default function StudentDashboardPage() {
       }
 
       const idToken = await activeUser.getIdToken(true);
-      const updateDto: any = { // Usar 'any' temporalmente para incluir paymentInfo si se decide añadir a UserProperties
+      const updateDto: any = { 
         nombre: values.nombre,
         apellido: values.apellido,
         photoURL: uploadedPhotoURL,
       };
-      if (values.paymentInfo) {
-          updateDto.paymentInfo = values.paymentInfo; // Si se añade a UserProperties y DTO
-      }
 
 
       const response = await fetch('/api/users/update-profile', {
@@ -600,19 +594,6 @@ export default function StudentDashboardPage() {
                             <FormMessage />
                             </FormItem>
                         )}
-                        />
-                         <FormField
-                          control={form.control}
-                          name="paymentInfo"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Información de Pago de Comisiones (Opcional)</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ej: Email de PayPal o cuenta bancaria (IBAN)" {...field} disabled={isSubmitting || isUploadingImage}/>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
                         />
                         <DialogFooter>
                         <DialogClose asChild>

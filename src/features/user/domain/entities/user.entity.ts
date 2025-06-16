@@ -18,7 +18,6 @@ export interface UserProperties {
   referidosExitosos: number;
   balanceCredito: number; // For general platform credits or rewards
   balanceComisionesPendientes?: number; // Specifically for referral commissions
-  paymentInfo?: string; // Nuevo: Información de pago (ej. email PayPal)
 }
 
 export class UserEntity {
@@ -37,7 +36,6 @@ export class UserEntity {
   referidosExitosos: number;
   balanceCredito: number;
   balanceComisionesPendientes: number;
-  paymentInfo?: string; // Nuevo
 
   constructor(props: UserProperties) {
     this.uid = props.uid;
@@ -55,7 +53,6 @@ export class UserEntity {
     this.referidosExitosos = props.referidosExitosos || 0;
     this.balanceCredito = props.balanceCredito || 0;
     this.balanceComisionesPendientes = props.balanceComisionesPendientes || 0;
-    this.paymentInfo = props.paymentInfo; // Nuevo
   }
 
   static create(
@@ -72,7 +69,6 @@ export class UserEntity {
       referidosExitosos?: number;
       balanceCredito?: number;
       balanceComisionesPendientes?: number;
-      paymentInfo?: string; // Nuevo
     }
   ): UserEntity {
     const now = new Date().toISOString();
@@ -100,13 +96,12 @@ export class UserEntity {
       referidosExitosos: inputProps.referidosExitosos || 0,
       balanceCredito: inputProps.balanceCredito || 0,
       balanceComisionesPendientes: inputProps.balanceComisionesPendientes || 0,
-      paymentInfo: inputProps.paymentInfo, // Nuevo
     };
     
     return new UserEntity(entityConstructorProps);
   }
 
-  updateProfile(data: Partial<Pick<UserProperties, 'nombre' | 'apellido' | 'photoURL' | 'balanceComisionesPendientes' | 'paymentInfo'>>) { // Añadido paymentInfo
+  updateProfile(data: Partial<Pick<UserProperties, 'nombre' | 'apellido' | 'photoURL' | 'balanceComisionesPendientes'>>) {
     if (data.nombre) this.nombre = data.nombre;
     if (data.apellido) this.apellido = data.apellido;
     if (data.nombre || data.apellido) {
@@ -114,7 +109,6 @@ export class UserEntity {
     }
     if (data.photoURL !== undefined) this.photoURL = data.photoURL;
     if (data.balanceComisionesPendientes !== undefined) this.balanceComisionesPendientes = data.balanceComisionesPendientes;
-    if (data.paymentInfo !== undefined) this.paymentInfo = data.paymentInfo; // Nuevo
     this.updatedAt = new Date();
   }
 
@@ -135,7 +129,6 @@ export class UserEntity {
       referidosExitosos: this.referidosExitosos,
       balanceCredito: this.balanceCredito,
       balanceComisionesPendientes: this.balanceComisionesPendientes,
-      paymentInfo: this.paymentInfo, // Nuevo
     };
   }
 }

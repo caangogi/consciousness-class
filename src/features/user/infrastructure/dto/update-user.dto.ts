@@ -7,7 +7,6 @@ export interface UpdateUserProfileDto {
   nombre?: string;
   apellido?: string;
   photoURL?: string | null; // Can be a URL string or null to remove the photo
-  paymentInfo?: string; // Nuevo campo
 }
 
 // What an admin might update (more extensive)

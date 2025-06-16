@@ -13,22 +13,24 @@ export interface CourseProperties {
   tipoAcceso: CourseAccessType;
   duracionEstimada: string; // e.g., "25 horas de video", "10 semanas"
   imagenPortadaUrl: string | null;
-  dataAiHintImagenPortada?: string | null; 
+  dataAiHintImagenPortada?: string | null;
   videoTrailerUrl?: string | null;
-  categoria: string; 
-  creadorUid: string; 
+  categoria: string;
+  creadorUid: string;
   estado: CourseStatus;
   fechaCreacion: string; // ISO Date string
   fechaActualizacion: string; // ISO Date string
   fechaPublicacion?: string | null; // ISO Date string
-  ratingPromedio?: number; 
+  ratingPromedio?: number;
   totalEstudiantes?: number; // Calculated or aggregated
-  totalResenas?: number; 
+  totalResenas?: number;
   requisitos?: string[];
   objetivosAprendizaje?: string[];
   publicoObjetivo?: string;
-  ordenModulos?: string[]; 
+  ordenModulos?: string[];
   comisionReferidoPorcentaje?: number | null; // Porcentaje de comisión (0-100) o null/undefined si no aplica
+  stripeProductId?: string | null; // Nuevo
+  stripePriceId?: string | null;   // Nuevo
 }
 
 export class CourseEntity {
@@ -56,6 +58,8 @@ export class CourseEntity {
   publicoObjetivo: string;
   ordenModulos: string[];
   comisionReferidoPorcentaje: number | null;
+  stripeProductId: string | null; // Nuevo
+  stripePriceId: string | null;   // Nuevo
 
   constructor(props: CourseProperties) {
     this.id = props.id;
@@ -82,13 +86,15 @@ export class CourseEntity {
     this.publicoObjetivo = props.publicoObjetivo || '';
     this.ordenModulos = props.ordenModulos || [];
     this.comisionReferidoPorcentaje = props.comisionReferidoPorcentaje === undefined ? null : props.comisionReferidoPorcentaje;
+    this.stripeProductId = props.stripeProductId === undefined ? null : props.stripeProductId; // Nuevo
+    this.stripePriceId = props.stripePriceId === undefined ? null : props.stripePriceId;       // Nuevo
   }
 
   static create(
-    input: Omit<CourseProperties, 'id' | 'fechaCreacion' | 'fechaActualizacion' | 'estado' | 'ratingPromedio' | 'totalEstudiantes' | 'totalResenas' | 'ordenModulos' | 'comisionReferidoPorcentaje'> & { id?: string, comisionReferidoPorcentaje?: number | null }
+    input: Omit<CourseProperties, 'id' | 'fechaCreacion' | 'fechaActualizacion' | 'estado' | 'ratingPromedio' | 'totalEstudiantes' | 'totalResenas' | 'ordenModulos' | 'comisionReferidoPorcentaje' | 'stripeProductId' | 'stripePriceId'> & { id?: string, comisionReferidoPorcentaje?: number | null }
   ): CourseEntity {
     const now = new Date();
-    const id = input.id || crypto.randomUUID(); 
+    const id = input.id || crypto.randomUUID();
 
     const props: CourseProperties = {
       ...input,
@@ -104,6 +110,8 @@ export class CourseEntity {
       imagenPortadaUrl: input.imagenPortadaUrl || null,
       dataAiHintImagenPortada: input.dataAiHintImagenPortada ?? null,
       comisionReferidoPorcentaje: input.comisionReferidoPorcentaje === undefined ? null : input.comisionReferidoPorcentaje,
+      stripeProductId: null, // Nuevo
+      stripePriceId: null,   // Nuevo
     };
     return new CourseEntity(props);
   }
@@ -130,12 +138,14 @@ export class CourseEntity {
     if (data.publicoObjetivo !== undefined) this.publicoObjetivo = data.publicoObjetivo;
     if (data.ordenModulos !== undefined) this.ordenModulos = data.ordenModulos;
     if (data.comisionReferidoPorcentaje !== undefined) this.comisionReferidoPorcentaje = data.comisionReferidoPorcentaje;
-    
+    if (data.stripeProductId !== undefined) this.stripeProductId = data.stripeProductId; // Nuevo
+    if (data.stripePriceId !== undefined) this.stripePriceId = data.stripePriceId;       // Nuevo
+
     this.fechaActualizacion = new Date();
 
     if (this.estado === 'publicado' && oldStatus !== 'publicado') {
       this.fechaPublicacion = new Date();
-    } else if (data.fechaPublicacion === null) { 
+    } else if (data.fechaPublicacion === null) {
         this.fechaPublicacion = null;
     }
   }
@@ -166,6 +176,10 @@ export class CourseEntity {
       publicoObjetivo: this.publicoObjetivo,
       ordenModulos: this.ordenModulos,
       comisionReferidoPorcentaje: this.comisionReferidoPorcentaje,
+      stripeProductId: this.stripeProductId, // Nuevo
+      stripePriceId: this.stripePriceId,     // Nuevo
     };
   }
 }
+
+    

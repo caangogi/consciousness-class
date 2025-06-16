@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn, ShoppingCart } from 'lucide-react';
+import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn, ShoppingCart, Repeat } from 'lucide-react'; // Added Repeat
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
@@ -37,7 +37,7 @@ const placeholderReviews = [
 
 export default function CourseDetailPage() {
   const params = useParams<{ id: string }>();
-  const courseIdFromPath = params.id; 
+  const courseIdFromPath = params.id;
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser, loading: authLoading, refreshUserProfile } = useAuth();
@@ -53,6 +53,8 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     const refCodeFromUrl = searchParams.get('ref');
+    console.log(`[CourseDetailPage] useEffect for referral codes triggered. refCodeFromUrl: ${refCodeFromUrl}, courseIdFromPath: ${courseIdFromPath}`);
+
     if (refCodeFromUrl) {
       if (refCodeFromUrl.length > 3 && refCodeFromUrl.length < 50 && /^[a-zA-Z0-9-_]+$/.test(refCodeFromUrl)) {
         try {
@@ -65,7 +67,7 @@ export default function CourseDetailPage() {
         console.warn(`[CourseDetailPage] Invalid referral code format in URL: "${refCodeFromUrl}". Not saving.`);
       }
     }
-    // Siempre guardar el promoted_course_id si tenemos un courseIdFromPath
+
     if (courseIdFromPath) {
         try {
             localStorage.setItem('promoted_course_id', courseIdFromPath);
@@ -84,7 +86,6 @@ export default function CourseDetailPage() {
         variant: 'default',
         duration: 5000,
       });
-      // Remove 'canceled' from URL without full page reload
       const newUrl = `${window.location.pathname}`;
       window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
     }
@@ -140,8 +141,8 @@ export default function CourseDetailPage() {
     } else {
         console.warn("[CourseDetailPage] Course Data useEffect: courseId is NOT present. Not calling fetchCourseData.");
         setError("El ID del curso no está presente en la URL.");
-        setIsLoading(false); 
-        setCourseData(null); 
+        setIsLoading(false);
+        setCourseData(null);
     }
   }, [courseIdFromPath, fetchCourseData]);
 
@@ -182,7 +183,7 @@ export default function CourseDetailPage() {
             const errorData = await response.json();
             throw new Error(errorData.details || errorData.error || 'Error al inscribirse en el curso.');
         }
-        
+
         toast({ title: "¡Inscripción Exitosa!", description: `Te has inscrito correctamente en "${courseData.course.nombre}".` });
         await refreshUserProfile();
     } catch (err: any) {
@@ -205,8 +206,8 @@ export default function CourseDetailPage() {
     }
 
     if (currentUser?.cursosInscritos?.includes(courseData.course.id)) {
-      toast({ 
-        title: "Ya Inscrito", 
+      toast({
+        title: "Ya Inscrito",
         description: "Ya estás inscrito en este curso.",
         variant: "default"
       });
@@ -235,10 +236,16 @@ export default function CourseDetailPage() {
         const checkoutPayload: { courseId: string; referralCode?: string; promotedCourseId?: string } = { courseId: courseIdFromPath };
         if (referralCodeFromStorage) checkoutPayload.referralCode = referralCodeFromStorage;
         if (promotedCourseIdFromStorage) checkoutPayload.promotedCourseId = promotedCourseIdFromStorage;
-        
-        console.log("[CourseDetailPage] handlePaidCheckout: Sending to /api/checkout/create-session:", JSON.stringify(checkoutPayload));
 
-        const response = await fetch(`/api/checkout/create-session`, {
+        console.log("[CourseDetailPage] handlePaidCheckout: Sending to API with payload:", JSON.stringify(checkoutPayload));
+
+        const apiEndpoint = courseData.course.tipoAcceso === 'suscripcion'
+            ? '/api/checkout/create-subscription-session'
+            : '/api/checkout/create-session';
+
+        console.log(`[CourseDetailPage] handlePaidCheckout: Using API endpoint: ${apiEndpoint}`);
+
+        const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -249,10 +256,11 @@ export default function CourseDetailPage() {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.details || errorData.error || 'Error al iniciar el proceso de pago.');
+            console.error(`[CourseDetailPage] Error from ${apiEndpoint}:`, errorData);
+            throw new Error(errorData.details || errorData.error || `Error al iniciar el proceso de ${courseData.course.tipoAcceso === 'suscripcion' ? 'suscripción' : 'pago'}.`);
         }
         const { sessionId, sessionUrl } = await response.json();
-        
+
         if (!sessionUrl) {
             throw new Error('No se pudo obtener la URL de la sesión de pago.');
         }
@@ -264,10 +272,10 @@ export default function CourseDetailPage() {
             console.log("Attempting to redirect current window to Stripe:", sessionUrl);
             window.location.href = sessionUrl;
         }
-        
+
     } catch (err: any) {
-        toast({ title: "Error de Compra", description: err.message, variant: "destructive" });
-        console.error("Error processing paid checkout:", err);
+        toast({ title: "Error de Compra/Suscripción", description: err.message, variant: "destructive" });
+        console.error("Error processing paid checkout/subscription:", err);
     } finally {
         setIsProcessingPayment(false);
     }
@@ -359,7 +367,8 @@ export default function CourseDetailPage() {
   const { course, modules } = courseData;
   const totalLessons = modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
   const firstLessonIdIfAny = modules[0]?.lessons[0]?.id || 'start';
-  const isCourseFree = course.precio <= 0;
+  const isCourseFree = course.tipoAcceso === 'unico' && course.precio <= 0;
+  const isSubscription = course.tipoAcceso === 'suscripcion';
 
   const creatorDisplay = {
     id: course.creadorUid,
@@ -375,9 +384,9 @@ export default function CourseDetailPage() {
 
     if (!currentUser) {
         return (
-            <Button 
-                size="lg" 
-                className={commonButtonClasses} 
+            <Button
+                size="lg"
+                className={commonButtonClasses}
                 onClick={() => {
                     localStorage.setItem('post_auth_redirect', window.location.pathname + window.location.search);
                     router.push(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
@@ -394,7 +403,7 @@ export default function CourseDetailPage() {
             </Button>
         );
     }
-    if (isCourseFree) {
+    if (isCourseFree) { // Solo para tipoAcceso 'unico'
         return (
             <Button size="lg" className={commonButtonClasses} onClick={handleFreeEnrollment} disabled={processing}>
                 {processing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5"/>}
@@ -402,10 +411,11 @@ export default function CourseDetailPage() {
             </Button>
         );
     }
+    // Para cursos de pago único o suscripciones
     return (
         <Button size="lg" className={commonButtonClasses} onClick={handlePaidCheckout} disabled={processing}>
-             {processing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ShoppingCart className="mr-2 h-5 w-5"/>}
-             {processing ? 'Procesando...' : `Comprar por ${course.precio.toFixed(2)} €`}
+             {processing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (isSubscription ? <Repeat className="mr-2 h-5 w-5" /> : <ShoppingCart className="mr-2 h-5 w-5"/>)}
+             {processing ? 'Procesando...' : (isSubscription ? `Suscribirse por ${course.precio.toFixed(2)} €/mes` : `Comprar por ${course.precio.toFixed(2)} €`)}
         </Button>
     );
   };
@@ -435,7 +445,7 @@ export default function CourseDetailPage() {
               </Badge>
               <h1 className="text-4xl md:text-5xl font-bold font-headline leading-tight">{course.nombre}</h1>
               <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">{course.descripcionCorta}</p>
-              
+
               <div className="flex items-center space-x-4 pt-2">
                 <Avatar className="h-12 w-12 border-2 border-accent shadow-md">
                   <AvatarImage src={creatorDisplay.avatarUrl} alt={creatorDisplay.nombre} data-ai-hint={creatorDisplay.dataAiHint} />
@@ -478,10 +488,12 @@ export default function CourseDetailPage() {
                 </motion.div>
                 <CardContent className="p-6 space-y-4">
                   <p className="text-4xl font-bold text-primary">
-                      {isCourseFree ? 'Gratis' : `${course.precio.toFixed(2)} €`}
+                      {isCourseFree ? 'Gratis' : (isSubscription ? `${course.precio.toFixed(2)} €/mes` : `${course.precio.toFixed(2)} €`)}
                   </p>
                   {renderActionButton()}
-                  <p className="text-xs text-muted-foreground text-center">Garantía de 30 días. Acceso de por vida.</p>
+                  <p className="text-xs text-muted-foreground text-center">
+                    {isSubscription ? 'Cancela cuando quieras.' : 'Garantía de 30 días. Acceso de por vida.'}
+                  </p>
                 </CardContent>
               </Card>
             </motion.div>
@@ -537,7 +549,7 @@ export default function CourseDetailPage() {
                  {modules.length === 0 && <p className="text-muted-foreground text-center py-6">Este curso aún no tiene módulos definidos.</p>}
               </CardContent>
             </Card>
-            
+
             <Card className="shadow-lg rounded-xl">
               <CardHeader>
                 <CardTitle className="text-2xl md:text-3xl font-headline">Valoraciones y Reseñas</CardTitle>
@@ -624,4 +636,5 @@ export default function CourseDetailPage() {
     </motion.div>
   );
 }
+
     

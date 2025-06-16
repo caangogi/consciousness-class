@@ -8,14 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Filter, Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardFooter } from "@/components/ui/card"; // Added imports
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import type { CourseAccessType } from '@/features/course/domain/entities/course.entity';
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<CourseCardData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // TODO: Implement actual filtering and sorting state and logic
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
   const [sortBy, setSortBy] = useState('popularity');
@@ -31,7 +31,11 @@ export default function CoursesPage() {
           throw new Error(errorData.details || errorData.error || 'Failed to fetch courses');
         }
         const data = await response.json();
-        setCourses(data.courses || []);
+        const coursesWithAccessType = data.courses.map((course: any) => ({
+          ...course,
+          tipoAcceso: course.tipoAcceso || 'unico', // Asegurar que tipoAcceso esté presente
+        })) as CourseCardData[];
+        setCourses(coursesWithAccessType || []);
       } catch (err: any) {
         setError(err.message);
         console.error("Error fetching courses:", err);
@@ -42,8 +46,7 @@ export default function CoursesPage() {
     fetchCourses();
   }, []);
 
-  // Placeholder for categories and sorting options
-  const categories = ["Desarrollo Web", "Data Science", "Diseño", "Marketing", "Fotografía", "Finanzas", "Desarrollo de Videojuegos", "Bienestar", "Tecnología"];
+  const categories = ["Desarrollo Web", "Data Science", "Diseño", "Marketing", "Fotografía", "Finanzas", "Desarrollo de Videojuegos", "Bienestar", "Tecnología", "Salud y Bienestar"];
   const sortOptions = [
     { value: "popularity", label: "Popularidad" },
     { value: "newest", label: "Más Recientes" },
@@ -55,15 +58,19 @@ export default function CoursesPage() {
   if (error) {
     return (
       <div className="container mx-auto py-12 px-4 md:px-6 text-center">
-        <div className="inline-block p-4 bg-destructive/10 rounded-full mb-4">
-          <Filter className="h-12 w-12 text-destructive" />
-        </div>
-        <h3 className="text-xl font-semibold mb-2 text-destructive-foreground">Error al Cargar Cursos</h3>
-        <p className="text-muted-foreground mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()} variant="destructive">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Intentar de Nuevo
-        </Button>
+        <Card className="inline-block p-6 bg-card shadow-lg rounded-xl">
+          <CardContent className="p-0">
+            <div className="mx-auto p-3 bg-destructive/10 rounded-full w-fit mb-4">
+              <Filter className="h-12 w-12 text-destructive" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2 text-destructive-foreground">Error al Cargar Cursos</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()} variant="destructive">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Intentar de Nuevo
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -77,8 +84,7 @@ export default function CoursesPage() {
         </p>
       </header>
 
-      {/* Filters Section */}
-      <Card className="mb-8 p-4 md:p-6 shadow-lg rounded-xl">
+      <Card className="mb-8 p-4 md:p-6 shadow-lg rounded-xl bg-card">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           <div className="relative">
             <Input
@@ -117,16 +123,15 @@ export default function CoursesPage() {
         </div>
       </Card>
 
-      {/* Courses Grid */}
       {isLoading ? (
         <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[...Array(8)].map((_, i) => (
-            <Card key={i} className="flex flex-col overflow-hidden shadow-lg rounded-lg">
+            <Card key={i} className="flex flex-col overflow-hidden shadow-lg rounded-lg bg-card">
               <Skeleton className="aspect-[16/9] w-full" />
               <CardContent className="flex-grow p-5 space-y-3">
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-6 w-full" />
-                <Skeleton className="h-16 w-full" /> {/* Increased height for description */}
+                <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-4 w-3/4" />
               </CardContent>
               <CardFooter className="p-5 border-t bg-secondary/30 flex justify-between items-center">
@@ -144,15 +149,18 @@ export default function CoursesPage() {
         </div>
       ) : (
         <div className="text-center py-12">
-            <div className="inline-block p-4 bg-secondary rounded-full mb-4">
-              <Filter className="h-12 w-12 text-muted-foreground" />
-            </div>
-          <h3 className="text-xl font-semibold mb-2">No se encontraron cursos</h3>
-          <p className="text-muted-foreground">Intenta ajustar tus filtros o revisa más tarde.</p>
+            <Card className="inline-block p-6 bg-card shadow-md rounded-xl">
+              <CardContent className="p-0">
+                <div className="mx-auto p-3 bg-secondary rounded-full w-fit mb-4">
+                  <Filter className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">No se encontraron cursos</h3>
+                <p className="text-muted-foreground">Intenta ajustar tus filtros o revisa más tarde.</p>
+              </CardContent>
+            </Card>
         </div>
       )}
 
-      {/* Pagination (Placeholder) */}
       {!isLoading && courses.length > 0 && (
         <div className="mt-12 flex justify-center">
           <Button variant="outline" className="mr-2 rounded-md" disabled>Anterior</Button>

@@ -21,7 +21,7 @@ export interface UserProfile extends FirebaseUser {
   cursosInscritos?: string[]; // Array of course IDs
   referidosExitosos?: number;
   balanceCredito?: number;
-  balanceComisionesPendientes?: number; // Aseguramos que este campo esté aquí
+  balanceComisionesPendientes?: number; 
 }
 
 interface AuthContextType {
@@ -60,6 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (userDocSnap.exists()) {
         const data = userDocSnap.data();
+        console.log(`[AuthContext] Raw Firestore data for ${user.uid} during fetchAndSetUserProfile:`, JSON.stringify(data));
         fetchedRole = data.role || 'student';
         userProfileData = {
           nombre: data.nombre,
@@ -70,39 +71,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
           referralCodeGenerated: data.referralCodeGenerated,
           referredBy: data.referredBy,
           cursosInscritos: data.cursosInscritos || [],
-          referidosExitosos: data.referidosExitosos || 0, // Default to 0 if undefined
-          balanceCredito: data.balanceCredito || 0,       // Default to 0 if undefined
-          balanceComisionesPendientes: data.balanceComisionesPendientes || 0, // Explicitly add and default to 0
+          referidosExitosos: data.referidosExitosos || 0,
+          balanceCredito: data.balanceCredito || 0,
+          balanceComisionesPendientes: data.balanceComisionesPendientes === undefined ? 0 : data.balanceComisionesPendientes, // Ensure it's a number
         };
-        console.log(`[AuthContext] Fetched Firestore data for ${user.uid}:`, {
-            referidosExitosos: data.referidosExitosos,
-            balanceComisionesPendientes: data.balanceComisionesPendientes
-        });
       } else {
-         console.warn(`[AuthContext] User document for ${user.uid} not found in Firestore. Defaulting role to student and empty enrollments/balances.`);
-         userProfileData.cursosInscritos = [];
-         userProfileData.referidosExitosos = 0;
-         userProfileData.balanceCredito = 0;
-         userProfileData.balanceComisionesPendientes = 0;
+         console.warn(`[AuthContext] User document for ${user.uid} not found in Firestore. Defaulting profile fields.`);
+         userProfileData = {
+             cursosInscritos: [],
+             referidosExitosos: 0,
+             balanceCredito: 0,
+             balanceComisionesPendientes: 0,
+         };
       }
       
       const combinedUser: UserProfile = {
-        ...user, 
+        ...(user as UserProfile), // Cast to UserProfile to satisfy type, FirebaseUser base properties
         displayName: userProfileData.nombre && userProfileData.apellido ? `${userProfileData.nombre} ${userProfileData.apellido}` : user.displayName,
         photoURL: userProfileData.photoURL !== undefined ? userProfileData.photoURL : user.photoURL, 
-        ...userProfileData, // Spread the fetched Firestore data
-        role: fetchedRole,
-        cursosInscritos: userProfileData.cursosInscritos || [], 
-        // Ensure these are explicitly set with defaults if not in userProfileData (though they are now)
-        referidosExitosos: userProfileData.referidosExitosos || 0,
-        balanceComisionesPendientes: userProfileData.balanceComisionesPendientes || 0,
+        ...userProfileData, // Spread the fetched Firestore data (includes balanceComisionesPendientes)
+        role: fetchedRole, // Ensure role from Firestore takes precedence or defaults
       };
       
       console.log('[AuthContext] fetchAndSetUserProfile - combinedUser to be set:', { 
           uid: combinedUser.uid, 
           email: combinedUser.email, 
           role: combinedUser.role, 
-          cursosInscritos: combinedUser.cursosInscritos,
+          cursosInscritosLength: combinedUser.cursosInscritos?.length,
           referidosExitosos: combinedUser.referidosExitosos,
           balanceComisionesPendientes: combinedUser.balanceComisionesPendientes,
       });
@@ -139,14 +134,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshUserProfile = useCallback(async () => {
     if (auth.currentUser) {
-      console.log(`[AuthContext] refreshUserProfile START for UID: ${auth.currentUser.uid}. Current cursosInscritos in context (before fetch):`, JSON.stringify(currentUser?.cursosInscritos));
-      console.log(`[AuthContext] Current referidosExitosos (before fetch): ${currentUser?.referidosExitosos}, balanceComisionesPendientes (before fetch): ${currentUser?.balanceComisionesPendientes}`);
+      console.log(`[AuthContext] refreshUserProfile START for UID: ${auth.currentUser.uid}.`);
       await fetchAndSetUserProfile(auth.currentUser);
-      console.log(`[AuthContext] refreshUserProfile END for UID: ${auth.currentUser.uid}.`);
+      console.log(`[AuthContext] refreshUserProfile END for UID: ${auth.currentUser.uid}. CurrentUser in context should now be updated.`);
     } else {
         console.log("[AuthContext] No current user to refresh.");
     }
-  }, [fetchAndSetUserProfile, currentUser]); // Added currentUser to dependencies of refreshUserProfile
+  }, [fetchAndSetUserProfile]);
   
   const value = {
     currentUser,

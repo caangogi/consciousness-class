@@ -323,10 +323,13 @@ export default function StudentDashboardPage() {
     setIsRefreshingStats(true);
     toast({ title: "Actualizando Datos...", description: "Estamos refrescando tus estadísticas de referidos." });
     try {
-      await refreshUserProfile(); // This fetches the latest user profile from Firestore
+      await refreshUserProfile();
+      // Log after refresh to see what StudentDashboardPage receives
+      console.log('[StudentDashboardPage] currentUser after refresh:', currentUser);
+      console.log('[StudentDashboardPage] currentUser.balanceComisionesPendientes after refresh:', currentUser?.balanceComisionesPendientes);
       toast({ title: "Datos Actualizados", description: "Tus estadísticas de referidos han sido actualizadas." });
     } catch (error) {
-      console.error("Error refreshing user profile:", error);
+      console.error("[StudentDashboardPage] Error refreshing user profile:", error);
       toast({ title: "Error al Actualizar", description: "No se pudieron refrescar los datos.", variant: "destructive" });
     } finally {
       setIsRefreshingStats(false);
@@ -338,6 +341,12 @@ export default function StudentDashboardPage() {
     if (name) return name.substring(0, 2).toUpperCase();
     return 'MB';
   };
+
+  // Log currentUser on initial render and on update
+  useEffect(() => {
+    console.log('[StudentDashboardPage] currentUser changed or initial render:', currentUser);
+    console.log('[StudentDashboardPage] currentUser.balanceComisionesPendientes on render:', currentUser?.balanceComisionesPendientes);
+  }, [currentUser]);
 
   if (authLoading) {
     return (
@@ -721,5 +730,3 @@ export default function StudentDashboardPage() {
     </div>
   );
 }
-    
-    

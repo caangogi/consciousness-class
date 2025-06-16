@@ -19,7 +19,7 @@ interface RouteContext {
   params: { courseId: string };
 }
 
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: RouteContext) { // context is the second argument
   const courseId = context.params.courseId; 
   console.log(`[API /learn/course-structure] Received request for courseId: ${courseId}`);
   try {

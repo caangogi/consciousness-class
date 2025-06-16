@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PlusCircle, Edit3, BarChart2, Settings, MessageSquare, Users, Eye } from "lucide-react";
+import { PlusCircle, Edit3, BarChart2, Settings, MessageSquare, Users, Eye, Info } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen as BookOpenIcon, Star as StarIcon, DollarSign as DollarSignIcon } from "lucide-react"; // Renamed to avoid conflict
@@ -43,7 +43,7 @@ export default function CreatorDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalEarnings.toFixed(2)} €</div>
-            <p className="text-xs text-muted-foreground">Desde el inicio</p>
+            <p className="text-xs text-muted-foreground">Estadísticas próximamente.</p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -53,7 +53,7 @@ export default function CreatorDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalStudents}</div>
-            <p className="text-xs text-muted-foreground">En todos tus cursos</p>
+            <p className="text-xs text-muted-foreground">Estadísticas próximamente.</p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -63,7 +63,7 @@ export default function CreatorDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.activeCourses}</div>
-            <p className="text-xs text-muted-foreground">Cursos publicados</p>
+            <p className="text-xs text-muted-foreground">Cursos publicados (próximamente).</p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -73,7 +73,7 @@ export default function CreatorDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.avgRating.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">En todos tus cursos</p>
+            <p className="text-xs text-muted-foreground">Estadísticas próximamente.</p>
           </CardContent>
         </Card>
       </div>
@@ -84,10 +84,10 @@ export default function CreatorDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-2xl font-headline">Mis Cursos</CardTitle>
-              <CardDescription>Gestiona tus cursos creados.</CardDescription>
+              <CardDescription>Gestiona tus cursos creados. El listado real se muestra en "Gestionar Cursos".</CardDescription>
             </div>
              <Button variant="outline" size="sm" asChild>
-                <Link href="/dashboard/creator/courses">Ver todos</Link>
+                <Link href="/dashboard/creator/courses">Gestionar Cursos</Link>
              </Button>
           </div>
         </CardHeader>
@@ -95,7 +95,7 @@ export default function CreatorDashboardPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Título del Curso</TableHead>
+                <TableHead>Título del Curso (Ejemplo)</TableHead>
                 <TableHead className="text-center hidden md:table-cell">Estudiantes</TableHead>
                 <TableHead className="text-right hidden md:table-cell">Ingresos</TableHead>
                 <TableHead className="text-center">Estado</TableHead>
@@ -103,7 +103,7 @@ export default function CreatorDashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {creatorCourses.slice(0, 3).map((course) => ( // Show first 3 for overview
+              {creatorCourses.slice(0, 3).map((course) => ( 
                 <TableRow key={course.id}>
                   <TableCell className="font-medium">{course.title}</TableCell>
                   <TableCell className="text-center hidden md:table-cell">{course.students}</TableCell>
@@ -115,10 +115,10 @@ export default function CreatorDashboardPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" asChild title="Editar">
+                    <Button variant="ghost" size="icon" asChild title="Editar (Ir a Gestionar Cursos)">
                       <Link href={`/dashboard/creator/courses/edit/${course.id}`}><Edit3 className="h-4 w-4" /></Link>
                     </Button>
-                     <Button variant="ghost" size="icon" asChild title="Ver">
+                     <Button variant="ghost" size="icon" asChild title="Ver (Ir a página pública)">
                       <Link href={`/courses/${course.id}`}><Eye className="h-4 w-4" /></Link>
                     </Button>
                   </TableCell>
@@ -127,6 +127,13 @@ export default function CreatorDashboardPage() {
             </TableBody>
           </Table>
           {creatorCourses.length === 0 && <p className="text-muted-foreground mt-4 text-center">Aún no has creado ningún curso.</p>}
+           <div className="mt-6 p-4 bg-secondary/50 rounded-md text-sm text-secondary-foreground flex items-start gap-3">
+                <Info className="h-5 w-5 shrink-0 mt-0.5"/>
+                <div>
+                    <p className="font-medium">Esta es una vista de ejemplo.</p>
+                    <p>Para ver y gestionar todos tus cursos, dirígete a la sección <Link href="/dashboard/creator/courses" className="underline hover:text-primary">Gestionar Cursos</Link>.</p>
+                </div>
+            </div>
         </CardContent>
       </Card>
 
@@ -141,10 +148,8 @@ export default function CreatorDashboardPage() {
             <CardDescription>Define las recompensas para quienes refieran tus cursos.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">Atrae más estudiantes permitiendo que otros promocionen tus cursos a cambio de recompensas.</p>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/creator/referral-config">Configurar Recompensas</Link>
-            </Button>
+            <p className="text-muted-foreground mb-4">Esta funcionalidad estará disponible próximamente. Podrás configurar comisiones y condiciones para tu programa de referidos.</p>
+            <Button variant="outline" disabled>Configurar (Próximamente)</Button>
           </CardContent>
         </Card>
 
@@ -157,10 +162,8 @@ export default function CreatorDashboardPage() {
             <CardDescription>Revisa y responde a los comentarios de tus estudiantes.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">Mantén la interacción con tu comunidad de estudiantes.</p>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/creator/comments">Ver Comentarios</Link>
-            </Button>
+            <p className="text-muted-foreground mb-4">Próximamente podrás gestionar aquí todas las interacciones de tus estudiantes.</p>
+            <Button variant="outline" disabled>Ver Comentarios (Próximamente)</Button>
           </CardContent>
         </Card>
       </div>

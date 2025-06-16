@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Users, BookOpen, BarChartBig, Settings, Ticket, ShieldCheck } from "lucide-react"; // Removed Percent, UserPlus, DollarSign
+import { Users, BookOpen, Settings, Ticket, ShieldCheck, Info } from "lucide-react"; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
@@ -38,12 +38,27 @@ export default function SuperadminDashboardPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Panel de Superadministrador</h1>
+      
+      <Card className="shadow-md">
+        <CardHeader>
+            <div className="flex items-center gap-2">
+                <Info className="h-6 w-6 text-primary"/>
+                <CardTitle className="text-xl font-headline">Bienvenido, Superadministrador</CardTitle>
+            </div>
+        </CardHeader>
+        <CardContent>
+            <p className="text-muted-foreground">
+                Esta sección está en desarrollo. Próximamente podrás gestionar usuarios, cursos, y ver estadísticas detalladas de la plataforma.
+                Por ahora, las estadísticas mostradas son datos de ejemplo.
+            </p>
+        </CardContent>
+      </Card>
 
       {/* Platform Stats Section */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Usuarios Totales</CardTitle>
+            <CardTitle className="text-sm font-medium">Usuarios Totales (Ejemplo)</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -52,7 +67,7 @@ export default function SuperadminDashboardPage() {
         </Card>
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cursos Totales</CardTitle>
+            <CardTitle className="text-sm font-medium">Cursos Totales (Ejemplo)</CardTitle>
             <BookOpen className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -61,7 +76,7 @@ export default function SuperadminDashboardPage() {
         </Card>
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
+            <CardTitle className="text-sm font-medium">Ingresos Totales (Ejemplo)</CardTitle>
             <DollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -70,7 +85,7 @@ export default function SuperadminDashboardPage() {
         </Card>
          <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Suscripciones Activas</CardTitle>
+            <CardTitle className="text-sm font-medium">Suscripciones (Ejemplo)</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -88,9 +103,7 @@ export default function SuperadminDashboardPage() {
           </CardHeader>
           <CardContent>
             <CardDescription className="mb-4">Administra roles, permisos y datos de usuarios.</CardDescription>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/superadmin/user-management">Ir a Usuarios</Link>
-            </Button>
+            <Button variant="outline" disabled>Ir (Próximamente)</Button>
           </CardContent>
         </Card>
         <Card className="shadow-lg hover:shadow-xl transition-shadow">
@@ -100,9 +113,7 @@ export default function SuperadminDashboardPage() {
           </CardHeader>
           <CardContent>
             <CardDescription className="mb-4">Revisa, aprueba y gestiona todos los cursos de la plataforma.</CardDescription>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/superadmin/course-management">Ir a Cursos</Link>
-            </Button>
+            <Button variant="outline" disabled>Ir (Próximamente)</Button>
           </CardContent>
         </Card>
         <Card className="shadow-lg hover:shadow-xl transition-shadow">
@@ -112,9 +123,7 @@ export default function SuperadminDashboardPage() {
           </CardHeader>
           <CardContent>
             <CardDescription className="mb-4">Ajusta comisiones, referidos y otros parámetros de la plataforma.</CardDescription>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/superadmin/settings">Ir a Configuración</Link>
-            </Button>
+            <Button variant="outline" disabled>Ir (Próximamente)</Button>
           </CardContent>
         </Card>
       </div>
@@ -123,7 +132,7 @@ export default function SuperadminDashboardPage() {
       <div className="grid md:grid-cols-2 gap-8">
         <Card className="shadow-lg">
             <CardHeader>
-                <CardTitle className="text-xl font-headline">Usuarios Recientes</CardTitle>
+                <CardTitle className="text-xl font-headline">Usuarios Recientes (Ejemplo)</CardTitle>
                 <CardDescription>Últimos usuarios registrados en la plataforma.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -148,13 +157,13 @@ export default function SuperadminDashboardPage() {
                     </TableBody>
                 </Table>
                 <Button variant="link" asChild className="mt-4 p-0 h-auto text-primary hover:underline">
-                    <Link href="/dashboard/superadmin/user-management">Ver todos los usuarios</Link>
+                    <Link href="/dashboard/superadmin/user-management" className="pointer-events-none opacity-50">Ver todos (Próximamente)</Link>
                 </Button>
             </CardContent>
         </Card>
         <Card className="shadow-lg">
             <CardHeader>
-                <CardTitle className="text-xl font-headline">Pendientes de Aprobación</CardTitle>
+                <CardTitle className="text-xl font-headline">Pendientes de Aprobación (Ejemplo)</CardTitle>
                 <CardDescription>Nuevos cursos o solicitudes de creator para revisar.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -166,12 +175,12 @@ export default function SuperadminDashboardPage() {
                             <p className="font-semibold">{item.type === 'curso' ? item.title : item.name}</p>
                             <p className="text-sm text-muted-foreground">{item.type === 'curso' ? `Por: ${item.creator}` : item.email}</p>
                         </div>
-                        <Button size="sm" variant="outline">Revisar</Button>
+                        <Button size="sm" variant="outline" disabled>Revisar</Button>
                         </li>
                     ))}
                     </ul>
                 ) : (
-                    <p className="text-muted-foreground">No hay elementos pendientes de aprobación.</p>
+                    <p className="text-muted-foreground">No hay elementos pendientes de aprobación (Ejemplo).</p>
                 )}
             </CardContent>
         </Card>

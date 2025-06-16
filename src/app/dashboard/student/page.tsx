@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from 'next/image';
-import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle } from "lucide-react";
+import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton"; 
 import { useToast } from "@/hooks/use-toast";
@@ -33,10 +33,6 @@ const profileFormSchema = z.object({
   apellido: z.string().min(1, { message: "El apellido es requerido." }),
 });
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
-
-const certificatesPlaceholder = [
-    { id: 'cert1', courseTitle: 'Fotografía Profesional', dateAwarded: '2023-10-15', url: '#' },
-];
 
 export default function StudentDashboardPage() {
   const { currentUser, userRole, loading: authLoading, refreshUserProfile } = useAuth();
@@ -91,7 +87,7 @@ export default function StudentDashboardPage() {
     } finally {
       setIsLoadingCourses(false);
     }
-  }, [currentUser, toast]); // currentUser es dependencia clave aquí
+  }, [currentUser, toast]); 
 
   useEffect(() => {
     if (!authLoading && currentUser?.uid) {
@@ -100,7 +96,7 @@ export default function StudentDashboardPage() {
     } else if (!authLoading && !currentUser) {
       console.log('[StudentDashboard] useEffect: No user or auth still loading, clearing courses.');
       setEnrolledCoursesApiData([]);
-      setIsLoadingCourses(false); // Ensure loading is false if no user
+      setIsLoadingCourses(false); 
     }
   }, [authLoading, currentUser?.uid, currentUser?.cursosInscritos?.length, fetchEnrolledCourses]);
 
@@ -259,14 +255,13 @@ export default function StudentDashboardPage() {
   const getInitials = (name?: string | null, surname?: string | null) => {
     if (name && surname) return `${name[0]}${surname[0]}`.toUpperCase();
     if (name) return name.substring(0, 2).toUpperCase();
-    return 'CC';
+    return 'MB'; // MentorBloom initials as fallback
   };
 
   if (authLoading) {
     return (
       <div className="space-y-8">
         <Skeleton className="h-10 w-1/3" />
-        {/* Skeleton for My Courses section */}
         <Card className="shadow-lg">
           <CardHeader><Skeleton className="h-8 w-1/3 mb-2" /><Skeleton className="h-4 w-1/2" /></CardHeader>
           <CardContent>
@@ -285,7 +280,6 @@ export default function StudentDashboardPage() {
             </div>
           </CardContent>
         </Card>
-        {/* Skeleton for other sections */}
         <div className="grid md:grid-cols-2 gap-8">
             <Card className="shadow-lg"><CardHeader><Skeleton className="h-6 w-1/4" /></CardHeader><CardContent className="space-y-3"><Skeleton className="h-5 w-3/5" /><Skeleton className="h-5 w-4/5" /><Skeleton className="h-9 w-1/3" /></CardContent></Card>
             <Card className="shadow-lg"><CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader><CardContent className="space-y-3"><Skeleton className="h-10 w-full" /><Skeleton className="h-5 w-1/2" /><Skeleton className="h-5 w-2/3" /></CardContent></Card>
@@ -299,7 +293,6 @@ export default function StudentDashboardPage() {
     return <p className="text-center text-lg">Por favor, <Link href="/login" className="text-primary hover:underline">inicia sesión</Link> para ver tu panel.</p>;
   }
 
-  const certificates = certificatesPlaceholder;
   const referralCode = currentUser.referralCodeGenerated || 'GENERANDO...';
   const successfulReferrals = currentUser.referidosExitosos || 0;
   const rewardsEarned = `${(currentUser.balanceCredito || 0).toFixed(2)} € en créditos`;
@@ -368,8 +361,8 @@ export default function StudentDashboardPage() {
                      )}
                   </CardContent>
                   <CardFooter className="p-4 border-t">
-                    <Button variant="default" size="sm" asChild className="w-full">
-                      <Link href={`/learn/${course.id}/${course.modules && course.modules[0]?.lessons && course.modules[0].lessons[0]?.id || 'start'}`}>Ir al Curso</Link>
+                     <Button variant="default" size="sm" asChild className="w-full">
+                      <Link href={`/learn/${course.id}/${course.modules && course.modules.length > 0 && course.modules[0].lessons && course.modules[0].lessons.length > 0 ? course.modules[0].lessons[0].id : 'start'}`}>Ir al Curso</Link>
                     </Button>
                   </CardFooter>
                 </Card>
@@ -487,7 +480,7 @@ export default function StudentDashboardPage() {
                             <AlertDialogHeader>
                             <AlertDialogTitle>¿Quieres convertirte en Creator?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Como Creator, podrás crear y vender tus propios cursos en consciousness-class.
+                                Como Creator, podrás crear y vender tus propios cursos en MentorBloom.
                                 Esta acción cambiará tu rol de Student a Creator.
                             </AlertDialogDescription>
                             </AlertDialogHeader>
@@ -511,7 +504,7 @@ export default function StudentDashboardPage() {
                 <Gift className="h-6 w-6 text-primary" />
                 <CardTitle className="text-2xl font-headline">Mi Código de Referido</CardTitle>
             </div>
-            <CardDescription>Comparte tu código y obtén recompensas.</CardDescription>
+            <CardDescription>Comparte tu código y obtén recompensas cuando otros se unan o compren.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 p-3 bg-secondary rounded-md">
@@ -523,9 +516,10 @@ export default function StudentDashboardPage() {
             </div>
             <p><span className="font-semibold">Referidos Exitosos:</span> {successfulReferrals}</p>
             <p><span className="font-semibold">Recompensas Obtenidas:</span> {rewardsEarned}</p>
-            <Button variant="link" asChild className="p-0 h-auto text-primary hover:underline">
-              <Link href="/dashboard/student/referrals-history">Ver historial de recompensas</Link>
-            </Button>
+             <div className="mt-3 p-3 bg-secondary/50 rounded-md text-xs text-secondary-foreground flex items-start gap-2">
+                <Info className="h-4 w-4 shrink-0 mt-0.5"/>
+                <p>La funcionalidad completa de seguimiento y aplicación de recompensas por referidos estará disponible próximamente.</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -539,23 +533,11 @@ export default function StudentDashboardPage() {
           <CardDescription>Visualiza y descarga los certificados de los cursos completados.</CardDescription>
         </CardHeader>
         <CardContent>
-          {certificates.length > 0 ? (
-            <ul className="space-y-3">
-              {certificates.map(cert => (
-                <li key={cert.id} className="flex justify-between items-center p-3 border rounded-md hover:bg-secondary/30">
-                  <div>
-                    <p className="font-semibold">{cert.courseTitle}</p>
-                    <p className="text-sm text-muted-foreground">Obtenido el: {cert.dateAwarded}</p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={cert.url} target="_blank" rel="noopener noreferrer">Ver Certificado</Link>
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-             <p className="text-muted-foreground">Aún no has obtenido ningún certificado. ¡Sigue aprendiendo!</p>
-          )}
+            <div className="text-center py-6 text-muted-foreground">
+                <Award className="mx-auto h-10 w-10 mb-3 opacity-50" />
+                <p className="font-medium">Funcionalidad de Certificados Próximamente</p>
+                <p className="text-sm">Cuando completes tus cursos, tus certificados aparecerán aquí.</p>
+            </div>
         </CardContent>
       </Card>
     </div>

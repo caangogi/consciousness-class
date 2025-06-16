@@ -27,7 +27,7 @@ import type { UpdateModuleDto } from '@/features/course/infrastructure/dto/updat
 import type { CreateLessonDto } from '@/features/course/infrastructure/dto/create-lesson.dto';
 import type { UpdateLessonDto } from '@/features/course/infrastructure/dto/update-lesson.dto';
 import { type LessonProperties, type LessonContentType } from '@/features/course/domain/entities/lesson.entity';
-import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud, GripVertical, Trash2, Edit, Rocket, Eye } from 'lucide-react';
+import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud, GripVertical, Trash2, Edit, Rocket, Eye, Percent } from 'lucide-react';
 import { auth, storage } from '@/lib/firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
@@ -44,6 +44,7 @@ const step1Schema = z.object({
   tipoAcceso: z.enum(['unico', 'suscripcion'], { required_error: 'Debes seleccionar un tipo de acceso.' }),
   precio: z.coerce.number().min(0, { message: 'El precio debe ser 0 o mayor.' }),
   duracionEstimada: z.string().min(3, { message: 'La duración estimada es requerida.'}),
+  comisionReferidoPorcentaje: z.coerce.number().min(0, "La comisión debe ser 0 o mayor.").max(100, "La comisión no puede exceder 100%.").optional().nullable(),
 });
 type Step1FormValues = z.infer<typeof step1Schema>;
 
@@ -143,6 +144,7 @@ export default function NewCoursePage() {
       tipoAcceso: undefined, 
       precio: 0,
       duracionEstimada: '',
+      comisionReferidoPorcentaje: null,
     },
   });
 
@@ -188,6 +190,7 @@ export default function NewCoursePage() {
         tipoAcceso: courseDetails.tipoAcceso,
         precio: courseDetails.precio ?? 0,
         duracionEstimada: courseDetails.duracionEstimada || '',
+        comisionReferidoPorcentaje: courseDetails.comisionReferidoPorcentaje === undefined ? null : courseDetails.comisionReferidoPorcentaje,
       });
       setCoverImagePreviewUrl(courseDetails.imagenPortadaUrl || null);
       setVideoTrailerUrlInput(courseDetails.videoTrailerUrl || '');
@@ -359,7 +362,11 @@ export default function NewCoursePage() {
       const endpoint = createdCourseId ? `/api/courses/update/${createdCourseId}` : '/api/courses/create';
       const method = "POST";
       
-      const dto: CreateCourseDto | UpdateCourseDto = { ...values, tipoAcceso: values.tipoAcceso as CourseAccessType };
+      const dto: CreateCourseDto | UpdateCourseDto = { 
+        ...values, 
+        tipoAcceso: values.tipoAcceso as CourseAccessType,
+        comisionReferidoPorcentaje: values.comisionReferidoPorcentaje === undefined || values.comisionReferidoPorcentaje === null ? null : Number(values.comisionReferidoPorcentaje) 
+      };
       
       const response = await fetch(endpoint, {
         method,
@@ -543,8 +550,6 @@ export default function NewCoursePage() {
         contentText = values.lessonContentText || null;
         downloadURL = null; 
       } else if (isFileType && !lessonContentFile) {
-        // Si el tipo de contenido sigue siendo de archivo, pero no se subió uno nuevo,
-        // mantenemos el `downloadURL` existente. Solo se limpia si el tipo cambia.
         if (currentEditingLesson.contenidoPrincipal.tipo !== values.lessonContentType) {
             downloadURL = null; 
             contentText = null;
@@ -911,9 +916,6 @@ export default function NewCoursePage() {
                 setModules(prevModules => prevModules.map(m => 
                     m.id === moduleId ? updatedModuleData.module : m
                 ));
-                // Instead of full fetchLessonsForModule, update local lesson order directly if API confirms
-                // or rely on the optimistic update if API just returns success.
-                // For robustness, fetchLessonsForModule is safer if backend module data drives lesson display.
                  await fetchLessonsForModule(createdCourseId, moduleId, updatedModuleData.module);
             }
              toast({ title: "Lecciones Reordenadas", description: `El orden de las lecciones en el módulo ha sido actualizado.` });
@@ -935,7 +937,6 @@ export default function NewCoursePage() {
     switch (tipo) {
       case 'video':
         if (!url) return <p className="text-muted-foreground">URL del video no disponible.</p>;
-        // Basic check for YouTube/Vimeo embeds
         if (url.includes('youtube.com/embed') || url.includes('player.vimeo.com/video')) {
           return (
             <div className="aspect-video">
@@ -1019,6 +1020,30 @@ export default function NewCoursePage() {
                         <FormField control={formStep1.control} name="precio" render={({ field }) => (<FormItem><FormLabel>Precio (€)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Ej: 49.99" {...field} /></FormControl><FormMessage /></FormItem>)} />
                         <FormField control={formStep1.control} name="duracionEstimada" render={({ field }) => (<FormItem><FormLabel>Duración Estimada</FormLabel><FormControl><Input placeholder="Ej: 20 horas de video" {...field} /></FormControl><FormMessage /></FormItem>)} />
                       </div>
+                      <FormField 
+                        control={formStep1.control} 
+                        name="comisionReferidoPorcentaje" 
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Comisión por Referido (%)</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input 
+                                  type="number" 
+                                  placeholder="Ej: 10" 
+                                  {...field} 
+                                  value={field.value === null ? '' : field.value} // Manejar null para input vacío
+                                  onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
+                                  className="pl-8"
+                                />
+                                <Percent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              </div>
+                            </FormControl>
+                            <FormDescription>Porcentaje (0-100) que se dará como comisión. Déjalo vacío si no aplica.</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )} 
+                      />
                       <div className="flex justify-end pt-4"><Button type="submit" disabled={isLoading}>{isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{createdCourseId ? "Actualizar y Continuar" : "Guardar y Continuar"} <ArrowRight className="ml-2 h-4 w-4" /></Button></div>
                     </form>
                   </Form>
@@ -1558,4 +1583,3 @@ export default function NewCoursePage() {
     </div>
   );
 }
-

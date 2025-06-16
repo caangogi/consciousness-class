@@ -28,6 +28,7 @@ export interface CourseProperties {
   objetivosAprendizaje?: string[];
   publicoObjetivo?: string;
   ordenModulos?: string[]; 
+  comisionReferidoPorcentaje?: number | null; // Porcentaje de comisión (0-100) o null/undefined si no aplica
 }
 
 export class CourseEntity {
@@ -54,6 +55,7 @@ export class CourseEntity {
   objetivosAprendizaje: string[];
   publicoObjetivo: string;
   ordenModulos: string[];
+  comisionReferidoPorcentaje: number | null;
 
   constructor(props: CourseProperties) {
     this.id = props.id;
@@ -79,10 +81,11 @@ export class CourseEntity {
     this.objetivosAprendizaje = props.objetivosAprendizaje || [];
     this.publicoObjetivo = props.publicoObjetivo || '';
     this.ordenModulos = props.ordenModulos || [];
+    this.comisionReferidoPorcentaje = props.comisionReferidoPorcentaje === undefined ? null : props.comisionReferidoPorcentaje;
   }
 
   static create(
-    input: Omit<CourseProperties, 'id' | 'fechaCreacion' | 'fechaActualizacion' | 'estado' | 'ratingPromedio' | 'totalEstudiantes' | 'totalResenas' | 'ordenModulos'> & { id?: string }
+    input: Omit<CourseProperties, 'id' | 'fechaCreacion' | 'fechaActualizacion' | 'estado' | 'ratingPromedio' | 'totalEstudiantes' | 'totalResenas' | 'ordenModulos' | 'comisionReferidoPorcentaje'> & { id?: string, comisionReferidoPorcentaje?: number | null }
   ): CourseEntity {
     const now = new Date();
     const id = input.id || crypto.randomUUID(); 
@@ -100,6 +103,7 @@ export class CourseEntity {
       ordenModulos: [],
       imagenPortadaUrl: input.imagenPortadaUrl || null,
       dataAiHintImagenPortada: input.dataAiHintImagenPortada ?? null,
+      comisionReferidoPorcentaje: input.comisionReferidoPorcentaje === undefined ? null : input.comisionReferidoPorcentaje,
     };
     return new CourseEntity(props);
   }
@@ -125,6 +129,7 @@ export class CourseEntity {
     if (data.objetivosAprendizaje !== undefined) this.objetivosAprendizaje = data.objetivosAprendizaje;
     if (data.publicoObjetivo !== undefined) this.publicoObjetivo = data.publicoObjetivo;
     if (data.ordenModulos !== undefined) this.ordenModulos = data.ordenModulos;
+    if (data.comisionReferidoPorcentaje !== undefined) this.comisionReferidoPorcentaje = data.comisionReferidoPorcentaje;
     
     this.fechaActualizacion = new Date();
 
@@ -160,6 +165,7 @@ export class CourseEntity {
       objetivosAprendizaje: this.objetivosAprendizaje,
       publicoObjetivo: this.publicoObjetivo,
       ordenModulos: this.ordenModulos,
+      comisionReferidoPorcentaje: this.comisionReferidoPorcentaje,
     };
   }
 }

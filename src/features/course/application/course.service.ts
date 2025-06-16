@@ -13,7 +13,7 @@ export class CourseService {
       const courseEntity = CourseEntity.create({
         ...dto,
         creadorUid: creatorUid,
-        // Other defaults are set by CourseEntity.create
+        comisionReferidoPorcentaje: dto.comisionReferidoPorcentaje === undefined ? null : dto.comisionReferidoPorcentaje,
       });
 
       await this.courseRepository.save(courseEntity);
@@ -65,7 +65,6 @@ export class CourseService {
         throw new Error('Forbidden: User is not the creator of the course.'); 
       }
       
-      // Update properties from DTO if they are provided
       const updateData: Partial<Parameters<typeof courseEntity.update>[0]> = {};
       if (dto.nombre !== undefined) updateData.nombre = dto.nombre;
       if (dto.descripcionCorta !== undefined) updateData.descripcionCorta = dto.descripcionCorta;
@@ -77,7 +76,8 @@ export class CourseService {
       if (dto.imagenPortadaUrl !== undefined) updateData.imagenPortadaUrl = dto.imagenPortadaUrl;
       if (dto.dataAiHintImagenPortada !== undefined) updateData.dataAiHintImagenPortada = dto.dataAiHintImagenPortada;
       if (dto.videoTrailerUrl !== undefined) updateData.videoTrailerUrl = dto.videoTrailerUrl;
-      if (dto.estado !== undefined) updateData.estado = dto.estado as CourseStatus; // Cast if necessary
+      if (dto.estado !== undefined) updateData.estado = dto.estado as CourseStatus;
+      if (dto.comisionReferidoPorcentaje !== undefined) updateData.comisionReferidoPorcentaje = dto.comisionReferidoPorcentaje;
       
       if (Object.keys(updateData).length > 0) {
         courseEntity.update(updateData);
@@ -108,12 +108,10 @@ export class CourseService {
         throw new Error(`Forbidden: User ${updaterUid} is not the creator of course ${courseId}.`);
       }
 
-      // Validate that all orderedModuleIds belong to the course (optional, but good practice)
       const currentModuleIds = courseEntity.ordenModulos || [];
       const allExistAndMatch = orderedModuleIds.every(id => currentModuleIds.includes(id)) && orderedModuleIds.length === currentModuleIds.length;
-      if (!allExistAndMatch && currentModuleIds.length > 0) { // Only validate if there were modules to begin with
+      if (!allExistAndMatch && currentModuleIds.length > 0) { 
         console.warn(`[CourseService] Reorder validation failed. Ordered IDs: ${orderedModuleIds}. Current IDs: ${currentModuleIds}`);
-        // throw new Error('Invalid module IDs provided for reordering.'); // Can be stricter
       }
       
       courseEntity.update({ ordenModulos: orderedModuleIds });
@@ -126,5 +124,3 @@ export class CourseService {
     }
   }
 }
-
-    

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from 'next/image';
-import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info } from "lucide-react";
+import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton"; 
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +49,14 @@ export default function StudentDashboardPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRequestingCreatorRole, setIsRequestingCreatorRole] = useState(false);
   const [showBecomeCreatorDialog, setShowBecomeCreatorDialog] = useState(false);
+  const [baseUrl, setBaseUrl] = useState('');
+
+  useEffect(() => {
+    // Ensure window is defined (Client side)
+    if (typeof window !== 'undefined') {
+      setBaseUrl(window.location.origin);
+    }
+  }, []);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -63,7 +71,6 @@ export default function StudentDashboardPage() {
       setIsLoadingCourses(false);
       return;
     }
-    console.log('[StudentDashboard] fetchEnrolledCourses called. CurrentUser:', currentUser?.uid, 'Cursos inscritos en currentUser:', currentUser.cursosInscritos);
     setIsLoadingCourses(true);
     setCoursesError(null);
     try {
@@ -78,11 +85,9 @@ export default function StudentDashboardPage() {
         throw new Error(errorData.details || errorData.error || 'Error al cargar los cursos inscritos.');
       }
       const data = await response.json();
-      console.log('[StudentDashboard] fetchEnrolledCourses API response:', data);
       setEnrolledCoursesApiData(data.enrolledCourses || []);
     } catch (err: any) {
       setCoursesError(err.message);
-      console.error("[StudentDashboard] Error fetching enrolled courses:", err);
       toast({ title: "Error al Cargar Cursos", description: err.message, variant: "destructive" });
     } finally {
       setIsLoadingCourses(false);
@@ -91,10 +96,8 @@ export default function StudentDashboardPage() {
 
   useEffect(() => {
     if (!authLoading && currentUser?.uid) {
-      console.log('[StudentDashboard] useEffect for fetchEnrolledCourses triggered. UID:', currentUser.uid, 'cursosInscritos:', currentUser.cursosInscritos, 'length:', currentUser.cursosInscritos?.length);
       fetchEnrolledCourses();
     } else if (!authLoading && !currentUser) {
-      console.log('[StudentDashboard] useEffect: No user or auth still loading, clearing courses.');
       setEnrolledCoursesApiData([]);
       setIsLoadingCourses(false); 
     }
@@ -159,7 +162,6 @@ export default function StudentDashboardPage() {
             await uploadBytes(storageRefInstance, imageFile, fileMetadata);
             uploadedPhotoURL = await getDownloadURL(storageRefInstance);
         } catch (uploadError: any) {
-            console.error("[StudentDashboard] Firebase Storage Upload Error:", uploadError);
             toast({
                 title: "Error al Subir Imagen",
                 description: `Storage: ${uploadError.message || 'Error desconocido.'}. Ver consola para detalles.`,
@@ -198,7 +200,6 @@ export default function StudentDashboardPage() {
       setIsEditDialogOpen(false);
 
     } catch (error: any) {
-      console.error("Error al actualizar perfil (onSubmit):", error);
       toast({ title: "Error de Actualización", description: error.message || "No se pudo actualizar el perfil.", variant: "destructive" });
       setIsUploadingImage(false);
     } finally {
@@ -214,12 +215,27 @@ export default function StudentDashboardPage() {
         })
         .catch(err => {
             toast({ title: "Error al Copiar", description: "No se pudo copiar el código.", variant: "destructive"});
-            console.error("Error al copiar código de referido:", err);
         });
     } else {
         toast({ title: "Error", description: "No hay código de referido para copiar.", variant: "destructive"});
     }
-  }
+  };
+
+  const handleCopyReferralLink = (type: 'signup' | 'home') => {
+    if (currentUser?.referralCodeGenerated && baseUrl) {
+        const path = type === 'signup' ? '/signup' : '/';
+        const link = `${baseUrl}${path}?ref=${currentUser.referralCodeGenerated}`;
+        navigator.clipboard.writeText(link)
+        .then(() => {
+            toast({ title: "Enlace Copiado", description: `Tu enlace de referido a ${type === 'signup' ? 'registro' : 'la página principal'} ha sido copiado.`});
+        })
+        .catch(err => {
+            toast({ title: "Error al Copiar Enlace", description: "No se pudo copiar el enlace.", variant: "destructive"});
+        });
+    } else {
+        toast({ title: "Error", description: "No se pudo generar el enlace de referido.", variant: "destructive"});
+    }
+  };
 
   const handleRequestCreatorRole = async () => {
     if (!auth.currentUser) {
@@ -255,7 +271,7 @@ export default function StudentDashboardPage() {
   const getInitials = (name?: string | null, surname?: string | null) => {
     if (name && surname) return `${name[0]}${surname[0]}`.toUpperCase();
     if (name) return name.substring(0, 2).toUpperCase();
-    return 'MB'; // MentorBloom initials as fallback
+    return 'MB'; 
   };
 
   if (authLoading) {
@@ -504,15 +520,32 @@ export default function StudentDashboardPage() {
                 <Gift className="h-6 w-6 text-primary" />
                 <CardTitle className="text-2xl font-headline">Mi Código de Referido</CardTitle>
             </div>
-            <CardDescription>Comparte tu código y obtén recompensas cuando otros se unan o compren.</CardDescription>
+            <CardDescription>Comparte tu código o enlaces y obtén recompensas.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2 p-3 bg-secondary rounded-md">
-              <p className="text-lg font-mono text-primary flex-grow truncate">{referralCode}</p>
-              <Button variant="ghost" size="icon" onClick={handleCopyReferralCode} disabled={!currentUser.referralCodeGenerated || currentUser.referralCodeGenerated === 'GENERANDO...'}>
-                <Copy className="h-5 w-5" />
-                <span className="sr-only">Copiar código</span>
-              </Button>
+          <CardContent className="space-y-4">
+            <div>
+                <p className="text-sm font-medium mb-1">Tu Código Personal:</p>
+                <div className="flex items-center gap-2 p-3 bg-secondary rounded-md">
+                <p className="text-lg font-mono text-primary flex-grow truncate">{referralCode}</p>
+                <Button variant="ghost" size="icon" onClick={handleCopyReferralCode} disabled={!currentUser.referralCodeGenerated || currentUser.referralCodeGenerated === 'GENERANDO...' || !navigator.clipboard}>
+                    <Copy className="h-5 w-5" />
+                    <span className="sr-only">Copiar código</span>
+                </Button>
+                </div>
+            </div>
+             <div>
+                <p className="text-sm font-medium mb-1">Enlaces para Compartir:</p>
+                <div className="space-y-2">
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => handleCopyReferralLink('signup')} disabled={!currentUser.referralCodeGenerated || !baseUrl || !navigator.clipboard}>
+                        <LinkIcon className="mr-2 h-4 w-4"/> Copiar Enlace de Registro
+                    </Button>
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => handleCopyReferralLink('home')} disabled={!currentUser.referralCodeGenerated || !baseUrl || !navigator.clipboard}>
+                        <LinkIcon className="mr-2 h-4 w-4"/> Copiar Enlace a Página Principal
+                    </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                    También puedes añadir <code className="text-xs bg-secondary p-0.5 rounded">?ref={referralCode}</code> al final de cualquier URL de curso para referirlo.
+                </p>
             </div>
             <p><span className="font-semibold">Referidos Exitosos:</span> {successfulReferrals}</p>
             <p><span className="font-semibold">Recompensas Obtenidas:</span> {rewardsEarned}</p>

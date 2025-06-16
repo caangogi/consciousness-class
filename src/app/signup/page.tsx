@@ -10,11 +10,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { UserPlus, Eye, EyeOff } from 'lucide-react';
-import React from 'react';
-import { auth } from '@/lib/firebase/config'; // Client SDK for Auth
+import React, { useEffect } from 'react'; // Added useEffect
+import { auth } from '@/lib/firebase/config'; 
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
 
 const signupSchema = z.object({
   nombre: z.string().min(1, { message: 'El nombre es requerido.' }),
@@ -31,6 +31,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams(); // Hook para leer query params
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -43,22 +44,52 @@ export default function SignupPage() {
     },
   });
 
+  useEffect(() => {
+    const urlReferralCode = searchParams.get('ref');
+    let finalReferralCode = '';
+
+    if (urlReferralCode) {
+      if (urlReferralCode.length > 3 && urlReferralCode.length < 50 && /^[a-zA-Z0-9-_]+$/.test(urlReferralCode)) {
+        finalReferralCode = urlReferralCode;
+        try {
+          localStorage.setItem('referral_code', urlReferralCode); // Guardar/actualizar el de la URL
+          console.log(`[SignupPage] Referral code "${urlReferralCode}" from URL used and saved to localStorage.`);
+        } catch (error) {
+          console.error("[SignupPage] Error saving referral code from URL to localStorage:", error);
+        }
+      } else {
+         console.warn(`[SignupPage] Invalid referral code format in URL: "${urlReferralCode}".`);
+      }
+    } else {
+      // Si no hay código en la URL, intentar leer de localStorage
+      try {
+        const storedReferralCode = localStorage.getItem('referral_code');
+        if (storedReferralCode) {
+          finalReferralCode = storedReferralCode;
+          console.log(`[SignupPage] Referral code "${storedReferralCode}" from localStorage used.`);
+        }
+      } catch (error) {
+        console.error("[SignupPage] Error reading referral code from localStorage:", error);
+      }
+    }
+
+    if (finalReferralCode) {
+      form.setValue('referralCode', finalReferralCode);
+    }
+  }, [searchParams, form]);
+
   async function onSubmit(values: SignupFormValues) {
     setIsLoading(true);
     try {
-      // 1. Create user with Firebase Auth (Client SDK)
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // 2. Update Firebase Auth profile (optional, but good for display name consistency)
       await updateProfile(user, {
         displayName: `${values.nombre} ${values.apellido}`,
       });
 
-      // 3. Get ID Token
       const idToken = await user.getIdToken(true);
 
-      // 4. Call our backend API (Route Handler) to create Firestore profile
       const response = await fetch('/api/users/create-profile', {
         method: 'POST',
         headers: {
@@ -68,35 +99,39 @@ export default function SignupPage() {
         body: JSON.stringify({
           nombre: values.nombre,
           apellido: values.apellido,
-          referralCode: values.referralCode, // Ensure this is sent if present
+          // Usar el código de referido del formulario, que ya fue pre-poblado o ingresado
+          referralCode: values.referralCode || null, 
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        // Throw an error that includes details from the backend if available
         throw new Error(errorData.details ? `${errorData.error}: ${errorData.details}` : errorData.error || 'Error al crear perfil de usuario en backend.');
       }
       
-      // const responseData = await response.json(); // Optional: use responseData if needed
-
       toast({
         title: "¡Cuenta Creada!",
         description: "Tu cuenta ha sido creada exitosamente. Serás redirigido.",
       });
 
-      // Redirect to student dashboard (AuthContext will pick up the new user state)
+      // Limpiar el código de referido de localStorage después de un registro exitoso
+      try {
+        localStorage.removeItem('referral_code');
+        console.log("[SignupPage] Referral code removed from localStorage after successful registration.");
+      } catch (error) {
+        console.error("[SignupPage] Error removing referral code from localStorage:", error);
+      }
+
       router.push('/dashboard');
 
     } catch (error: any) {
       console.error("Error al crear cuenta:", error);
       let errorMessage = "Ocurrió un error al crear tu cuenta. Por favor, inténtalo de nuevo.";
-      // Check for specific Firebase Auth error codes
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = "Este correo electrónico ya está en uso. Por favor, utiliza otro.";
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "La contraseña es demasiado débil. Por favor, elige una más segura.";
-      } else if (error.message) { // Use the error message thrown from the fetch block or other errors
+      } else if (error.message) { 
         errorMessage = error.message;
       }
       
@@ -118,7 +153,7 @@ export default function SignupPage() {
             <UserPlus className="h-10 w-10 text-primary" />
           </div>
           <CardTitle className="text-3xl font-headline">Crea tu Cuenta</CardTitle>
-          <CardDescription>Únete a consciousness-class y comienza tu viaje de aprendizaje.</CardDescription>
+          <CardDescription>Únete a MentorBloom y comienza tu viaje de aprendizaje.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>

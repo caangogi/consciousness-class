@@ -10,8 +10,8 @@ import type { UserCourseProgressProperties } from '@/features/progress/domain/en
 
 
 const USERS_COLLECTION = 'usuarios';
-const COURSES_COLLECTION = 'cursos'; // Added for fetching course details
-const PROGRESS_SUBCOLLECTION = 'progresoCursos'; // For user progress
+const COURSES_COLLECTION = 'cursos'; 
+const PROGRESS_SUBCOLLECTION = 'progresoCursos'; 
 
 export class FirebaseUserRepository implements IUserRepository {
   private get usersCollection() {
@@ -42,9 +42,7 @@ export class FirebaseUserRepository implements IUserRepository {
         return null;
       }
       const data = docSnap.data() as UserProperties;
-      // console.log(`[FirebaseUserRepository] findByUid - UID: ${uid}, Raw cursosInscritos from Firestore:`, JSON.stringify(data.cursosInscritos));
       if (!Array.isArray(data.cursosInscritos)) {
-        console.warn(`[FirebaseUserRepository] findByUid - UID: ${uid}, cursosInscritos was not an array. Initializing as empty. Original value:`, data.cursosInscritos);
         data.cursosInscritos = [];
       }
       return new UserEntity(data);
@@ -64,7 +62,6 @@ export class FirebaseUserRepository implements IUserRepository {
       }
       const data = snapshot.docs[0].data() as UserProperties;
       if (!Array.isArray(data.cursosInscritos)) {
-        console.warn(`[FirebaseUserRepository] findByEmail - Email: ${email}, cursosInscritos was not an array. Initializing as empty. Original value:`, data.cursosInscritos);
         data.cursosInscritos = [];
       }
       return new UserEntity(data);
@@ -72,6 +69,25 @@ export class FirebaseUserRepository implements IUserRepository {
       const firebaseError = error as FirebaseError;
       console.error(`[FirebaseUserRepository] Error finding user by email (${email}):`, firebaseError.message, firebaseError.code, firebaseError.stack);
       throw new Error(`Firestore findByEmail operation failed: ${firebaseError.message}`);
+    }
+  }
+
+  async findByReferralCode(referralCode: string): Promise<UserEntity | null> {
+    try {
+      const snapshot = await this.usersCollection.where('referralCodeGenerated', '==', referralCode).limit(1).get();
+      if (snapshot.empty) {
+        console.log(`[FirebaseUserRepository] User not found for referralCode: ${referralCode}`);
+        return null;
+      }
+      const data = snapshot.docs[0].data() as UserProperties;
+      if (!Array.isArray(data.cursosInscritos)) {
+        data.cursosInscritos = [];
+      }
+      return new UserEntity(data);
+    } catch (error: any) {
+      const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseUserRepository] Error finding user by referralCode (${referralCode}):`, firebaseError.message, firebaseError.code, firebaseError.stack);
+      throw new Error(`Firestore findByReferralCode operation failed: ${firebaseError.message}`);
     }
   }
 
@@ -101,8 +117,10 @@ export class FirebaseUserRepository implements IUserRepository {
       }
 
       if (data.cursosInscritos !== undefined && !Array.isArray(data.cursosInscritos)) {
-        console.warn(`[FirebaseUserRepository] cursosInscritos for UID ${uid} was not an array during update, initializing as empty array.`);
         updateData.cursosInscritos = [];
+      }
+      if (data.balanceComisionesPendientes !== undefined) {
+        updateData.balanceComisionesPendientes = data.balanceComisionesPendientes;
       }
 
 
@@ -116,7 +134,6 @@ export class FirebaseUserRepository implements IUserRepository {
 
       const finalData = updatedDocSnap.data() as UserProperties;
       if (!Array.isArray(finalData.cursosInscritos)) {
-         console.warn(`[FirebaseUserRepository] User document for UID ${uid} after update has non-array cursosInscritos. Initializing as empty.`);
         finalData.cursosInscritos = [];
       }
       return new UserEntity(finalData);
@@ -158,7 +175,6 @@ export class FirebaseUserRepository implements IUserRepository {
       const firebaseError = error as FirebaseError;
       console.error(`[FirebaseUserRepository - addCourseToEnrolled] Firestore specific error details: Code='${firebaseError.code}', Message='${firebaseError.message}', Stack='${firebaseError.stack}'`);
       console.error(`[FirebaseUserRepository - addCourseToEnrolled] CRITICAL ERROR updating user '${userId}' to add course '${courseId}':`, firebaseError.message, firebaseError.stack);
-      // Propagate the error to be handled by the service/webhook
       throw new Error(`Firestore addCourseToEnrolled (arrayUnion) operation failed for user ${userId}: ${firebaseError.message}`);
     }
   }
@@ -178,7 +194,6 @@ export class FirebaseUserRepository implements IUserRepository {
 
       const userData = userDocSnap.data() as UserProperties;
       if (!Array.isArray(userData.cursosInscritos)) {
-         console.warn(`[FirebaseUserRepository] findUserWithEnrolledCoursesAndProgress - UID: ${uid}, cursosInscritos was not an array. Initializing as empty. Original value:`, userData.cursosInscritos);
         userData.cursosInscritos = [];
       }
       const userEntity = new UserEntity(userData);
@@ -222,7 +237,6 @@ export class FirebaseUserRepository implements IUserRepository {
 
       const userEntityPlain = userEntity.toPlainObject();
       if (!Array.isArray(userEntityPlain.cursosInscritos)) {
-          console.warn(`[FirebaseUserRepository] User entity plain object for UID ${uid} had non-array cursosInscritos. Initializing as empty.`);
           userEntityPlain.cursosInscritos = [];
       }
       return { ...userEntityPlain, enrolledCoursesDetails } as UserWithEnrolledCourses;
@@ -233,4 +247,40 @@ export class FirebaseUserRepository implements IUserRepository {
       throw new Error(`Firestore findUserWithEnrolledCoursesAndProgress operation failed: ${firebaseError.message}`);
     }
   }
+
+  async incrementSuccessfulReferrals(userId: string): Promise<void> {
+    const userRef = this.usersCollection.doc(userId);
+    const updatePayload = {
+        referidosExitosos: FieldValue.increment(1),
+        updatedAt: new Date().toISOString(),
+    };
+    console.log(`[FirebaseUserRepository] Attempting to increment successful referrals for user '${userId}'.`);
+    try {
+      await userRef.update(updatePayload);
+      console.log(`[FirebaseUserRepository] Successfully incremented successful referrals for user '${userId}'.`);
+    } catch (error: any) {
+      const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseUserRepository] Error incrementing successful referrals for user '${userId}':`, firebaseError.message);
+      throw new Error(`Firestore incrementSuccessfulReferrals operation failed: ${firebaseError.message}`);
+    }
+  }
+  
+  async updateReferrerBalance(userId: string, commissionAmount: number): Promise<void> {
+    const userRef = this.usersCollection.doc(userId);
+    const updatePayload = {
+        balanceComisionesPendientes: FieldValue.increment(commissionAmount),
+        updatedAt: new Date().toISOString(),
+    };
+    console.log(`[FirebaseUserRepository] Attempting to update referrer balance for user '${userId}' by ${commissionAmount}.`);
+    try {
+        await userRef.update(updatePayload);
+        console.log(`[FirebaseUserRepository] Successfully updated referrer balance for user '${userId}'.`);
+    } catch (error: any) {
+        const firebaseError = error as FirebaseError;
+        console.error(`[FirebaseUserRepository] Error updating referrer balance for user '${userId}':`, firebaseError.message);
+        throw new Error(`Firestore updateReferrerBalance operation failed: ${firebaseError.message}`);
+    }
+  }
 }
+
+    

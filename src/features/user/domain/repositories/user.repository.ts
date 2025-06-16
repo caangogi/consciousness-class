@@ -19,8 +19,13 @@ export interface IUserRepository {
   save(user: UserEntity): Promise<void>;
   findByUid(uid: string): Promise<UserEntity | null>;
   findByEmail(email: string): Promise<UserEntity | null>;
+  findByReferralCode(referralCode: string): Promise<UserEntity | null>; // Nueva
   update(uid: string, data: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt'>>): Promise<UserEntity | null>;
   delete(uid: string): Promise<void>;
-  addCourseToEnrolled(userId: string, courseId: string): Promise<void>; // For enrollment
+  addCourseToEnrolled(userId: string, courseId: string): Promise<void>; 
   findUserWithEnrolledCoursesAndProgress(uid: string): Promise<UserWithEnrolledCourses | null>;
+  incrementSuccessfulReferrals(userId: string): Promise<void>; // Nueva
+  updateReferrerBalance(userId: string, commissionAmount: number): Promise<void>; // Nueva
 }
+
+    

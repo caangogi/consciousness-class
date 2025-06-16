@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from 'next/image';
-import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon, Share2, ExternalLink } from "lucide-react";
+import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon, Share2, ExternalLink, DollarSign } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton"; 
 import { useToast } from "@/hooks/use-toast";
@@ -361,7 +361,9 @@ export default function StudentDashboardPage() {
 
   const referralCode = currentUser.referralCodeGenerated || 'GENERANDO...';
   const successfulReferrals = currentUser.referidosExitosos || 0;
-  const rewardsEarned = `${(currentUser.balanceCredito || 0).toFixed(2)} € en créditos`;
+  const pendingCommissions = `${(currentUser.balanceComisionesPendientes || 0).toFixed(2)} €`;
+  const generalCredits = `${(currentUser.balanceCredito || 0).toFixed(2)} €`;
+
 
   return (
     <div className="space-y-8">
@@ -568,7 +570,7 @@ export default function StudentDashboardPage() {
           <CardHeader>
              <div className="flex items-center gap-2">
                 <Gift className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl font-headline">Mi Código de Referido</CardTitle>
+                <CardTitle className="text-2xl font-headline">Mi Programa de Referidos</CardTitle>
             </div>
             <CardDescription>Comparte tu código o enlaces y obtén recompensas.</CardDescription>
           </CardHeader>
@@ -593,12 +595,23 @@ export default function StudentDashboardPage() {
                         <LinkIcon className="mr-2 h-4 w-4"/> Copiar Enlace a Página Principal
                     </Button>
                 </div>
+                 <p className="text-xs text-muted-foreground mt-2">
+                    También puedes añadir <code className="text-xs bg-muted px-1 py-0.5 rounded">?ref={currentUser.referralCodeGenerated || 'TU_CODIGO'}</code> al final de cualquier URL de curso para compartirlo.
+                 </p>
             </div>
-            <p><span className="font-semibold">Referidos Exitosos:</span> {successfulReferrals}</p>
-            <p><span className="font-semibold">Recompensas Obtenidas:</span> {rewardsEarned}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t mt-4">
+                <div>
+                    <p className="text-sm font-medium text-muted-foreground">Referidos Exitosos:</p>
+                    <p className="text-2xl font-semibold">{successfulReferrals}</p>
+                </div>
+                 <div>
+                    <p className="text-sm font-medium text-muted-foreground">Comisiones Pendientes (Próximamente):</p>
+                    <p className="text-2xl font-semibold flex items-center">{currentUser.balanceComisionesPendientes ? `${currentUser.balanceComisionesPendientes.toFixed(2)} €` : '0.00 €'} <DollarSign className="h-5 w-5 ml-1 text-muted-foreground"/></p>
+                </div>
+            </div>
              <div className="mt-3 p-3 bg-secondary/50 rounded-md text-xs text-secondary-foreground flex items-start gap-2">
                 <Info className="h-4 w-4 shrink-0 mt-0.5"/>
-                <p>La funcionalidad completa de seguimiento y aplicación de recompensas por referidos estará disponible próximamente.</p>
+                <p>El seguimiento detallado de comisiones y su pago se habilitará próximamente. Por ahora, puedes ver tus referidos exitosos.</p>
             </div>
           </CardContent>
         </Card>
@@ -690,3 +703,5 @@ export default function StudentDashboardPage() {
     </div>
   );
 }
+
+    

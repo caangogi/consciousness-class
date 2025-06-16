@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const userId = decodedToken.uid;
     const userEmail = decodedToken.email;
 
-    const { courseId } = await request.json();
+    const { courseId, referralCode, promotedCourseId } = await request.json();
     if (!courseId || typeof courseId !== 'string') {
       return NextResponse.json({ error: 'Bad Request: Missing or invalid courseId.' }, { status: 400 });
     }
@@ -51,18 +51,30 @@ export async function POST(request: NextRequest) {
 
     const origin = request.headers.get('origin') || 'http://localhost:9002'; // Fallback for local dev
 
+    const metadata: Stripe.MetadataParam = {
+        courseId: course.id,
+        userId: userId,
+    };
+
+    if (referralCode) {
+        metadata.referralCodeUsed = referralCode;
+    }
+    if (promotedCourseId) {
+        metadata.promotedCourseId = promotedCourseId;
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
-            currency: 'eur', // Currency changed to EUR
+            currency: 'eur', 
             product_data: {
               name: course.nombre,
               description: course.descripcionCorta,
               images: course.imagenPortadaUrl ? [course.imagenPortadaUrl] : [],
             },
-            unit_amount: Math.round(course.precio * 100), // Price in cents
+            unit_amount: Math.round(course.precio * 100), 
           },
           quantity: 1,
         },
@@ -70,11 +82,8 @@ export async function POST(request: NextRequest) {
       mode: 'payment',
       success_url: `${origin}/payment/success?session_id={CHECKOUT_SESSION_ID}&courseId=${courseId}`,
       cancel_url: `${origin}/courses/${courseId}?canceled=true`,
-      customer_email: userEmail, // Pre-fill customer email
-      metadata: {
-        courseId: course.id,
-        userId: userId,
-      },
+      customer_email: userEmail, 
+      metadata: metadata,
     });
 
     if (!session.id || !session.url) {
@@ -98,3 +107,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: errorMessage, details: errorDetails, stack }, { status: 500 });
   }
 }
+
+    

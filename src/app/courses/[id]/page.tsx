@@ -37,7 +37,7 @@ const placeholderReviews = [
 
 export default function CourseDetailPage() {
   const params = useParams<{ id: string }>();
-  const courseId = params.id; 
+  const courseIdFromPath = params.id; 
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser, loading: authLoading, refreshUserProfile } = useAuth();
@@ -49,7 +49,7 @@ export default function CourseDetailPage() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isUserEnrolled = currentUser?.cursosInscritos?.includes(courseId) ?? false;
+  const isUserEnrolled = currentUser?.cursosInscritos?.includes(courseIdFromPath) ?? false;
 
   useEffect(() => {
     const refCodeFromUrl = searchParams.get('ref');
@@ -58,14 +58,19 @@ export default function CourseDetailPage() {
         try {
           localStorage.setItem('referral_code', refCodeFromUrl);
           console.log(`[CourseDetailPage] Referral code "${refCodeFromUrl}" from URL saved to localStorage.`);
+          // Si hay un código de referido en la URL, también guardamos el ID del curso actual como el promocionado.
+          if (courseIdFromPath) {
+            localStorage.setItem('promoted_course_id', courseIdFromPath);
+            console.log(`[CourseDetailPage] Promoted course ID "${courseIdFromPath}" saved to localStorage due to ref in URL.`);
+          }
         } catch (e) {
-          console.error("[CourseDetailPage] Error saving referral code to localStorage:", e);
+          console.error("[CourseDetailPage] Error saving referral/promoted info to localStorage:", e);
         }
       } else {
         console.warn(`[CourseDetailPage] Invalid referral code format in URL: "${refCodeFromUrl}". Not saving.`);
       }
     }
-  }, [searchParams]);
+  }, [searchParams, courseIdFromPath]);
 
   useEffect(() => {
     if (searchParams.get('canceled') === 'true') {
@@ -75,26 +80,26 @@ export default function CourseDetailPage() {
         variant: 'default',
         duration: 5000,
       });
-      router.replace(`/courses/${courseId}`, { scroll: false });
+      router.replace(`/courses/${courseIdFromPath}`, { scroll: false });
     }
-  }, [searchParams, courseId, router, toast]);
+  }, [searchParams, courseIdFromPath, router, toast]);
 
   const fetchCourseData = useCallback(async () => {
-    if (!courseId) {
+    if (!courseIdFromPath) {
       console.warn("[CourseDetailPage] fetchCourseData: courseId is missing. Current params.id:", params.id);
       setError("ID del curso no disponible en la URL.");
       setIsLoading(false);
       setCourseData(null);
       return;
     }
-    console.log(`[CourseDetailPage] fetchCourseData called for courseId: ${courseId}`);
+    console.log(`[CourseDetailPage] fetchCourseData called for courseId: ${courseIdFromPath}`);
     setIsLoading(true);
     setError(null);
     setCourseData(null);
 
     try {
-      const response = await fetch(`/api/learn/course-structure/${courseId}`);
-      console.log(`[CourseDetailPage] API response status: ${response.status} for ${courseId}`);
+      const response = await fetch(`/api/learn/course-structure/${courseIdFromPath}`);
+      console.log(`[CourseDetailPage] API response status: ${response.status} for ${courseIdFromPath}`);
       if (!response.ok) {
         let errorData;
         try {
@@ -107,23 +112,23 @@ export default function CourseDetailPage() {
         throw new Error(errorData.details || errorData.error || 'Error al cargar los datos del curso');
       }
       const data: CourseStructureData = await response.json();
-      console.log(`[CourseDetailPage] API success response data for ${courseId}:`, data);
+      console.log(`[CourseDetailPage] API success response data for ${courseIdFromPath}:`, data);
       setCourseData(data);
       setError(null);
     } catch (err: any) {
-      console.error(`[CourseDetailPage] Error in fetchCourseData for ${courseId}:`, err);
+      console.error(`[CourseDetailPage] Error in fetchCourseData for ${courseIdFromPath}:`, err);
       setError(err.message);
       setCourseData(null);
     } finally {
-      console.log(`[CourseDetailPage] fetchCourseData finally block for ${courseId}. Setting isLoading to false.`);
+      console.log(`[CourseDetailPage] fetchCourseData finally block for ${courseIdFromPath}. Setting isLoading to false.`);
       setIsLoading(false);
     }
-  }, [courseId, params.id]);
+  }, [courseIdFromPath, params.id]);
 
 
   useEffect(() => {
-    console.log("[CourseDetailPage] Course Data useEffect triggered. Current courseId:", courseId);
-    if (courseId) {
+    console.log("[CourseDetailPage] Course Data useEffect triggered. Current courseId:", courseIdFromPath);
+    if (courseIdFromPath) {
         console.log("[CourseDetailPage] Course Data useEffect: courseId is present, calling fetchCourseData.");
         fetchCourseData();
     } else {
@@ -132,7 +137,7 @@ export default function CourseDetailPage() {
         setIsLoading(false); 
         setCourseData(null); 
     }
-  }, [courseId, fetchCourseData]);
+  }, [courseIdFromPath, fetchCourseData]);
 
   useEffect(() => {
     console.log(`[CourseDetailPage] User Profile useEffect triggered. currentUser.uid: ${currentUser?.uid}, authLoading: ${authLoading}`);
@@ -146,9 +151,9 @@ export default function CourseDetailPage() {
 
 
   const handleFreeEnrollment = async () => {
-    if (!currentUser || !courseId || !courseData) {
+    if (!currentUser || !courseIdFromPath || !courseData) {
         toast({ title: "Error", description: "Usuario no autenticado o datos del curso no disponibles.", variant: "destructive" });
-        if (!currentUser) router.push(`/login?redirect=/courses/${courseId}`);
+        if (!currentUser) router.push(`/login?redirect=/courses/${courseIdFromPath}`);
         return;
     }
     setIsProcessingEnrollment(true);
@@ -156,7 +161,7 @@ export default function CourseDetailPage() {
         const idToken = await auth.currentUser?.getIdToken(true);
         if (!idToken) throw new Error("No se pudo obtener el token de autenticación.");
 
-        const response = await fetch(`/api/courses/${courseId}/enroll`, {
+        const response = await fetch(`/api/courses/${courseIdFromPath}/enroll`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -180,9 +185,9 @@ export default function CourseDetailPage() {
   };
 
   const handlePaidCheckout = async () => {
-    if (!currentUser || !courseId || !courseData?.course) {
+    if (!currentUser || !courseIdFromPath || !courseData?.course) {
         toast({ title: "Error", description: "Usuario no autenticado o datos del curso no disponibles.", variant: "destructive" });
-        if (!currentUser) router.push(`/login?redirect=/courses/${courseId}`);
+        if (!currentUser) router.push(`/login?redirect=/courses/${courseIdFromPath}`);
         return;
     }
 
@@ -204,13 +209,26 @@ export default function CourseDetailPage() {
         const idToken = await auth.currentUser?.getIdToken(true);
         if (!idToken) throw new Error("No se pudo obtener el token de autenticación.");
 
+        let referralCodeUsed: string | null = null;
+        let promotedCourseIdUsed: string | null = null;
+        try {
+          referralCodeUsed = localStorage.getItem('referral_code');
+          promotedCourseIdUsed = localStorage.getItem('promoted_course_id');
+        } catch (e) {
+          console.warn("[CourseDetailPage] Could not access localStorage for referral codes.", e);
+        }
+
+        const checkoutPayload: { courseId: string; referralCode?: string; promotedCourseId?: string } = { courseId: courseIdFromPath };
+        if (referralCodeUsed) checkoutPayload.referralCode = referralCodeUsed;
+        if (promotedCourseIdUsed) checkoutPayload.promotedCourseId = promotedCourseIdUsed;
+
         const response = await fetch(`/api/checkout/create-session`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${idToken}`,
             },
-            body: JSON.stringify({ courseId }),
+            body: JSON.stringify(checkoutPayload),
         });
 
         if (!response.ok) {
@@ -324,7 +342,7 @@ export default function CourseDetailPage() {
 
   const { course, modules } = courseData;
   const totalLessons = modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
-  const firstLessonId = modules[0]?.lessons[0]?.id || 'start';
+  const firstLessonIdIfAny = modules[0]?.lessons[0]?.id || 'start';
   const isCourseFree = course.precio <= 0;
 
   const creatorDisplay = {
@@ -342,7 +360,7 @@ export default function CourseDetailPage() {
     if (!currentUser) {
         return (
             <Button size="lg" className={commonButtonClasses} asChild>
-                <Link href={`/login?redirect=/courses/${courseId}`}>
+                <Link href={`/login?redirect=/courses/${courseIdFromPath}`}>
                     <LogIn className="mr-2 h-5 w-5" /> Iniciar Sesión para Acceder
                 </Link>
             </Button>
@@ -351,7 +369,7 @@ export default function CourseDetailPage() {
     if (isUserEnrolled) {
         return (
             <Button size="lg" className={commonButtonClasses} asChild>
-               <Link href={`/learn/${course.id}/${firstLessonId}`}>Ir al Curso</Link>
+               <Link href={`/learn/${course.id}/${firstLessonIdIfAny}`}>Ir al Curso</Link>
             </Button>
         );
     }
@@ -585,3 +603,5 @@ export default function CourseDetailPage() {
     </motion.div>
   );
 }
+
+    

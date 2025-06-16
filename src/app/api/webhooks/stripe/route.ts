@@ -5,11 +5,11 @@ import { adminDb } from '@/lib/firebase/admin';
 import { FirebaseUserRepository } from '@/features/user/infrastructure/repositories/firebase-user.repository';
 import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
 import { EnrollmentService } from '@/features/enrollment/application/enrollment.service';
+import { FieldValue } from 'firebase-admin/firestore';
 
-// Collection for storing webhook logs
 const LOGS_COLLECTION = 'webhookLogs';
+const COMMISSIONS_COLLECTION = 'comisionesRegistradas'; // Nueva colección
 
-// Helper to write log steps into Firestore (root collection for visibility)
 async function writeWebhookLog(eventId: string, step: string, details: any) {
   const timestamp = new Date().toISOString();
   try {
@@ -57,8 +57,6 @@ export async function POST(request: NextRequest) {
   const sig = request.headers.get('stripe-signature');
   if (!sig) {
     console.error('[Stripe Webhook] Webhook Error: Missing "stripe-signature" header. Cannot verify event.');
-    // No vamos a devolver un error 400 inmediatamente aquí para permitir el modo de depuración si fuera necesario,
-    // pero la construcción del evento fallará si sig es nulo.
   } else {
     console.log('[Stripe Webhook] Stripe signature header is present.');
   }
@@ -72,10 +70,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook Error: could not read body' }, { status: 400 });
   }
 
-  // -- REINTRODUCIENDO LA LÓGICA COMPLETA DEL WEBHOOK --
   let event: Stripe.Event;
   try {
-    if (!sig) { // Ahora hacemos la comprobación estricta aquí
+    if (!sig) { 
       console.error('[Stripe Webhook] Webhook Error: Missing "stripe-signature" header after attempting to read body. Cannot verify event.');
       await writeWebhookLog("NO_EVENT_ID_NO_SIGNATURE", 'missing_signature_header', { error: "Missing stripe-signature header" });
       return NextResponse.json({ error: 'Webhook Error: Missing signature header' }, { status: 400 });
@@ -101,30 +98,96 @@ export async function POST(request: NextRequest) {
         if (session.payment_status === 'paid') {
           console.log('[Stripe Webhook] Payment status is "paid". Extracting metadata...');
           
-          const userId = session.metadata?.userId ?? session.metadata?.userid;
-          const courseId = session.metadata?.courseId ?? session.metadata?.courseid;
+          const buyerUserId = session.metadata?.userId;
+          const courseIdPurchased = session.metadata?.courseId;
+          const referralCodeUsed = session.metadata?.referralCodeUsed;
+          const promotedCourseId = session.metadata?.promotedCourseId;
           
           console.log('[Stripe Webhook] Raw Metadata from Stripe session:', JSON.stringify(session.metadata)); 
-          console.log(`[Stripe Webhook] Extracted - User ID: ${userId}, Course ID: ${courseId}`);
-          await writeWebhookLog(eventId, 'extracted_metadata', { userId, courseId, rawMetadata: session.metadata });
+          console.log(`[Stripe Webhook] Extracted - Buyer User ID: ${buyerUserId}, Course ID Purchased: ${courseIdPurchased}, Referral Code Used: ${referralCodeUsed}, Promoted Course ID: ${promotedCourseId}`);
+          await writeWebhookLog(eventId, 'extracted_metadata', { buyerUserId, courseIdPurchased, referralCodeUsed, promotedCourseId, rawMetadata: session.metadata });
 
-          if (!userId || !courseId) {
-            console.error(`[Stripe Webhook] CRITICAL: Missing essential metadata. User ID: ${userId}, Course ID: ${courseId}. Cannot proceed with enrollment for session ${session.id}.`);
-            await writeWebhookLog(eventId, 'missing_metadata_error', { userId, courseId, rawMetadata: session.metadata });
-            return NextResponse.json({ error: 'Webhook Error: Missing essential metadata (userId or courseId).' }, { status: 400 });
+          if (!buyerUserId || !courseIdPurchased) {
+            console.error(`[Stripe Webhook] CRITICAL: Missing essential metadata. Buyer User ID: ${buyerUserId}, Course ID Purchased: ${courseIdPurchased}. Cannot proceed with enrollment for session ${session.id}.`);
+            await writeWebhookLog(eventId, 'missing_metadata_error_enrollment', { buyerUserId, courseIdPurchased, rawMetadata: session.metadata });
+            // No devolver error 400 todavía, intentar procesar comisión si es posible.
+            // return NextResponse.json({ error: 'Webhook Error: Missing essential metadata (userId or courseId) for enrollment.' }, { status: 400 });
+          } else {
+             // Proceder con la inscripción
+            console.log(`[Stripe Webhook] Enrollment Metadata OK. Calling EnrollmentService for User: ${buyerUserId}, Course: ${courseIdPurchased}`);
+            const userRepository = new FirebaseUserRepository();
+            const courseRepository = new FirebaseCourseRepository();
+            const enrollmentService = new EnrollmentService(userRepository, courseRepository);
+            
+            await enrollmentService.enrollStudentToCourse(buyerUserId, courseIdPurchased);
+            console.log(`[Stripe Webhook] EnrollmentService.enrollStudentToCourse completed successfully for User: ${buyerUserId}, Course: ${courseIdPurchased}.`);
+            await writeWebhookLog(eventId, 'enrollment_service_success', { buyerUserId, courseIdPurchased });
           }
 
-          console.log(`[Stripe Webhook] Metadata OK. Calling EnrollmentService for User: ${userId}, Course: ${courseId}`);
-          const userRepository = new FirebaseUserRepository();
-          const courseRepository = new FirebaseCourseRepository();
-          const enrollmentService = new EnrollmentService(userRepository, courseRepository);
-          
-          await enrollmentService.enrollStudentToCourse(userId, courseId);
-          console.log(`[Stripe Webhook] EnrollmentService.enrollStudentToCourse completed successfully for User: ${userId}, Course: ${courseId}.`);
-          await writeWebhookLog(eventId, 'enrollment_service_success', { userId, courseId });
+
+          // Lógica de Referidos y Comisiones
+          if (referralCodeUsed && buyerUserId) {
+            console.log(`[Stripe Webhook] Referral code "${referralCodeUsed}" found. Processing referral...`);
+            const userRepository = new FirebaseUserRepository();
+            const courseRepository = new FirebaseCourseRepository();
+
+            const referrerUser = await userRepository.findByReferralCode(referralCodeUsed);
+
+            if (referrerUser && referrerUser.uid !== buyerUserId) {
+              console.log(`[Stripe Webhook] Referrer found: UID ${referrerUser.uid}. Buyer UID: ${buyerUserId}.`);
+              
+              // Incrementar referidosExitosos del referente
+              await userRepository.incrementSuccessfulReferrals(referrerUser.uid);
+              console.log(`[Stripe Webhook] Incremented successful referrals for referrer ${referrerUser.uid}.`);
+
+              const coursePurchased = await courseRepository.findById(courseIdPurchased);
+              if (coursePurchased && coursePurchased.comisionReferidoPorcentaje && coursePurchased.comisionReferidoPorcentaje > 0) {
+                // Solo registrar comisión si el curso comprado es el mismo que el promocionado (si promotedCourseId existe)
+                // O si promotedCourseId no existe, se asume que cualquier compra con el código de referido aplica.
+                // Para MVP, si el curso comprado ES el promocionado Y tiene comisión.
+                if (courseIdPurchased === promotedCourseId) {
+                  const commissionPercentage = coursePurchased.comisionReferidoPorcentaje / 100;
+                  const purchaseAmount = session.amount_total ? session.amount_total / 100 : 0; // Convertir de céntimos a euros/USD
+                  const commissionAmount = purchaseAmount * commissionPercentage;
+
+                  const commissionData = {
+                    referenteUid: referrerUser.uid,
+                    referidoUid: buyerUserId,
+                    courseIdComprado: courseIdPurchased,
+                    promotedCourseId: promotedCourseId, // Guardar para trazabilidad
+                    stripeSessionId: session.id,
+                    montoCompra: purchaseAmount,
+                    porcentajeComisionCurso: coursePurchased.comisionReferidoPorcentaje,
+                    montoComisionCalculado: commissionAmount,
+                    fechaCreacion: new Date().toISOString(),
+                    estadoPagoComision: 'pendiente',
+                  };
+                  await adminDb.collection(COMMISSIONS_COLLECTION).add(commissionData);
+                  console.log(`[Stripe Webhook] Commission registered for referrer ${referrerUser.uid} for course ${courseIdPurchased}. Amount: ${commissionAmount.toFixed(2)}`);
+                  await writeWebhookLog(eventId, 'commission_registered', commissionData);
+                  
+                  // Actualizar balanceComisionesPendientes del referente
+                  await userRepository.updateReferrerBalance(referrerUser.uid, commissionAmount);
+                  console.log(`[Stripe Webhook] Updated pending commission balance for referrer ${referrerUser.uid} by ${commissionAmount.toFixed(2)}.`);
+
+                } else {
+                  console.log(`[Stripe Webhook] Commission not registered: Purchased course ${courseIdPurchased} does not match promoted course ${promotedCourseId}, or course has no commission.`);
+                  await writeWebhookLog(eventId, 'commission_not_registered_mismatch_or_no_course_commission', { courseIdPurchased, promotedCourseId, courseCommission: coursePurchased.comisionReferidoPorcentaje });
+                }
+              } else {
+                console.log(`[Stripe Webhook] Course ${courseIdPurchased} not found or has no referral commission percentage. No commission registered.`);
+                await writeWebhookLog(eventId, 'commission_not_registered_no_course_commission', { courseIdPurchased });
+              }
+            } else {
+              console.log(`[Stripe Webhook] Referrer not found for code "${referralCodeUsed}" or referrer is the same as buyer. No commission action.`);
+              await writeWebhookLog(eventId, 'referrer_not_found_or_is_buyer', { referralCodeUsed, buyerUserId });
+            }
+          } else {
+            console.log('[Stripe Webhook] No referral code used or buyerUserId missing. Skipping referral processing.');
+          }
 
         } else {
-          console.log(`[Stripe Webhook] Payment status is '${session.payment_status}', not 'paid'. No enrollment action taken for session ${session.id}.`);
+          console.log(`[Stripe Webhook] Payment status is '${session.payment_status}', not 'paid'. No enrollment or commission action taken for session ${session.id}.`);
           await writeWebhookLog(eventId, 'payment_not_paid', { sessionId: session.id, payment_status: session.payment_status });
         }
         break;

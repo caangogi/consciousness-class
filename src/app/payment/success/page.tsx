@@ -30,7 +30,7 @@ export default function PaymentSuccessPage() {
   const [isLoadingCourseData, setIsLoadingCourseData] = useState(false);
   const [firstLessonId, setFirstLessonId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [hasRefreshed, setHasRefreshed] = useState(false); // New state to control single refresh
+  const [hasRefreshed, setHasRefreshed] = useState(false); 
 
   const fetchCourseDataForLink = useCallback(async () => {
     if (!courseId) return;
@@ -63,13 +63,21 @@ export default function PaymentSuccessPage() {
     if (sessionId && courseId) {
       if (!authLoading && currentUser && !hasRefreshed) {
         console.log(`[PaymentSuccessPage] Auth loaded and user present (UID: ${currentUser.uid}). Attempting to refresh profile and fetch course data...`);
-        setHasRefreshed(true); // Set refresh flag
+        setHasRefreshed(true); 
         refreshUserProfile().then(() => {
           console.log("[PaymentSuccessPage] User profile refresh COMPLETED.");
+          // Limpiar códigos de referido de localStorage
+          try {
+            localStorage.removeItem('referral_code');
+            localStorage.removeItem('promoted_course_id');
+            console.log("[PaymentSuccessPage] Referral codes cleared from localStorage after successful payment.");
+          } catch (e) {
+            console.warn("[PaymentSuccessPage] Could not clear referral codes from localStorage:", e);
+          }
           fetchCourseDataForLink(); 
         }).catch(err => {
           console.error("[PaymentSuccessPage] Error refreshing user profile on payment success:", err);
-          fetchCourseDataForLink(); // Still try to fetch course data
+          fetchCourseDataForLink(); 
         });
       } else if (authLoading) {
         console.log("[PaymentSuccessPage] Waiting for auth to load...");
@@ -77,10 +85,7 @@ export default function PaymentSuccessPage() {
         console.log("[PaymentSuccessPage] Waiting for user to be present...");
       } else if (hasRefreshed) {
         console.log("[PaymentSuccessPage] Profile already refreshed for this session.");
-        // If already refreshed, and course data might not have loaded (e.g. if refreshUserProfile didn't trigger a new currentUser object that fetchCourseDataForLink depended on)
-        // we might need to call fetchCourseDataForLink here too, or ensure its dependencies are correct.
-        // For now, let's assume if it's refreshed, fetchCourseDataForLink was also called.
-        if (!firstLessonId && !isLoadingCourseData && !error) { // Only call if not already loading or errored
+        if (!firstLessonId && !isLoadingCourseData && !error) { 
             fetchCourseDataForLink();
         }
       }
@@ -123,7 +128,7 @@ export default function PaymentSuccessPage() {
           )}
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center">
-           {courseId && (!authLoading || currentUser) && !error && ( // Enable buttons once auth is no longer loading or user is present
+           {courseId && (!authLoading || currentUser) && !error && ( 
              isLoadingCourseData ? (
                 <Button disabled>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando curso...
@@ -134,7 +139,7 @@ export default function PaymentSuccessPage() {
                     <BookOpen className="mr-2 h-4 w-4"/> Ir al Curso
                     </Link>
                 </Button>
-             ) : ( // Fallback if firstLessonId couldn't be determined but courseId exists
+             ) : ( 
                 <Button asChild>
                     <Link href={`/courses/${courseId}`}>
                     <BookOpen className="mr-2 h-4 w-4"/> Ver Detalles del Curso
@@ -152,3 +157,5 @@ export default function PaymentSuccessPage() {
     </div>
   );
 }
+
+    

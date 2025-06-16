@@ -21,9 +21,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Invalid ID token', details: error.message }, { status: 401 });
     }
     
-    // Check if user has superadmin role (from custom claims or Firestore document)
-    // For this example, we'll rely on the AuthContext temporary override for 'superadmin@example.com'
-    // In a production system, you'd fetch the user's profile from Firestore here and check their role.
     const userProfile = await new FirebaseUserRepository().findByUid(decodedToken.uid);
     const isSuperAdmin = userProfile?.role === 'superadmin' || decodedToken.email === process.env.SUPERADMIN_DEV_EMAIL;
 
@@ -35,8 +32,8 @@ export async function GET(request: NextRequest) {
     const userRepository = new FirebaseUserRepository();
     const userService = new UserService(userRepository);
 
-    // Fetch, for example, the 5 most recently created users
-    const users = await userService.getAllUsers(5, 'createdAt', 'desc');
+    // Fetch, for example, the 50 most recently created users
+    const users = await userService.getAllUsers(50, 'createdAt', 'desc');
     const usersData = users.map(user => user.toPlainObject());
 
     return NextResponse.json({ users: usersData }, { status: 200 });
@@ -55,7 +52,7 @@ export async function GET(request: NextRequest) {
     }
     
     const stack = process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined;
-    return NextResponse.json({ error: errorMessage, details: errorDetails, stack }, { status: 500 });
+    return NextResponse.json({ error: errorMessage, details: errorDetails, stack }, { status: statusCode });
   }
 }
     

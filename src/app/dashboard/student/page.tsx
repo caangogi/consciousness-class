@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from 'next/image';
-import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon, Share2, ExternalLink, DollarSign, RefreshCw } from "lucide-react";
+import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon, Share2, ExternalLink, DollarSign, RefreshCw, ListChecks, CalendarDays } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,11 @@ import { auth, storage } from '@/lib/firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { UserCourseProgressProperties } from '@/features/progress/domain/entities/user-course-progress.entity';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
 
 interface EnrolledCourseApiData extends CourseProperties {
   progress?: UserCourseProgressProperties;
@@ -38,9 +43,20 @@ interface PromotableCourseData {
   categoria: string;
 }
 
+interface CommissionData {
+  id: string;
+  fechaCreacion: string;
+  nombreCursoComprado?: string;
+  courseIdComprado: string;
+  montoComisionCalculado: number;
+  estadoPagoComision: 'pendiente' | 'pagada' | 'cancelada';
+}
+
+
 const profileFormSchema = z.object({
   nombre: z.string().min(1, { message: "El nombre es requerido." }),
   apellido: z.string().min(1, { message: "El apellido es requerido." }),
+  paymentInfo: z.string().optional(), // Nuevo campo para información de pago
 });
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
@@ -55,6 +71,10 @@ export default function StudentDashboardPage() {
   const [promotableCourses, setPromotableCourses] = useState<PromotableCourseData[]>([]);
   const [isLoadingPromotableCourses, setIsLoadingPromotableCourses] = useState(true);
   const [promotableCoursesError, setPromotableCoursesError] = useState<string | null>(null);
+
+  const [detailedCommissions, setDetailedCommissions] = useState<CommissionData[]>([]);
+  const [isLoadingCommissions, setIsLoadingCommissions] = useState(true);
+  const [commissionsError, setCommissionsError] = useState<string | null>(null);
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -72,11 +92,18 @@ export default function StudentDashboardPage() {
     }
   }, []);
 
+  useEffect(() => {
+    console.log('[StudentDashboardPage] currentUser changed or initial render:', currentUser);
+    console.log('[StudentDashboardPage] currentUser.balanceComisionesPendientes on render:', currentUser?.balanceComisionesPendientes);
+  }, [currentUser]);
+
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       nombre: '',
       apellido: '',
+      paymentInfo: '',
     },
   });
 
@@ -127,17 +154,48 @@ export default function StudentDashboardPage() {
     }
   }, [toast]);
 
+  const fetchDetailedCommissions = useCallback(async () => {
+    if (!currentUser || !auth.currentUser) {
+      setIsLoadingCommissions(false);
+      return;
+    }
+    setIsLoadingCommissions(true);
+    setCommissionsError(null);
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+      const response = await fetch('/api/student/my-commissions', {
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Error al cargar el detalle de comisiones.');
+      }
+      const data = await response.json();
+      setDetailedCommissions(data.commissions || []);
+    } catch (err: any) {
+      setCommissionsError(err.message);
+      toast({ title: "Error Detalle Comisiones", description: err.message, variant: "destructive"});
+    } finally {
+      setIsLoadingCommissions(false);
+    }
+  }, [currentUser, toast]);
+
   useEffect(() => {
     if (!authLoading && currentUser?.uid) {
       fetchEnrolledCourses();
       fetchPromotableCourses();
+      fetchDetailedCommissions();
     } else if (!authLoading && !currentUser) {
       setEnrolledCoursesApiData([]);
       setIsLoadingCourses(false);
       setPromotableCourses([]);
       setIsLoadingPromotableCourses(false);
+      setDetailedCommissions([]);
+      setIsLoadingCommissions(false);
     }
-  }, [authLoading, currentUser?.uid, fetchEnrolledCourses, fetchPromotableCourses]);
+  }, [authLoading, currentUser?.uid, fetchEnrolledCourses, fetchPromotableCourses, fetchDetailedCommissions]);
 
 
   useEffect(() => {
@@ -145,6 +203,7 @@ export default function StudentDashboardPage() {
       form.reset({
         nombre: currentUser.nombre || '',
         apellido: currentUser.apellido || '',
+        paymentInfo: (currentUser as any).paymentInfo || '', // Asumiendo que 'paymentInfo' se añade al UserProfile
       });
       setImagePreviewUrl(currentUser.photoURL || null);
       setImageFile(null);
@@ -211,11 +270,15 @@ export default function StudentDashboardPage() {
       }
 
       const idToken = await activeUser.getIdToken(true);
-      const updateDto = {
+      const updateDto: any = { // Usar 'any' temporalmente para incluir paymentInfo si se decide añadir a UserProperties
         nombre: values.nombre,
         apellido: values.apellido,
         photoURL: uploadedPhotoURL,
       };
+      if (values.paymentInfo) {
+          updateDto.paymentInfo = values.paymentInfo; // Si se añade a UserProperties y DTO
+      }
+
 
       const response = await fetch('/api/users/update-profile', {
         method: 'POST',
@@ -321,13 +384,13 @@ export default function StudentDashboardPage() {
 
   const handleRefreshStats = async () => {
     setIsRefreshingStats(true);
-    toast({ title: "Actualizando Datos...", description: "Estamos refrescando tus estadísticas de referidos." });
+    toast({ title: "Actualizando Datos...", description: "Estamos refrescando tus estadísticas y comisiones." });
     try {
       await refreshUserProfile();
-      // Log after refresh to see what StudentDashboardPage receives
+      await fetchDetailedCommissions(); // Asegurarse de recargar las comisiones también
       console.log('[StudentDashboardPage] currentUser after refresh:', currentUser);
       console.log('[StudentDashboardPage] currentUser.balanceComisionesPendientes after refresh:', currentUser?.balanceComisionesPendientes);
-      toast({ title: "Datos Actualizados", description: "Tus estadísticas de referidos han sido actualizadas." });
+      toast({ title: "Datos Actualizados", description: "Tus estadísticas y comisiones han sido actualizadas." });
     } catch (error) {
       console.error("[StudentDashboardPage] Error refreshing user profile:", error);
       toast({ title: "Error al Actualizar", description: "No se pudieron refrescar los datos.", variant: "destructive" });
@@ -341,12 +404,6 @@ export default function StudentDashboardPage() {
     if (name) return name.substring(0, 2).toUpperCase();
     return 'MB';
   };
-
-  // Log currentUser on initial render and on update
-  useEffect(() => {
-    console.log('[StudentDashboardPage] currentUser changed or initial render:', currentUser);
-    console.log('[StudentDashboardPage] currentUser.balanceComisionesPendientes on render:', currentUser?.balanceComisionesPendientes);
-  }, [currentUser]);
 
   if (authLoading) {
     return (
@@ -544,6 +601,19 @@ export default function StudentDashboardPage() {
                             </FormItem>
                         )}
                         />
+                         <FormField
+                          control={form.control}
+                          name="paymentInfo"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Información de Pago de Comisiones (Opcional)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Ej: Email de PayPal o cuenta bancaria (IBAN)" {...field} disabled={isSubmitting || isUploadingImage}/>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                         <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="outline" disabled={isSubmitting || isUploadingImage}>Cancelar</Button>
@@ -644,6 +714,66 @@ export default function StudentDashboardPage() {
         </Card>
       </div>
 
+       <Card className="shadow-lg">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ListChecks className="h-6 w-6 text-primary" />
+            <CardTitle className="text-2xl font-headline">Mis Comisiones por Referidos</CardTitle>
+          </div>
+          <CardDescription>Aquí puedes ver el detalle de las comisiones que has generado.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingCommissions ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Cargando comisiones...
+            </div>
+          ) : commissionsError ? (
+            <div className="text-center py-6">
+              <AlertTriangle className="mx-auto h-10 w-10 text-destructive mb-2" />
+              <p className="text-muted-foreground text-sm">{commissionsError}</p>
+            </div>
+          ) : detailedCommissions.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Curso</TableHead>
+                    <TableHead className="text-right">Monto Comisión</TableHead>
+                    <TableHead className="text-center">Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {detailedCommissions.map((commission) => (
+                    <TableRow key={commission.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                           <CalendarDays className="h-4 w-4 text-muted-foreground"/>
+                           {format(new Date(commission.fechaCreacion), 'dd MMM yyyy, HH:mm', { locale: es })}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium truncate max-w-xs" title={commission.nombreCursoComprado || commission.courseIdComprado}>
+                        {commission.nombreCursoComprado || commission.courseIdComprado}
+                      </TableCell>
+                      <TableCell className="text-right">{commission.montoComisionCalculado.toFixed(2)} €</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={commission.estadoPagoComision === 'pagada' ? 'default' : 'secondary'} 
+                               className={commission.estadoPagoComision === 'pagada' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
+                          {commission.estadoPagoComision === 'pendiente' ? 'Pendiente' : commission.estadoPagoComision}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-muted-foreground py-4 text-center">Aún no has generado ninguna comisión.</p>
+          )}
+        </CardContent>
+      </Card>
+
+
       <Card className="shadow-lg">
         <CardHeader>
             <div className="flex items-center gap-2">
@@ -730,3 +860,5 @@ export default function StudentDashboardPage() {
     </div>
   );
 }
+
+    

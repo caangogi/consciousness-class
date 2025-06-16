@@ -22,6 +22,7 @@ export interface UserProfile extends FirebaseUser {
   referidosExitosos?: number;
   balanceCredito?: number;
   balanceComisionesPendientes?: number; 
+  paymentInfo?: string; // Nuevo
 }
 
 interface AuthContextType {
@@ -73,7 +74,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           cursosInscritos: data.cursosInscritos || [],
           referidosExitosos: data.referidosExitosos || 0,
           balanceCredito: data.balanceCredito || 0,
-          balanceComisionesPendientes: data.balanceComisionesPendientes === undefined ? 0 : data.balanceComisionesPendientes, // Ensure it's a number
+          balanceComisionesPendientes: data.balanceComisionesPendientes === undefined ? 0 : data.balanceComisionesPendientes,
+          paymentInfo: data.paymentInfo, // Nuevo
         };
       } else {
          console.warn(`[AuthContext] User document for ${user.uid} not found in Firestore. Defaulting profile fields.`);
@@ -86,11 +88,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       
       const combinedUser: UserProfile = {
-        ...(user as UserProfile), // Cast to UserProfile to satisfy type, FirebaseUser base properties
+        ...(user as UserProfile), 
         displayName: userProfileData.nombre && userProfileData.apellido ? `${userProfileData.nombre} ${userProfileData.apellido}` : user.displayName,
         photoURL: userProfileData.photoURL !== undefined ? userProfileData.photoURL : user.photoURL, 
-        ...userProfileData, // Spread the fetched Firestore data (includes balanceComisionesPendientes)
-        role: fetchedRole, // Ensure role from Firestore takes precedence or defaults
+        ...userProfileData, 
+        role: fetchedRole,
       };
       
       console.log('[AuthContext] fetchAndSetUserProfile - combinedUser to be set:', { 
@@ -100,6 +102,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           cursosInscritosLength: combinedUser.cursosInscritos?.length,
           referidosExitosos: combinedUser.referidosExitosos,
           balanceComisionesPendientes: combinedUser.balanceComisionesPendientes,
+          paymentInfo: combinedUser.paymentInfo, // Loguear nuevo campo
       });
       setCurrentUser(combinedUser);
       setUserRole(fetchedRole);
@@ -152,3 +155,5 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+
+    

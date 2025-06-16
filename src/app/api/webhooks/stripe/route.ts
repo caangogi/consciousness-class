@@ -19,7 +19,7 @@ async function writeWebhookLog(eventId: string, step: string, details: any) {
     if (details[key] !== undefined) {
       sanitizedDetails[key] = details[key];
     } else {
-      sanitizedDetails[key] = null; // Or omit the key if Firestore is configured to ignore undefined
+      sanitizedDetails[key] = null; 
     }
   }
 
@@ -30,7 +30,7 @@ async function writeWebhookLog(eventId: string, step: string, details: any) {
     }
     await adminDb
       .collection(LOGS_COLLECTION)
-      .add({ eventId, timestamp, step, details: sanitizedDetails }); // Use sanitizedDetails
+      .add({ eventId, timestamp, step, details: sanitizedDetails }); 
     console.log(`[Stripe Webhook Log] Logged: ${step} for event ${eventId}`);
   } catch (err) {
     console.error('[Stripe Webhook Log] writeWebhookLog failed:', err);
@@ -144,6 +144,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
                   referenteUid: referrerUser.uid,
                   referidoUid: buyerUserId,
                   courseIdComprado: courseIdPurchased,
+                  nombreCursoComprado: coursePurchasedEntity.nombre, // <-- AÑADIDO
                   promotedCourseId: promotedCourseId,
                   stripeSessionId: session.id,
                   montoCompra: purchaseAmount,
@@ -205,7 +206,6 @@ async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription
     const userSubscriptionRef = adminDb.collection('usuarios').doc(userId).collection(SUBSCRIPTIONS_COLLECTION).doc(stripeSubscriptionId);
 
     try {
-        // Convert Stripe timestamps (seconds) to ISO strings (milliseconds for Date constructor)
         const currentPeriodStartISO = subscription.current_period_start ? new Date(subscription.current_period_start * 1000).toISOString() : null;
         const currentPeriodEndISO = subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null;
         const createdAtISO = subscription.created ? new Date(subscription.created * 1000).toISOString() : null;
@@ -357,7 +357,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook processing failed.', details: error.message }, { status: 500 });
   }
 }
-
-    
 
     

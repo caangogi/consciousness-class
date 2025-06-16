@@ -122,6 +122,9 @@ export class FirebaseUserRepository implements IUserRepository {
       if (data.balanceComisionesPendientes !== undefined) {
         updateData.balanceComisionesPendientes = data.balanceComisionesPendientes;
       }
+      if (data.paymentInfo !== undefined) { // Nuevo: Manejar paymentInfo
+        updateData.paymentInfo = data.paymentInfo;
+      }
 
 
       await userRef.update(updateData);

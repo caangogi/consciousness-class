@@ -38,8 +38,6 @@ const placeholderReviews = [
 export default function CourseDetailPage() {
   const params = useParams<{ id: string }>();
   const courseId = params.id; 
-  console.log("[CourseDetailPage] Render. params.id:", params.id, "courseId var:", courseId);
-
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser, loading: authLoading, refreshUserProfile } = useAuth();
@@ -52,6 +50,22 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const isUserEnrolled = currentUser?.cursosInscritos?.includes(courseId) ?? false;
+
+  useEffect(() => {
+    const refCodeFromUrl = searchParams.get('ref');
+    if (refCodeFromUrl) {
+      if (refCodeFromUrl.length > 3 && refCodeFromUrl.length < 50 && /^[a-zA-Z0-9-_]+$/.test(refCodeFromUrl)) {
+        try {
+          localStorage.setItem('referral_code', refCodeFromUrl);
+          console.log(`[CourseDetailPage] Referral code "${refCodeFromUrl}" from URL saved to localStorage.`);
+        } catch (e) {
+          console.error("[CourseDetailPage] Error saving referral code to localStorage:", e);
+        }
+      } else {
+        console.warn(`[CourseDetailPage] Invalid referral code format in URL: "${refCodeFromUrl}". Not saving.`);
+      }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (searchParams.get('canceled') === 'true') {
@@ -104,10 +118,9 @@ export default function CourseDetailPage() {
       console.log(`[CourseDetailPage] fetchCourseData finally block for ${courseId}. Setting isLoading to false.`);
       setIsLoading(false);
     }
-  }, [courseId, params.id]); // Eliminado toast de las dependencias de useCallback
+  }, [courseId, params.id]);
 
 
-  // useEffect to fetch course data when courseId changes
   useEffect(() => {
     console.log("[CourseDetailPage] Course Data useEffect triggered. Current courseId:", courseId);
     if (courseId) {
@@ -121,10 +134,9 @@ export default function CourseDetailPage() {
     }
   }, [courseId, fetchCourseData]);
 
-  // useEffect to refresh user profile when currentUser.uid changes or authLoading finishes
   useEffect(() => {
     console.log(`[CourseDetailPage] User Profile useEffect triggered. currentUser.uid: ${currentUser?.uid}, authLoading: ${authLoading}`);
-    if (!authLoading && currentUser?.uid) { // Only refresh if auth has loaded and we have a user
+    if (!authLoading && currentUser?.uid) {
         console.log("[CourseDetailPage] User Profile useEffect: authLoading is false and currentUser.uid is present, calling refreshUserProfile.");
         refreshUserProfile().catch(err => console.error("Failed to refresh user profile on course detail page:", err));
     } else if (!authLoading && !currentUser?.uid) {
@@ -174,7 +186,6 @@ export default function CourseDetailPage() {
         return;
     }
 
-    // --- AÑADIR ESTA VALIDACIÓN ---
     if (currentUser?.cursosInscritos?.includes(courseData.course.id)) {
       toast({ 
         title: "Ya Inscrito", 
@@ -183,7 +194,6 @@ export default function CourseDetailPage() {
       });
       return;
     }
-    // --- FIN DE LA VALIDACIÓN ---
 
     if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
       toast({ title: "Error de Configuración", description: "La pasarela de pago no está configurada correctamente (Clave Pública).", variant: "destructive" });

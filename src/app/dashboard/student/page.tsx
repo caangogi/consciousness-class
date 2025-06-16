@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from 'next/image';
-import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon } from "lucide-react";
+import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon, Share2, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton"; 
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +28,16 @@ interface EnrolledCourseApiData extends CourseProperties {
   progress?: UserCourseProgressProperties;
 }
 
+interface PromotableCourseData {
+  id: string;
+  nombre: string;
+  imagenPortadaUrl: string | null;
+  dataAiHintImagenPortada?: string | null;
+  comisionReferidoPorcentaje: number | null;
+  precio: number;
+  categoria: string;
+}
+
 const profileFormSchema = z.object({
   nombre: z.string().min(1, { message: "El nombre es requerido." }),
   apellido: z.string().min(1, { message: "El apellido es requerido." }),
@@ -41,6 +51,10 @@ export default function StudentDashboardPage() {
   const [enrolledCoursesApiData, setEnrolledCoursesApiData] = useState<EnrolledCourseApiData[]>([]);
   const [isLoadingCourses, setIsLoadingCourses] = useState(true);
   const [coursesError, setCoursesError] = useState<string | null>(null);
+
+  const [promotableCourses, setPromotableCourses] = useState<PromotableCourseData[]>([]);
+  const [isLoadingPromotableCourses, setIsLoadingPromotableCourses] = useState(true);
+  const [promotableCoursesError, setPromotableCoursesError] = useState<string | null>(null);
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -52,7 +66,6 @@ export default function StudentDashboardPage() {
   const [baseUrl, setBaseUrl] = useState('');
 
   useEffect(() => {
-    // Ensure window is defined (Client side)
     if (typeof window !== 'undefined') {
       setBaseUrl(window.location.origin);
     }
@@ -94,14 +107,36 @@ export default function StudentDashboardPage() {
     }
   }, [currentUser, toast]); 
 
+  const fetchPromotableCourses = useCallback(async () => {
+    setIsLoadingPromotableCourses(true);
+    setPromotableCoursesError(null);
+    try {
+      const response = await fetch('/api/courses/promotable');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Error al cargar cursos promocionables.');
+      }
+      const data = await response.json();
+      setPromotableCourses(data.courses || []);
+    } catch (err: any) {
+      setPromotableCoursesError(err.message);
+      toast({ title: "Error Cursos Promocionables", description: err.message, variant: "destructive"});
+    } finally {
+      setIsLoadingPromotableCourses(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     if (!authLoading && currentUser?.uid) {
       fetchEnrolledCourses();
+      fetchPromotableCourses();
     } else if (!authLoading && !currentUser) {
       setEnrolledCoursesApiData([]);
       setIsLoadingCourses(false); 
+      setPromotableCourses([]);
+      setIsLoadingPromotableCourses(false);
     }
-  }, [authLoading, currentUser?.uid, currentUser?.cursosInscritos?.length, fetchEnrolledCourses]);
+  }, [authLoading, currentUser?.uid, fetchEnrolledCourses, fetchPromotableCourses]);
 
 
   useEffect(() => {
@@ -221,19 +256,34 @@ export default function StudentDashboardPage() {
     }
   };
 
-  const handleCopyReferralLink = (type: 'signup' | 'home') => {
+  const handleCopyReferralLink = (type: 'signup' | 'home' | 'course', courseId?: string) => {
     if (currentUser?.referralCodeGenerated && baseUrl) {
-        const path = type === 'signup' ? '/signup' : '/';
+        let path = '';
+        let messageType = '';
+        if (type === 'signup') {
+            path = '/signup';
+            messageType = 'registro';
+        } else if (type === 'home') {
+            path = '/';
+            messageType = 'la página principal';
+        } else if (type === 'course' && courseId) {
+            path = `/courses/${courseId}`;
+            messageType = `el curso específico`;
+        } else {
+             toast({ title: "Error", description: "Información incompleta para generar enlace de referido.", variant: "destructive"});
+            return;
+        }
+
         const link = `${baseUrl}${path}?ref=${currentUser.referralCodeGenerated}`;
         navigator.clipboard.writeText(link)
         .then(() => {
-            toast({ title: "Enlace Copiado", description: `Tu enlace de referido a ${type === 'signup' ? 'registro' : 'la página principal'} ha sido copiado.`});
+            toast({ title: "Enlace Copiado", description: `Tu enlace de referido a ${messageType} ha sido copiado.`});
         })
         .catch(err => {
             toast({ title: "Error al Copiar Enlace", description: "No se pudo copiar el enlace.", variant: "destructive"});
         });
     } else {
-        toast({ title: "Error", description: "No se pudo generar el enlace de referido.", variant: "destructive"});
+        toast({ title: "Error", description: "No se pudo generar el enlace de referido (código o URL base faltante).", variant: "destructive"});
     }
   };
 
@@ -534,7 +584,7 @@ export default function StudentDashboardPage() {
                 </div>
             </div>
              <div>
-                <p className="text-sm font-medium mb-1">Enlaces para Compartir:</p>
+                <p className="text-sm font-medium mb-1">Enlaces Rápidos para Compartir:</p>
                 <div className="space-y-2">
                     <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => handleCopyReferralLink('signup')} disabled={!currentUser.referralCodeGenerated || !baseUrl || !navigator.clipboard}>
                         <LinkIcon className="mr-2 h-4 w-4"/> Copiar Enlace de Registro
@@ -543,9 +593,6 @@ export default function StudentDashboardPage() {
                         <LinkIcon className="mr-2 h-4 w-4"/> Copiar Enlace a Página Principal
                     </Button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                    También puedes añadir <code className="text-xs bg-secondary p-0.5 rounded">?ref={referralCode}</code> al final de cualquier URL de curso para referirlo.
-                </p>
             </div>
             <p><span className="font-semibold">Referidos Exitosos:</span> {successfulReferrals}</p>
             <p><span className="font-semibold">Recompensas Obtenidas:</span> {rewardsEarned}</p>
@@ -557,6 +604,73 @@ export default function StudentDashboardPage() {
         </Card>
       </div>
       
+      <Card className="shadow-lg">
+        <CardHeader>
+            <div className="flex items-center gap-2">
+                <Share2 className="h-6 w-6 text-primary" />
+                <CardTitle className="text-2xl font-headline">Promociona Cursos y Gana</CardTitle>
+            </div>
+            <CardDescription>Obtén enlaces de referido para cursos específicos que ofrecen comisión.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            {isLoadingPromotableCourses ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                    {[...Array(2)].map((_, i) => (
+                        <Card key={i} className="p-4 space-y-3">
+                            <div className="flex gap-3 items-start">
+                                <Skeleton className="h-16 w-24 rounded-md" />
+                                <div className="flex-1 space-y-1.5">
+                                    <Skeleton className="h-5 w-3/4" />
+                                    <Skeleton className="h-4 w-1/2" />
+                                    <Skeleton className="h-4 w-1/4" />
+                                </div>
+                            </div>
+                            <Skeleton className="h-9 w-full" />
+                        </Card>
+                    ))}
+                </div>
+            ) : promotableCoursesError ? (
+                <div className="text-center py-6">
+                    <AlertTriangle className="mx-auto h-10 w-10 text-destructive mb-2" />
+                    <p className="text-muted-foreground text-sm">{promotableCoursesError}</p>
+                </div>
+            ) : promotableCourses.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                    {promotableCourses.map(course => (
+                        <Card key={course.id} className="p-4">
+                            <div className="flex gap-4 items-start mb-3">
+                                <Image 
+                                    src={course.imagenPortadaUrl || 'https://placehold.co/100x60.png'}
+                                    alt={course.nombre}
+                                    width={100}
+                                    height={60}
+                                    className="rounded-md object-cover aspect-[16/10]"
+                                    data-ai-hint={course.dataAiHintImagenPortada || 'course promo image'}
+                                />
+                                <div className="flex-1">
+                                    <h4 className="font-semibold text-sm leading-tight mb-0.5">{course.nombre}</h4>
+                                    <p className="text-xs text-muted-foreground">{course.categoria}</p>
+                                    <p className="text-xs font-medium text-primary mt-1">Comisión: {course.comisionReferidoPorcentaje}%</p>
+                                </div>
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="w-full"
+                                onClick={() => handleCopyReferralLink('course', course.id)}
+                                disabled={!currentUser.referralCodeGenerated || !baseUrl || !navigator.clipboard}
+                            >
+                                <ExternalLink className="mr-2 h-4 w-4" /> Copiar Enlace de Promoción
+                            </Button>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-muted-foreground py-4 text-center text-sm">Actualmente no hay cursos con comisión de referido para promocionar.</p>
+            )}
+        </CardContent>
+      </Card>
+
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center gap-2">

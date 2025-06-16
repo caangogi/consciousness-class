@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from 'next/image';
-import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon, Share2, ExternalLink, DollarSign } from "lucide-react";
+import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon, Share2, ExternalLink, DollarSign, RefreshCw } from "lucide-react"; // Added RefreshCw
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton"; 
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +64,7 @@ export default function StudentDashboardPage() {
   const [isRequestingCreatorRole, setIsRequestingCreatorRole] = useState(false);
   const [showBecomeCreatorDialog, setShowBecomeCreatorDialog] = useState(false);
   const [baseUrl, setBaseUrl] = useState('');
+  const [isRefreshingStats, setIsRefreshingStats] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -318,6 +319,18 @@ export default function StudentDashboardPage() {
     }
   };
 
+  const handleRefreshStats = async () => {
+    setIsRefreshingStats(true);
+    try {
+      await refreshUserProfile();
+      toast({ title: "Datos Actualizados", description: "Tus estadísticas de referidos han sido actualizadas." });
+    } catch (error) {
+      toast({ title: "Error al Actualizar", description: "No se pudieron refrescar los datos.", variant: "destructive" });
+    } finally {
+      setIsRefreshingStats(false);
+    }
+  };
+
   const getInitials = (name?: string | null, surname?: string | null) => {
     if (name && surname) return `${name[0]}${surname[0]}`.toUpperCase();
     if (name) return name.substring(0, 2).toUpperCase();
@@ -362,7 +375,6 @@ export default function StudentDashboardPage() {
   const referralCode = currentUser.referralCodeGenerated || 'GENERANDO...';
   const successfulReferrals = currentUser.referidosExitosos || 0;
   const pendingCommissions = `${(currentUser.balanceComisionesPendientes || 0).toFixed(2)} €`;
-  const generalCredits = `${(currentUser.balanceCredito || 0).toFixed(2)} €`;
 
 
   return (
@@ -568,10 +580,16 @@ export default function StudentDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader>
-             <div className="flex items-center gap-2">
-                <Gift className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl font-headline">Mi Programa de Referidos</CardTitle>
-            </div>
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Gift className="h-6 w-6 text-primary" />
+                    <CardTitle className="text-2xl font-headline">Mi Programa de Referidos</CardTitle>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleRefreshStats} disabled={isRefreshingStats}>
+                    {isRefreshingStats ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-2 h-3 w-3" />}
+                    Refrescar
+                </Button>
+             </div>
             <CardDescription>Comparte tu código o enlaces y obtén recompensas.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -606,13 +624,13 @@ export default function StudentDashboardPage() {
                 </div>
                  <div>
                     <p className="text-sm font-medium text-muted-foreground">Comisiones Pendientes (Próximamente):</p>
-                    <p className="text-2xl font-semibold flex items-center">{currentUser.balanceComisionesPendientes ? `${currentUser.balanceComisionesPendientes.toFixed(2)} €` : '0.00 €'} <DollarSign className="h-5 w-5 ml-1 text-muted-foreground"/></p>
-                </div>
+                    <p className="text-2xl font-semibold flex items-center">{pendingCommissions} <DollarSign className="h-5 w-5 ml-1 text-muted-foreground"/></p>
+                 </div>
             </div>
              <div className="mt-3 p-3 bg-secondary/50 rounded-md text-xs text-secondary-foreground flex items-start gap-2">
                 <Info className="h-4 w-4 shrink-0 mt-0.5"/>
-                <p>El seguimiento detallado de comisiones y su pago se habilitará próximamente. Por ahora, puedes ver tus referidos exitosos.</p>
-            </div>
+                <p>El seguimiento detallado de comisiones y su pago se habilitará próximamente. Por ahora, puedes ver tus referidos exitosos y el balance de comisiones pendientes.</p>
+             </div>
           </CardContent>
         </Card>
       </div>
@@ -703,5 +721,4 @@ export default function StudentDashboardPage() {
     </div>
   );
 }
-
     

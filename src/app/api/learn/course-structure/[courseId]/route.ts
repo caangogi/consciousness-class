@@ -19,8 +19,9 @@ interface RouteContext {
   params: { courseId: string };
 }
 
-export async function GET(request: NextRequest, context: RouteContext) {
-  const courseId = context.params.courseId; 
+export async function GET(request: NextRequest, context: RouteContext) { // context is the second argument
+  const params = await context.params; // Await context.params as per Next.js error doc
+  const courseId = params.courseId; 
   console.log(`[API /learn/course-structure] Received request for courseId: ${courseId}`);
   try {
     if (!courseId) {

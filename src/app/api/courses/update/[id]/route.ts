@@ -5,13 +5,14 @@ import { CourseService } from '@/features/course/application/course.service';
 import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
 import type { UpdateCourseDto } from '@/features/course/infrastructure/dto/update-course.dto';
 
-interface RouteParams {
+interface RouteContext {
   params: { id: string };
 }
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, context: RouteContext) {
   try {
-    const courseId = params.id;
+    const routeParams = await context.params;
+    const courseId = routeParams.id;
     if (!courseId) {
         return NextResponse.json({ error: 'Bad Request: Missing course ID in path.' }, { status: 400 });
     }
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (updateCourseDto.precio !== undefined && (typeof updateCourseDto.precio !== 'number' || updateCourseDto.precio < 0)) {
         return NextResponse.json({ error: 'Invalid precio: must be a non-negative number if provided.'}, {status: 400});
     }
-    if (updateCourseDto.nombre !== undefined && updateCourseDto.nombre.length < 5) {
+    if (updateCourseDto.nombre !== undefined && typeof updateCourseDto.nombre === 'string' && updateCourseDto.nombre.length < 5) {
         return NextResponse.json({ error: 'Invalid nombre: must be at least 5 characters if provided.'}, {status: 400});
     }
 
@@ -56,7 +57,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ message: 'Course updated successfully', courseId: updatedCourse.id, course: updatedCourse.toPlainObject() }, { status: 200 });
 
   } catch (error: any) {
-    console.error(`Error in POST /api/courses/update/${params?.id}:`, error);
+    const paramsForError = await context.params; // Re-await if error happens before initial await
+    console.error(`Error in POST /api/courses/update/${paramsForError?.id}:`, error);
     let errorMessage = 'Internal Server Error';
     let errorDetails = 'An unexpected error occurred while updating the course.';
     let statusCode = 500;

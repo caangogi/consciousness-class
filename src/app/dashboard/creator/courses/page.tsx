@@ -181,7 +181,7 @@ export default function CreatorCoursesPage() {
                 {courses.map((course) => (
                   <TableRow key={course.id}>
                     <TableCell className="font-medium">
-                      <Link href={`/dashboard/creator/courses/edit/${course.id}`} className="hover:text-primary transition-colors">
+                      <Link href={`/dashboard/creator/courses/${course.id}`} className="hover:text-primary transition-colors">
                         {course.nombre}
                       </Link>
                       <p className="text-xs text-muted-foreground truncate max-w-xs sm:max-w-sm md:max-w-md">{course.descripcionCorta}</p>
@@ -199,7 +199,7 @@ export default function CreatorCoursesPage() {
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
                         <Button variant="ghost" size="icon" asChild title="Editar Curso">
-                          <Link href={`/dashboard/creator/courses/edit/${course.id}`}>
+                          <Link href={`/dashboard/creator/courses/${course.id}`}>
                             <Edit3 className="h-4 w-4" />
                           </Link>
                         </Button>

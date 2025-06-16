@@ -5,13 +5,14 @@ import { FirebaseCourseRepository } from '@/features/course/infrastructure/repos
 // Potentially add adminAuth for creator verification if needed for GET, though may not be required if page is already protected
 // import { adminAuth } from '@/lib/firebase/admin';
 
-interface RouteParams {
+interface RouteContext {
   params: { courseId: string };
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, context: RouteContext) {
   try {
-    const courseId = params.courseId;
+    const routeParams = await context.params;
+    const courseId = routeParams.courseId;
     if (!courseId) {
       return NextResponse.json({ error: 'Bad Request: Missing course ID in path.' }, { status: 400 });
     }
@@ -32,7 +33,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ course: course.toPlainObject() }, { status: 200 });
 
   } catch (error: any) {
-    console.error(`Error in GET /api/courses/${params?.courseId}:`, error);
+    const paramsForError = await context.params; // Re-await if error happens before initial await
+    console.error(`Error in GET /api/courses/${paramsForError?.courseId}:`, error);
     let errorMessage = 'Internal Server Error';
     let errorDetails = 'An unexpected error occurred while fetching the course.';
     let statusCode = 500;

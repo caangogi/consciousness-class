@@ -1,4 +1,3 @@
-
 // src/app/api/courses/[courseId]/modules/[moduleId]/lessons/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
@@ -8,14 +7,15 @@ import { FirebaseModuleRepository } from '@/features/course/infrastructure/repos
 import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
 import type { CreateLessonDto } from '@/features/course/infrastructure/dto/create-lesson.dto';
 
-interface RouteParams {
+interface RouteContext {
   params: { courseId: string; moduleId: string };
 }
 
 // POST handler to create a new lesson for a module
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, context: RouteContext) {
   try {
-    const { courseId, moduleId } = params;
+    const routeParams = await context.params;
+    const { courseId, moduleId } = routeParams;
     if (!courseId || !moduleId) {
       return NextResponse.json({ error: 'Bad Request: Missing course ID or module ID in path.' }, { status: 400 });
     }
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ message: 'Lesson created successfully', lessonId: newLesson.id, lesson: newLesson.toPlainObject() }, { status: 201 });
 
   } catch (error: any) {
+    const paramsForError = await context.params; // Re-await if error happens before initial await
     console.error(`Error in POST /api/courses/.../modules/.../lessons:`, error);
     let errorMessage = 'Internal Server Error';
     let errorDetails = 'An unexpected error occurred while creating the lesson.';
@@ -71,9 +72,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 }
 
 // GET handler to retrieve all lessons for a module
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, context: RouteContext) {
   try {
-    const { courseId, moduleId } = params;
+    const routeParams = await context.params;
+    const { courseId, moduleId } = routeParams;
     if (!courseId || !moduleId) {
       return NextResponse.json({ error: 'Bad Request: Missing course ID or module ID in path.' }, { status: 400 });
     }
@@ -93,6 +95,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ lessons: lessonsData }, { status: 200 });
 
   } catch (error: any) {
+    const paramsForError = await context.params; // Re-await if error happens before initial await
     console.error(`Error in GET /api/courses/.../modules/.../lessons:`, error);
     let errorMessage = 'Internal Server Error';
     let errorDetails = 'An unexpected error occurred while fetching lessons.';

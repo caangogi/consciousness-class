@@ -1,4 +1,3 @@
-
 // src/app/api/courses/[courseId]/modules/[moduleId]/lessons/[lessonId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
@@ -8,7 +7,7 @@ import { FirebaseModuleRepository } from '@/features/course/infrastructure/repos
 import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
 import type { UpdateLessonDto } from '@/features/course/infrastructure/dto/update-lesson.dto';
 
-interface RouteParams {
+interface RouteContext {
   params: { courseId: string; moduleId: string; lessonId: string };
 }
 
@@ -21,9 +20,10 @@ function initializeServices() {
 }
 
 // PUT handler to update a specific lesson
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, context: RouteContext) {
   try {
-    const { courseId, moduleId, lessonId } = params;
+    const routeParams = await context.params;
+    const { courseId, moduleId, lessonId } = routeParams;
     if (!courseId || !moduleId || !lessonId) {
       return NextResponse.json({ error: 'Bad Request: Missing course, module, or lesson ID in path.' }, { status: 400 });
     }
@@ -55,7 +55,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ message: 'Lesson updated successfully', lesson: updatedLesson.toPlainObject() }, { status: 200 });
 
   } catch (error: any) {
-    console.error(`Error in PUT /api/courses/.../modules/.../lessons/${params.lessonId}:`, error);
+    const paramsForError = await context.params; // Re-await if error happens before initial await
+    console.error(`Error in PUT /api/courses/.../modules/.../lessons/${paramsForError?.lessonId}:`, error);
     let errorMessage = 'Internal Server Error';
     let errorDetails = 'An unexpected error occurred while updating the lesson.';
     let statusCode = 500;
@@ -76,9 +77,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE handler to delete a specific lesson
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
-    const { courseId, moduleId, lessonId } = params;
+    const routeParams = await context.params;
+    const { courseId, moduleId, lessonId } = routeParams;
     if (!courseId || !moduleId || !lessonId) {
       return NextResponse.json({ error: 'Bad Request: Missing course, module, or lesson ID in path.' }, { status: 400 });
     }
@@ -103,7 +105,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ message: 'Lesson deleted successfully' }, { status: 200 }); // Or 204 No Content
 
   } catch (error: any) {
-    console.error(`Error in DELETE /api/courses/.../modules/.../lessons/${params.lessonId}:`, error);
+    const paramsForError = await context.params; // Re-await if error happens before initial await
+    console.error(`Error in DELETE /api/courses/.../modules/.../lessons/${paramsForError?.lessonId}:`, error);
     let errorMessage = 'Internal Server Error';
     let errorDetails = 'An unexpected error occurred while deleting the lesson.';
     let statusCode = 500;

@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Users, BookOpen, Settings, Ticket, ShieldCheck, Info } from "lucide-react"; 
+import { Users, BookOpen, Settings, Ticket, ShieldCheck, Info, DollarSign } from "lucide-react"; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
@@ -24,14 +24,6 @@ const pendingApprovals = [
     { id: 'c4', title: 'Curso de Cocina Tailandesa', creator: 'Chef Rama', type: 'curso' },
     { id: 'u4', name: 'David Lee', email: 'david.lee@example.com', type: 'creator_request'},
 ];
-
-// Placeholder DollarSign icon if not globally available
-const DollarSign = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <line x1="12" x2="12" y1="1" y2="23"></line>
-    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-  </svg>
-);
 
 
 export default function SuperadminDashboardPage() {
@@ -189,3 +181,5 @@ export default function SuperadminDashboardPage() {
     </div>
   );
 }
+
+    

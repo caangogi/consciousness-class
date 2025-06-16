@@ -5,13 +5,13 @@ import { adminAuth } from '@/lib/firebase/admin';
 import { UserCourseProgressService } from '@/features/progress/application/user-course-progress.service';
 import { FirebaseUserCourseProgressRepository } from '@/features/progress/infrastructure/repositories/firebase-user-course-progress.repository';
 
-interface RouteParams {
+interface RouteContext { // Changed from RouteParams to RouteContext
   params: { courseId: string };
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, context: RouteContext) { // Changed { params } to context
   try {
-    const courseId = params.courseId;
+    const courseId = context.params.courseId; // Access courseId via context.params
     if (!courseId) {
       return NextResponse.json({ error: 'Bad Request: Missing course ID in path.' }, { status: 400 });
     }
@@ -39,7 +39,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ completedLessonIds: completedLessonIdsArray }, { status: 200 });
 
   } catch (error: any) {
-    console.error(`Error in GET /api/learn/progress/${params.courseId}:`, error);
+    // Use context.params.courseId if available, otherwise try to get from error if it's a request object
+    const errorCourseId = context?.params?.courseId || (error?.request?.params?.courseId); 
+    console.error(`Error in GET /api/learn/progress/${errorCourseId || '[unknownCourseId]'}:`, error);
     let errorMessage = 'Internal Server Error';
     let errorDetails = 'An unexpected error occurred while fetching course progress.';
     let statusCode = 500;

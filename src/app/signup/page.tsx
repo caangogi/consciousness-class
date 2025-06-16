@@ -10,11 +10,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { UserPlus, Eye, EyeOff } from 'lucide-react';
-import React, { useEffect } from 'react'; // Added useEffect
+import React, { useEffect } from 'react'; 
 import { auth } from '@/lib/firebase/config'; 
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
+import { useRouter, useSearchParams } from 'next/navigation'; 
 
 const signupSchema = z.object({
   nombre: z.string().min(1, { message: 'El nombre es requerido.' }),
@@ -31,7 +31,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const searchParams = useSearchParams(); // Hook para leer query params
+  const searchParams = useSearchParams(); 
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -52,7 +52,7 @@ export default function SignupPage() {
       if (urlReferralCode.length > 3 && urlReferralCode.length < 50 && /^[a-zA-Z0-9-_]+$/.test(urlReferralCode)) {
         finalReferralCode = urlReferralCode;
         try {
-          localStorage.setItem('referral_code', urlReferralCode); // Guardar/actualizar el de la URL
+          localStorage.setItem('referral_code', urlReferralCode); 
           console.log(`[SignupPage] Referral code "${urlReferralCode}" from URL used and saved to localStorage.`);
         } catch (error) {
           console.error("[SignupPage] Error saving referral code from URL to localStorage:", error);
@@ -61,7 +61,6 @@ export default function SignupPage() {
          console.warn(`[SignupPage] Invalid referral code format in URL: "${urlReferralCode}".`);
       }
     } else {
-      // Si no hay código en la URL, intentar leer de localStorage
       try {
         const storedReferralCode = localStorage.getItem('referral_code');
         if (storedReferralCode) {
@@ -99,7 +98,6 @@ export default function SignupPage() {
         body: JSON.stringify({
           nombre: values.nombre,
           apellido: values.apellido,
-          // Usar el código de referido del formulario, que ya fue pre-poblado o ingresado
           referralCode: values.referralCode || null, 
         }),
       });
@@ -114,7 +112,6 @@ export default function SignupPage() {
         description: "Tu cuenta ha sido creada exitosamente. Serás redirigido.",
       });
 
-      // Limpiar el código de referido de localStorage después de un registro exitoso
       try {
         localStorage.removeItem('referral_code');
         console.log("[SignupPage] Referral code removed from localStorage after successful registration.");
@@ -122,7 +119,27 @@ export default function SignupPage() {
         console.error("[SignupPage] Error removing referral code from localStorage:", error);
       }
 
-      router.push('/dashboard');
+      const redirectParam = searchParams.get('redirect');
+      let postAuthRedirect = null;
+      try {
+        postAuthRedirect = localStorage.getItem('post_auth_redirect');
+      } catch (e) {
+         console.warn("Could not access localStorage for post_auth_redirect", e);
+      }
+
+      if (redirectParam) {
+        router.push(redirectParam);
+      } else if (postAuthRedirect) {
+        router.push(postAuthRedirect);
+      } else {
+        router.push('/dashboard');
+      }
+      try {
+         localStorage.removeItem('post_auth_redirect');
+      } catch (e) {
+         console.warn("Could not remove post_auth_redirect from localStorage", e);
+      }
+
 
     } catch (error: any) {
       console.error("Error al crear cuenta:", error);
@@ -261,3 +278,4 @@ export default function SignupPage() {
     </div>
   );
 }
+    

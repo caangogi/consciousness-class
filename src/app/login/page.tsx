@@ -11,9 +11,9 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { auth } from '@/lib/firebase/config'; // Import Firebase auth
+import { auth } from '@/lib/firebase/config'; 
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const loginSchema = z.object({
@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const form = useForm<LoginFormValues>({
@@ -45,7 +46,28 @@ export default function LoginPage() {
         title: "¡Bienvenido de nuevo!",
         description: "Has iniciado sesión correctamente.",
       });
-      router.push('/dashboard'); // Placeholder redirect, will be role-based later
+
+      const redirectParam = searchParams.get('redirect');
+      let postAuthRedirect = null;
+      try {
+        postAuthRedirect = localStorage.getItem('post_auth_redirect');
+      } catch (e) {
+        console.warn("Could not access localStorage for post_auth_redirect", e);
+      }
+      
+      if (redirectParam) {
+        router.push(redirectParam);
+      } else if (postAuthRedirect) {
+        router.push(postAuthRedirect);
+      } else {
+        router.push('/dashboard');
+      }
+      try {
+        localStorage.removeItem('post_auth_redirect');
+      } catch (e) {
+         console.warn("Could not remove post_auth_redirect from localStorage", e);
+      }
+
     } catch (error: any) {
       console.error("Error al iniciar sesión:", error);
       let errorMessage = "Ocurrió un error al iniciar sesión. Por favor, verifica tus credenciales.";
@@ -144,3 +166,4 @@ export default function LoginPage() {
     </div>
   );
 }
+    

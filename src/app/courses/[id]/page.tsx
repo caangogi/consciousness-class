@@ -58,17 +58,21 @@ export default function CourseDetailPage() {
         try {
           localStorage.setItem('referral_code', refCodeFromUrl);
           console.log(`[CourseDetailPage] Referral code "${refCodeFromUrl}" from URL saved to localStorage.`);
-          // Si hay un código de referido en la URL, también guardamos el ID del curso actual como el promocionado.
-          if (courseIdFromPath) {
-            localStorage.setItem('promoted_course_id', courseIdFromPath);
-            console.log(`[CourseDetailPage] Promoted course ID "${courseIdFromPath}" saved to localStorage due to ref in URL.`);
-          }
         } catch (e) {
-          console.error("[CourseDetailPage] Error saving referral/promoted info to localStorage:", e);
+          console.error("[CourseDetailPage] Error saving referral_code to localStorage:", e);
         }
       } else {
         console.warn(`[CourseDetailPage] Invalid referral code format in URL: "${refCodeFromUrl}". Not saving.`);
       }
+    }
+    // Siempre guardar el promoted_course_id si tenemos un courseIdFromPath
+    if (courseIdFromPath) {
+        try {
+            localStorage.setItem('promoted_course_id', courseIdFromPath);
+            console.log(`[CourseDetailPage] Promoted course ID "${courseIdFromPath}" saved to localStorage.`);
+        } catch (e) {
+            console.error("[CourseDetailPage] Error saving promoted_course_id to localStorage:", e);
+        }
     }
   }, [searchParams, courseIdFromPath]);
 
@@ -80,7 +84,9 @@ export default function CourseDetailPage() {
         variant: 'default',
         duration: 5000,
       });
-      router.replace(`/courses/${courseIdFromPath}`, { scroll: false });
+      // Remove 'canceled' from URL without full page reload
+      const newUrl = `${window.location.pathname}`;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
     }
   }, [searchParams, courseIdFromPath, router, toast]);
 
@@ -153,7 +159,10 @@ export default function CourseDetailPage() {
   const handleFreeEnrollment = async () => {
     if (!currentUser || !courseIdFromPath || !courseData) {
         toast({ title: "Error", description: "Usuario no autenticado o datos del curso no disponibles.", variant: "destructive" });
-        if (!currentUser) router.push(`/login?redirect=/courses/${courseIdFromPath}`);
+        if (!currentUser) {
+            localStorage.setItem('post_auth_redirect', window.location.pathname + window.location.search);
+            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        }
         return;
     }
     setIsProcessingEnrollment(true);
@@ -186,8 +195,12 @@ export default function CourseDetailPage() {
 
   const handlePaidCheckout = async () => {
     if (!currentUser || !courseIdFromPath || !courseData?.course) {
-        toast({ title: "Error", description: "Usuario no autenticado o datos del curso no disponibles.", variant: "destructive" });
-        if (!currentUser) router.push(`/login?redirect=/courses/${courseIdFromPath}`);
+        if (!currentUser) {
+            localStorage.setItem('post_auth_redirect', window.location.pathname + window.location.search);
+            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+            return;
+        }
+        toast({ title: "Error", description: "Datos del curso no disponibles.", variant: "destructive" });
         return;
     }
 
@@ -209,18 +222,21 @@ export default function CourseDetailPage() {
         const idToken = await auth.currentUser?.getIdToken(true);
         if (!idToken) throw new Error("No se pudo obtener el token de autenticación.");
 
-        let referralCodeUsed: string | null = null;
-        let promotedCourseIdUsed: string | null = null;
+        let referralCodeFromStorage: string | null = null;
+        let promotedCourseIdFromStorage: string | null = null;
         try {
-          referralCodeUsed = localStorage.getItem('referral_code');
-          promotedCourseIdUsed = localStorage.getItem('promoted_course_id');
+          referralCodeFromStorage = localStorage.getItem('referral_code');
+          promotedCourseIdFromStorage = localStorage.getItem('promoted_course_id');
+          console.log(`[CourseDetailPage] handlePaidCheckout: referralCodeFromStorage: ${referralCodeFromStorage}, promotedCourseIdFromStorage: ${promotedCourseIdFromStorage}`);
         } catch (e) {
           console.warn("[CourseDetailPage] Could not access localStorage for referral codes.", e);
         }
 
         const checkoutPayload: { courseId: string; referralCode?: string; promotedCourseId?: string } = { courseId: courseIdFromPath };
-        if (referralCodeUsed) checkoutPayload.referralCode = referralCodeUsed;
-        if (promotedCourseIdUsed) checkoutPayload.promotedCourseId = promotedCourseIdUsed;
+        if (referralCodeFromStorage) checkoutPayload.referralCode = referralCodeFromStorage;
+        if (promotedCourseIdFromStorage) checkoutPayload.promotedCourseId = promotedCourseIdFromStorage;
+        
+        console.log("[CourseDetailPage] handlePaidCheckout: Sending to /api/checkout/create-session:", JSON.stringify(checkoutPayload));
 
         const response = await fetch(`/api/checkout/create-session`, {
             method: 'POST',
@@ -359,10 +375,15 @@ export default function CourseDetailPage() {
 
     if (!currentUser) {
         return (
-            <Button size="lg" className={commonButtonClasses} asChild>
-                <Link href={`/login?redirect=/courses/${courseIdFromPath}`}>
-                    <LogIn className="mr-2 h-5 w-5" /> Iniciar Sesión para Acceder
-                </Link>
+            <Button 
+                size="lg" 
+                className={commonButtonClasses} 
+                onClick={() => {
+                    localStorage.setItem('post_auth_redirect', window.location.pathname + window.location.search);
+                    router.push(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+                }}
+            >
+                <LogIn className="mr-2 h-5 w-5" /> Iniciar Sesión para Acceder
             </Button>
         );
     }
@@ -603,5 +624,4 @@ export default function CourseDetailPage() {
     </motion.div>
   );
 }
-
     

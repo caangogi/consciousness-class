@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
     const userEmail = decodedToken.email;
 
     const { courseId, referralCode, promotedCourseId } = await request.json();
+    console.log('[API /checkout/create-session] Received payload:', { courseId, referralCode, promotedCourseId });
+
     if (!courseId || typeof courseId !== 'string') {
       return NextResponse.json({ error: 'Bad Request: Missing or invalid courseId.' }, { status: 400 });
     }
@@ -45,11 +47,11 @@ export async function POST(request: NextRequest) {
     if (course.estado !== 'publicado') {
       return NextResponse.json({ error: 'Course not available for purchase.' }, { status: 403 });
     }
-    if (course.precio <= 0) { // Assuming 0 price means free or handled differently
+    if (course.precio <= 0) { 
       return NextResponse.json({ error: 'This course cannot be purchased this way (e.g., free or subscription-based).' }, { status: 400 });
     }
 
-    const origin = request.headers.get('origin') || 'http://localhost:9002'; // Fallback for local dev
+    const origin = request.headers.get('origin') || 'http://localhost:9003'; 
 
     const metadata: Stripe.MetadataParam = {
         courseId: course.id,
@@ -58,10 +60,14 @@ export async function POST(request: NextRequest) {
 
     if (referralCode) {
         metadata.referralCodeUsed = referralCode;
+        console.log(`[API /checkout/create-session] Adding referralCodeUsed to metadata: ${referralCode}`);
     }
     if (promotedCourseId) {
         metadata.promotedCourseId = promotedCourseId;
+        console.log(`[API /checkout/create-session] Adding promotedCourseId to metadata: ${promotedCourseId}`);
     }
+    
+    console.log('[API /checkout/create-session] Final metadata for Stripe session:', metadata);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -107,5 +113,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: errorMessage, details: errorDetails, stack }, { status: 500 });
   }
 }
-
     

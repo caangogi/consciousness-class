@@ -47,12 +47,12 @@ export default function PaymentSuccessPage() {
         setFirstLessonId(data.modules[0].lessons[0].id);
       } else {
         console.warn(`Curso ${courseId} no tiene lecciones, no se puede generar enlace directo a la primera lección.`);
-        setFirstLessonId(null); 
+        setFirstLessonId('start'); // Fallback to 'start' if no lessons, learn page will handle
       }
     } catch (err: any) {
       setError(err.message);
       console.error("Error fetching course data for success page link:", err);
-      setFirstLessonId(null); 
+      setFirstLessonId('start'); 
     } finally {
       setIsLoadingCourseData(false);
     }
@@ -66,13 +66,13 @@ export default function PaymentSuccessPage() {
         setHasRefreshed(true); 
         refreshUserProfile().then(() => {
           console.log("[PaymentSuccessPage] User profile refresh COMPLETED.");
-          // Limpiar códigos de referido de localStorage
           try {
             localStorage.removeItem('referral_code');
             localStorage.removeItem('promoted_course_id');
-            console.log("[PaymentSuccessPage] Referral codes cleared from localStorage after successful payment.");
+            localStorage.removeItem('post_auth_redirect'); // Limpiar también la redirección
+            console.log("[PaymentSuccessPage] Referral codes and post_auth_redirect cleared from localStorage after successful payment.");
           } catch (e) {
-            console.warn("[PaymentSuccessPage] Could not clear referral codes from localStorage:", e);
+            console.warn("[PaymentSuccessPage] Could not clear items from localStorage:", e);
           }
           fetchCourseDataForLink(); 
         }).catch(err => {
@@ -157,5 +157,4 @@ export default function PaymentSuccessPage() {
     </div>
   );
 }
-
     

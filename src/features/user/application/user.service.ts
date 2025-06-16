@@ -59,7 +59,7 @@ export class UserService {
 
   async updateUserProfile(uid: string, dto: UpdateUserProfileDto): Promise<UserEntity | null> {
     try {
-      const dataToUpdate: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'role' | 'referredBy' | 'displayName' | 'cursosInscritos' | 'paymentInfo' | 'balanceComisionesPendientes' >> = {};
+      const dataToUpdate: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'role' | 'referredBy' | 'displayName' | 'cursosInscritos' | 'balanceComisionesPendientes' >> = {};
       
       if (dto.nombre !== undefined) dataToUpdate.nombre = dto.nombre;
       if (dto.apellido !== undefined) dataToUpdate.apellido = dto.apellido;
@@ -138,7 +138,7 @@ export class UserService {
     }
   }
 
-  async getAllUsers(limitCount: number = 5, orderByField: string = 'createdAt', orderDirection: 'asc' | 'desc' = 'desc'): Promise<UserEntity[]> {
+  async getAllUsers(limitCount: number = 20, orderByField: string = 'createdAt', orderDirection: 'asc' | 'desc' = 'desc'): Promise<UserEntity[]> {
     try {
       return await this.userRepository.findAllUsers(limitCount, orderByField, orderDirection);
     } catch (error: any) {
@@ -147,5 +147,3 @@ export class UserService {
     }
   }
 }
-
-    

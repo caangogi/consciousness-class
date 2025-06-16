@@ -17,10 +17,10 @@ import { cn } from '@/lib/utils';
 
 // Placeholder data for stats (actual implementation can be added later)
 const placeholderStats = {
-  totalUsers: 0, // Will be updated if possible, or remains placeholder
-  totalCourses: 150, // Placeholder
-  totalRevenue: 125600.75, // Placeholder
-  activeSubscriptions: 850, // Placeholder
+  totalUsers: 0, 
+  totalCourses: 150, 
+  totalRevenue: 125600.75, 
+  activeSubscriptions: 850, 
 };
 
 const pendingApprovals = [
@@ -29,7 +29,7 @@ const pendingApprovals = [
 ];
 
 export default function SuperadminDashboardPage() {
-  const { currentUser } = useAuth(); // For auth token
+  const { currentUser } = useAuth(); 
   const { toast } = useToast();
   const [recentUsers, setRecentUsers] = useState<UserProperties[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
@@ -47,7 +47,8 @@ export default function SuperadminDashboardPage() {
     setUsersError(null);
     try {
       const idToken = await auth.currentUser.getIdToken(true);
-      const response = await fetch('/api/superadmin/users', {
+      // Request more users to see if creators appear
+      const response = await fetch('/api/superadmin/users', { 
         headers: {
           'Authorization': `Bearer ${idToken}`,
         },
@@ -59,7 +60,11 @@ export default function SuperadminDashboardPage() {
       }
       const data = await response.json();
       setRecentUsers(data.users || []);
-      setPlatformStats(prev => ({ ...prev, totalUsers: data.users?.length || 0 })); // Update total users count
+      // Update totalUsers based on the actual count from the API response if available,
+      // or keep it as part of placeholderStats if the API doesn't return total count for all users.
+      // For now, if data.users exists, use its length for the "Recent Users" stat.
+      // A more accurate total users count would require a separate API or count query.
+      setPlatformStats(prev => ({ ...prev, totalUsers: data.users?.length || prev.totalUsers })); 
     } catch (err: any) {
       setUsersError(err.message);
       toast({
@@ -174,8 +179,8 @@ export default function SuperadminDashboardPage() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoadingUsers ? <Skeleton className="h-7 w-16"/> : <div className="text-2xl font-bold">{platformStats.totalUsers.toLocaleString()}</div>}
-             <p className="text-xs text-muted-foreground">Total de usuarios en la plataforma.</p>
+            {isLoadingUsers ? <Skeleton className="h-7 w-16"/> : <div className="text-2xl font-bold">{recentUsers.length}</div>}
+             <p className="text-xs text-muted-foreground">Mostrando {recentUsers.length} usuarios (Recientes). <span className="italic">Total real puede ser mayor.</span></p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -249,7 +254,7 @@ export default function SuperadminDashboardPage() {
         <Card className="shadow-lg">
             <CardHeader>
                 <CardTitle className="text-xl font-headline">Usuarios Recientes</CardTitle>
-                <CardDescription>Últimos usuarios registrados en la plataforma.</CardDescription>
+                <CardDescription>Últimos usuarios registrados en la plataforma (ordenados por fecha de creación).</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -295,5 +300,3 @@ export default function SuperadminDashboardPage() {
     </div>
   );
 }
-
-    

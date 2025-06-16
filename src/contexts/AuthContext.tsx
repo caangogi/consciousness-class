@@ -10,6 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton'; // For loading state
 
 type UserRole = 'student' | 'creator' | 'superadmin' | null;
 
+// Placeholder email for superadmin role during development
+const SUPERADMIN_DEV_EMAIL = 'superadmin@example.com'; // Puedes cambiar esto a tu email de prueba
+
 export interface UserProfile extends FirebaseUser {
   role?: UserRole;
   nombre?: string;
@@ -85,6 +88,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
          };
       }
       
+      // --- TEMPORAL DEVELOPMENT OVERRIDE FOR SUPERADMIN ---
+      // Si el email del usuario coincide con el de desarrollo para superadmin, se le asigna ese rol.
+      // ¡¡¡RECUERDA QUITAR ESTO PARA PRODUCCIÓN!!!
+      if (user.email === SUPERADMIN_DEV_EMAIL) {
+        console.warn(`[AuthContext] DEV MODE: User ${user.email} is being assigned 'superadmin' role.`);
+        fetchedRole = 'superadmin';
+      }
+      // --- FIN DEL OVERRIDE TEMPORAL ---
+
       const combinedUser: UserProfile = {
         ...(user as UserProfile), 
         displayName: userProfileData.nombre && userProfileData.apellido ? `${userProfileData.nombre} ${userProfileData.apellido}` : user.displayName,

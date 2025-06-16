@@ -21,6 +21,7 @@ export interface UserProfile extends FirebaseUser {
   cursosInscritos?: string[]; // Array of course IDs
   referidosExitosos?: number;
   balanceCredito?: number;
+  balanceComisionesPendientes?: number; // Aseguramos que este campo esté aquí
 }
 
 interface AuthContextType {
@@ -69,28 +70,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
           referralCodeGenerated: data.referralCodeGenerated,
           referredBy: data.referredBy,
           cursosInscritos: data.cursosInscritos || [],
-          referidosExitosos: data.referidosExitosos,
-          balanceCredito: data.balanceCredito,
+          referidosExitosos: data.referidosExitosos || 0, // Default to 0 if undefined
+          balanceCredito: data.balanceCredito || 0,       // Default to 0 if undefined
+          balanceComisionesPendientes: data.balanceComisionesPendientes || 0, // Explicitly add and default to 0
         };
+        console.log(`[AuthContext] Fetched Firestore data for ${user.uid}:`, {
+            referidosExitosos: data.referidosExitosos,
+            balanceComisionesPendientes: data.balanceComisionesPendientes
+        });
       } else {
-         console.warn(`[AuthContext] User document for ${user.uid} not found in Firestore. Defaulting role to student and empty enrollments.`);
-         userProfileData.cursosInscritos = []; // Ensure it's an array even if doc doesn't exist
+         console.warn(`[AuthContext] User document for ${user.uid} not found in Firestore. Defaulting role to student and empty enrollments/balances.`);
+         userProfileData.cursosInscritos = [];
+         userProfileData.referidosExitosos = 0;
+         userProfileData.balanceCredito = 0;
+         userProfileData.balanceComisionesPendientes = 0;
       }
       
       const combinedUser: UserProfile = {
         ...user, 
         displayName: userProfileData.nombre && userProfileData.apellido ? `${userProfileData.nombre} ${userProfileData.apellido}` : user.displayName,
         photoURL: userProfileData.photoURL !== undefined ? userProfileData.photoURL : user.photoURL, 
-        ...userProfileData, 
+        ...userProfileData, // Spread the fetched Firestore data
         role: fetchedRole,
         cursosInscritos: userProfileData.cursosInscritos || [], 
+        // Ensure these are explicitly set with defaults if not in userProfileData (though they are now)
+        referidosExitosos: userProfileData.referidosExitosos || 0,
+        balanceComisionesPendientes: userProfileData.balanceComisionesPendientes || 0,
       };
       
       console.log('[AuthContext] fetchAndSetUserProfile - combinedUser to be set:', { 
           uid: combinedUser.uid, 
           email: combinedUser.email, 
           role: combinedUser.role, 
-          cursosInscritos: combinedUser.cursosInscritos 
+          cursosInscritos: combinedUser.cursosInscritos,
+          referidosExitosos: combinedUser.referidosExitosos,
+          balanceComisionesPendientes: combinedUser.balanceComisionesPendientes,
       });
       setCurrentUser(combinedUser);
       setUserRole(fetchedRole);
@@ -120,18 +134,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error("[AuthContext] Error signing out: ", error);
     }
+    // setCurrentUser and setUserRole will be handled by onAuthStateChanged
   };
 
   const refreshUserProfile = useCallback(async () => {
     if (auth.currentUser) {
       console.log(`[AuthContext] refreshUserProfile START for UID: ${auth.currentUser.uid}. Current cursosInscritos in context (before fetch):`, JSON.stringify(currentUser?.cursosInscritos));
+      console.log(`[AuthContext] Current referidosExitosos (before fetch): ${currentUser?.referidosExitosos}, balanceComisionesPendientes (before fetch): ${currentUser?.balanceComisionesPendientes}`);
       await fetchAndSetUserProfile(auth.currentUser);
-      // Note: currentUser logged here might not reflect the absolute latest state immediately due to render cycles
-      console.log(`[AuthContext] refreshUserProfile END for UID: ${auth.currentUser.uid}. (Note: context might show next render's data for 'cursosInscritos' here)`);
+      console.log(`[AuthContext] refreshUserProfile END for UID: ${auth.currentUser.uid}.`);
     } else {
         console.log("[AuthContext] No current user to refresh.");
     }
-  }, [fetchAndSetUserProfile]); 
+  }, [fetchAndSetUserProfile, currentUser]); // Added currentUser to dependencies of refreshUserProfile
   
   const value = {
     currentUser,

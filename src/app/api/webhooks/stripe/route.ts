@@ -13,6 +13,16 @@ const SUBSCRIPTIONS_COLLECTION = 'suscripciones'; // Subcolección bajo usuarios
 
 async function writeWebhookLog(eventId: string, step: string, details: any) {
   const timestamp = new Date().toISOString();
+  // Ensure undefined values are converted to null for Firestore
+  const sanitizedDetails: Record<string, any> = {};
+  for (const key in details) {
+    if (details[key] !== undefined) {
+      sanitizedDetails[key] = details[key];
+    } else {
+      sanitizedDetails[key] = null; // Or omit the key if Firestore is configured to ignore undefined
+    }
+  }
+
   try {
     if (!adminDb) {
       console.error('[Stripe Webhook Log] CRITICAL: adminDb is not initialized. Cannot write webhook log.');
@@ -20,7 +30,7 @@ async function writeWebhookLog(eventId: string, step: string, details: any) {
     }
     await adminDb
       .collection(LOGS_COLLECTION)
-      .add({ eventId, timestamp, step, details });
+      .add({ eventId, timestamp, step, details: sanitizedDetails }); // Use sanitizedDetails
     console.log(`[Stripe Webhook Log] Logged: ${step} for event ${eventId}`);
   } catch (err) {
     console.error('[Stripe Webhook Log] writeWebhookLog failed:', err);
@@ -51,8 +61,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
     const courseIdPurchased = session.metadata?.courseId;
     const referralCodeUsed = session.metadata?.referralCodeUsed;
     const promotedCourseId = session.metadata?.promotedCourseId;
-    const tipoAcceso = session.metadata?.tipoAcceso; // 'unico' o 'suscripcion'
-    const stripeSubscriptionId = session.subscription as string | null; // El ID de la suscripción de Stripe, si es una.
+    const tipoAcceso = session.metadata?.tipoAcceso; 
+    const stripeSubscriptionId = session.subscription as string | null; 
 
     console.log('[Stripe Webhook] Raw Metadata from Stripe session:', JSON.stringify(session.metadata));
     console.log(`[Stripe Webhook] Extracted - Buyer User ID: ${buyerUserId}, Course ID Purchased: ${courseIdPurchased}, Referral Code Used: ${referralCodeUsed}, Promoted Course ID: ${promotedCourseId}, Tipo Acceso: ${tipoAcceso}, Stripe Subscription ID: ${stripeSubscriptionId}`);
@@ -61,7 +71,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
     if (!buyerUserId || !courseIdPurchased) {
       console.error(`[Stripe Webhook] CRITICAL: Missing essential metadata. Buyer User ID: ${buyerUserId}, Course ID Purchased: ${courseIdPurchased}. Cannot proceed for session ${session.id}.`);
       await writeWebhookLog(eventId, 'missing_metadata_error_core', { buyerUserId, courseIdPurchased, rawMetadata: session.metadata });
-      return; // No podemos continuar sin estos datos
+      return; 
     }
 
     // ---- Enrollment Logic ----
@@ -84,7 +94,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
                 stripeCustomerId: typeof subscriptionObject.customer === 'string' ? subscriptionObject.customer : subscriptionObject.customer.id,
                 stripePriceId: session.metadata?.stripePriceId || subscriptionObject.items.data[0]?.price.id,
                 courseId: courseIdPurchased,
-                status: subscriptionObject.status, // e.g., 'active', 'trialing'
+                status: subscriptionObject.status, 
                 currentPeriodStart: new Date(subscriptionObject.current_period_start * 1000).toISOString(),
                 currentPeriodEnd: new Date(subscriptionObject.current_period_end * 1000).toISOString(),
                 cancelAtPeriodEnd: subscriptionObject.cancel_at_period_end,
@@ -127,7 +137,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
               if (courseIdPurchased === promotedCourseId) {
                 console.log(`[Stripe Webhook] Purchased course ${courseIdPurchased} MATCHES promoted course ${promotedCourseId}. Calculating commission.`);
                 const commissionPercentage = coursePurchasedEntity.comisionReferidoPorcentaje / 100;
-                const purchaseAmount = session.amount_total ? session.amount_total / 100 : 0; // amount_total is in cents
+                const purchaseAmount = session.amount_total ? session.amount_total / 100 : 0; 
                 const commissionAmount = purchaseAmount * commissionPercentage;
 
                 const commissionData = {
@@ -178,7 +188,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 
 async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription, eventId: string, eventType: string) {
     const userId = subscription.metadata?.platform_user_id;
-    const courseId = subscription.metadata?.platform_course_id; // O el ID del PriceItem si es más granular
+    const courseId = subscription.metadata?.platform_course_id; 
     const stripeSubscriptionId = subscription.id;
 
     if (!userId || !stripeSubscriptionId) {
@@ -195,24 +205,32 @@ async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription
     const userSubscriptionRef = adminDb.collection('usuarios').doc(userId).collection(SUBSCRIPTIONS_COLLECTION).doc(stripeSubscriptionId);
 
     try {
+        // Convert Stripe timestamps (seconds) to ISO strings (milliseconds for Date constructor)
+        const currentPeriodStartISO = subscription.current_period_start ? new Date(subscription.current_period_start * 1000).toISOString() : null;
+        const currentPeriodEndISO = subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null;
+        const createdAtISO = subscription.created ? new Date(subscription.created * 1000).toISOString() : null;
+
+        if (!currentPeriodStartISO || !currentPeriodEndISO || !createdAtISO) {
+            throw new Error('One or more required Stripe timestamps are missing or invalid from the subscription object.');
+        }
+        
         const subscriptionDataToStore = {
             stripeSubscriptionId: stripeSubscriptionId,
             stripeCustomerId: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
-            stripePriceId: subscription.items.data[0]?.price.id, // Asume un solo item por ahora
-            courseId: courseId || subscription.items.data[0]?.price.metadata?.platform_course_id || null, // Intenta obtenerlo de varios lugares
+            stripePriceId: subscription.items.data[0]?.price.id, 
+            courseId: courseId || subscription.items.data[0]?.price.metadata?.platform_course_id || null, 
             status: subscription.status,
-            currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+            currentPeriodStart: currentPeriodStartISO,
+            currentPeriodEnd: currentPeriodEndISO,
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
-            createdAt: new Date(subscription.created * 1000).toISOString(),
-            updatedAt: new Date().toISOString(), // Siempre actualizamos la fecha de modificación
+            createdAt: createdAtISO,
+            updatedAt: new Date().toISOString(), 
         };
 
         await userSubscriptionRef.set(subscriptionDataToStore, { merge: true });
         console.log(`[Stripe Webhook] ${eventType}: Subscription record for ${stripeSubscriptionId} for user ${userId} (course: ${courseId || 'N/A'}) ${eventType === 'customer.subscription.deleted' ? 'status updated/marked as deleted' : 'created/updated'}.`);
         await writeWebhookLog(eventId, `${eventType}_record_saved`, { userId, stripeSubscriptionId, courseId, status: subscription.status });
 
-        // Si es una creación y el estado es activo, asegurar la inscripción
         if (eventType === 'customer.subscription.created' && (subscription.status === 'active' || subscription.status === 'trialing') && courseId) {
             const userRepository = new FirebaseUserRepository();
             const courseRepository = new FirebaseCourseRepository();
@@ -221,10 +239,9 @@ async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription
             console.log(`[Stripe Webhook] ${eventType}: Ensured enrollment for user ${userId} to course ${courseId}.`);
             await writeWebhookLog(eventId, `${eventType}_enrollment_ensured`, { userId, courseId });
         }
-        // Podríamos añadir lógica para revocar acceso si subscription.status es 'canceled' o 'unpaid' etc.
-
+        
     } catch (error: any) {
-        console.error(`[Stripe Webhook] ${eventType}: Error processing subscription ${stripeSubscriptionId} for user ${userId}:`, error.message);
+        console.error(`[Stripe Webhook] ${eventType}: Error processing subscription ${stripeSubscriptionId} for user ${userId}:`, error.message, error.stack);
         await writeWebhookLog(eventId, `${eventType}_processing_error`, { userId, stripeSubscriptionId, error: error.message });
     }
 }
@@ -277,7 +294,8 @@ export async function POST(request: NextRequest) {
   }
 
   const eventId = event.id;
-  // No hacer log aquí aún, hacerlo dentro del case para evitar duplicados si el evento se procesa varias veces
+  await writeWebhookLog(eventId, 'received_and_verified_event', { type: event.type, id: event.id });
+
 
   try {
     switch (event.type) {
@@ -298,7 +316,7 @@ export async function POST(request: NextRequest) {
         await handleCustomerSubscriptionEvent(subscription, eventId, 'customer.subscription.updated');
         break;
       }
-      case 'customer.subscription.deleted': { // Cancelada inmediatamente o al final del periodo
+      case 'customer.subscription.deleted': { 
         const subscription = event.data.object as Stripe.Subscription;
         await writeWebhookLog(eventId, 'customer.subscription.deleted_received', { subscriptionId: subscription.id });
         await handleCustomerSubscriptionEvent(subscription, eventId, 'customer.subscription.deleted');
@@ -307,20 +325,16 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         await writeWebhookLog(eventId, 'invoice.payment_succeeded_received', { invoiceId: invoice.id, subscriptionId: invoice.subscription, customer: invoice.customer });
-        // Podríamos usar esto para comisiones recurrentes, o para asegurar el estado de la suscripción
         if (invoice.billing_reason === 'subscription_cycle' && invoice.subscription && typeof invoice.subscription === 'string') {
              const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
-             // Aquí se podría reactivar el acceso o confirmar que sigue activo.
-             // Y si se quieren comisiones recurrentes para referidos, se calcularían aquí.
-             console.log(`[Stripe Webhook] Invoice paid for subscription cycle: ${invoice.subscription}.`);
-             // Para MVP, el acceso se gestiona principalmente por customer.subscription.updated/created
+             console.log(`[Stripe Webhook] Invoice paid for subscription cycle: ${invoice.subscription}. Ensuring subscription status is updated.`);
+             await handleCustomerSubscriptionEvent(subscription, eventId, 'invoice.payment_succeeded_subscription_update');
         }
         break;
       }
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         await writeWebhookLog(eventId, 'invoice.payment_failed_received', { invoiceId: invoice.id, subscriptionId: invoice.subscription, customer: invoice.customer });
-        // Lógica para manejar pago fallido: marcar suscripción como 'past_due', notificar al usuario, etc.
         if (invoice.subscription && typeof invoice.subscription === 'string') {
             const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
             await handleCustomerSubscriptionEvent(subscription, eventId, 'invoice.payment_failed_subscription_update');
@@ -343,5 +357,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook processing failed.', details: error.message }, { status: 500 });
   }
 }
+
+    
 
     

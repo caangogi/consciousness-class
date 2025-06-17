@@ -3,12 +3,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap, Award, Users as UsersIcon, Clock, Edit3, Loader2, Percent, DollarSign, Wand2 } from 'lucide-react';
+import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap, Award, Users as UsersIcon, Clock, Edit3, Loader2, Percent, DollarSign, Wand2, BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CourseCard, type CourseCardData } from '@/components/CourseCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -79,30 +82,53 @@ const keyBenefits = [
   }
 ];
 
-const creatorBenefits = [
+const creatorBenefitsDetailed = [
   {
     icon: Percent,
-    title: "Controla tus Ingresos",
-    description: "Define comisiones por referido para tus cursos y recibe pagos de forma transparente.",
+    title: "Controla Tus Ingresos",
+    description: "Define comisiones por referido para tus cursos y recibe pagos de forma transparente y automatizada con Stripe.",
     dataAiHint: "commission percent icon"
   },
   {
     icon: DollarSign,
     title: "Pagos Simplificados",
-    description: "Integramos Stripe para que recibas tus ganancias de manera segura y eficiente.",
+    description: "Integramos Stripe para que recibas tus ganancias directamente, sin complicaciones y de manera segura.",
     dataAiHint: "automatic payment icon"
   },
   {
     icon: Wand2,
     title: "Herramientas Intuitivas",
-    description: "Nuestra plataforma te facilita crear y gestionar tus cursos sin complicaciones técnicas.",
+    description: "Nuestra plataforma te facilita crear, gestionar y promocionar tus cursos sin necesidad de conocimientos técnicos avanzados.",
     dataAiHint: "easy tools icon"
   },
   {
     icon: UsersIcon, // Reusing icon
-    title: "Comunidad de Creators",
-    description: "Únete a una red de instructores, comparte experiencias y recibe apoyo continuo.",
+    title: "Comunidad y Soporte",
+    description: "Únete a una red de instructores, comparte experiencias, recibe apoyo continuo y accede a recursos exclusivos.",
     dataAiHint: "creator community icon"
+  }
+];
+
+const faqItems = [
+  {
+    id: "faq1",
+    question: "¿Qué es MentorBloom?",
+    answer: "MentorBloom es una plataforma de aprendizaje online donde puedes encontrar una amplia variedad de cursos para desarrollar nuevas habilidades y avanzar en tu carrera. También ofrecemos a los expertos la posibilidad de crear y vender sus propios cursos."
+  },
+  {
+    id: "faq2",
+    question: "¿Cómo me inscribo en un curso?",
+    answer: "Simplemente navega por nuestro catálogo de cursos, elige el que te interese y sigue el proceso de inscripción. Puedes pagar por curso o, en algunos casos, acceder a través de una suscripción."
+  },
+  {
+    id: "faq3",
+    question: "¿Puedo ser instructor en MentorBloom?",
+    answer: "¡Sí! Si tienes conocimientos para compartir, te invitamos a convertirte en Creator. Ofrecemos herramientas para crear tu curso, definir precios, comisiones por referido y gestionar tus estudiantes."
+  },
+  {
+    id: "faq4",
+    question: "¿Cómo funcionan los pagos y comisiones?",
+    answer: "Utilizamos Stripe para procesar todos los pagos de forma segura. Como Creator, tus ingresos (después de la comisión de la plataforma) y las comisiones por referidos se gestionan de forma transparente. Más detalles en nuestra sección para Creators."
   }
 ];
 
@@ -265,6 +291,7 @@ export default function HomePage() {
 
       {/* Featured Courses Section */}
       <motion.section
+        id="courses-featured"
         className="py-16 md:py-24 bg-secondary/30"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -328,9 +355,9 @@ export default function HomePage() {
               className="text-center py-10 bg-card rounded-xl shadow-md"
               variants={itemVariants} initial="hidden" whileInView="visible" viewport={{once: true, amount: 0.5}}
             >
-              <Edit3 size={48} className="mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">¡Sé el Primero en Crear un Curso!</h3>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">Nuestra plataforma está lista para tu contenido. Inspira a otros y comparte tu pasión.</p>
+              <BookOpen size={48} className="mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-xl font-semibold mb-2">¡Próximamente Nuevos Cursos!</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">Estamos trabajando en contenido increíble. Mientras tanto, ¿por qué no te conviertes en uno de nuestros primeros Creators?</p>
               <Button size="lg" asChild className="rounded-full">
                 <Link href="/signup?role=creator">Conviértete en Creator <Zap className="ml-2 h-5 w-5" /></Link>
               </Button>
@@ -353,9 +380,37 @@ export default function HomePage() {
         </div>
       </motion.section>
 
-      {/* Detailed Become a Creator CTA Section - Shown if no courses or loading */}
-      {(isLoadingCourses || (!isLoadingCourses && featuredCourses.length === 0)) && (
-        <motion.section
+      {/* Pricing Placeholder Section */}
+      <section id="pricing" className="py-16 md:py-24 bg-background">
+        <div className="container mx-auto px-4 md:px-6 text-center">
+          <motion.h2
+            className="font-headline text-3xl md:text-4xl font-bold mb-4"
+            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{once: true, amount: 0.5}}
+          >
+            Precios Flexibles para Todos
+          </motion.h2>
+          <motion.p
+            className="text-lg text-muted-foreground max-w-xl mx-auto mb-12"
+            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{once: true, amount: 0.5}}
+          >
+            Elige la opción que mejor se adapte a tus necesidades. Paga por curso o accede a todo con nuestra suscripción.
+            <br/> <em className="text-sm">(Más detalles sobre la suscripción y precios específicos próximamente)</em>
+          </motion.p>
+          <Card className="max-w-md mx-auto p-6 shadow-soft-xl">
+            <CardHeader>
+              <CardTitle className="text-2xl font-headline">Acceso Completo</CardTitle>
+              <CardDescription>Detalles de nuestros planes de suscripción y precios de cursos individuales estarán disponibles pronto.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin"/>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Detailed Become a Creator CTA Section - Permanent */}
+      <motion.section
+          id="become-creator"
           className="py-16 md:py-24 bg-primary/5"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -382,7 +437,7 @@ export default function HomePage() {
               className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mt-12 mb-12"
               variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }}
             >
-              {creatorBenefits.map((benefit) => (
+              {creatorBenefitsDetailed.map((benefit) => (
                 <motion.div
                   key={benefit.title}
                   variants={itemVariants}
@@ -411,7 +466,6 @@ export default function HomePage() {
             </motion.div>
           </div>
         </motion.section>
-      )}
 
 
       {/* Key Benefits Section */}
@@ -504,6 +558,48 @@ export default function HomePage() {
                 </div>
               </motion.div>
             ))}
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* FAQ Section */}
+      <motion.section
+        id="faq"
+        className="py-16 md:py-24 bg-background"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="container mx-auto px-4 md:px-6">
+          <motion.h2
+            className="font-headline text-3xl md:text-4xl font-bold text-center mb-4"
+            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
+          >
+            Preguntas Frecuentes
+          </motion.h2>
+          <motion.p
+            className="text-center text-lg text-muted-foreground max-w-xl mx-auto mb-12"
+            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
+          >
+            Encuentra respuestas rápidas a las dudas más comunes sobre MentorBloom.
+          </motion.p>
+          <motion.div
+            className="max-w-3xl mx-auto"
+            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }}
+          >
+            <Accordion type="single" collapsible className="w-full space-y-3">
+              {faqItems.map((item, index) => (
+                <AccordionItem value={item.id} key={item.id} className="bg-card rounded-lg shadow-soft-xl overflow-hidden">
+                  <AccordionTrigger className="px-6 py-4 text-md font-headline hover:no-underline hover:bg-secondary/50 transition-colors text-left">
+                    {item.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4 pt-0 text-sm text-muted-foreground">
+                    {item.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </motion.div>
         </div>
       </motion.section>

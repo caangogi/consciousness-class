@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { BookOpen, LayoutDashboard, LogOut, UserCircle, Menu as MenuIcon, Briefcase, MessageCircleQuestion } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from '@/components/ui/sheet'; // Asegurada la importación de SheetHeader
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter, usePathname } from 'next/navigation';
@@ -24,10 +24,10 @@ import { cn } from '@/lib/utils';
 
 
 const navLinks = [
-  { href: '/courses', label: 'Cursos' },
+  { href: '/courses', label: 'Cursos', isHashLink: false },
   { href: '/#pricing', label: 'Precios', isHashLink: true },
   { href: '/#faq', label: 'FAQ', isHashLink: true },
-  { href: '/blog', label: 'Blog' },
+  // { href: '/blog', label: 'Blog', isHashLink: false }, // Blog link removed
 ];
 
 const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
@@ -166,7 +166,7 @@ export function Header() {
               asChild
               className={cn(
                 "rounded-full px-4 py-1.5 text-sm",
-                pathname === link.href ? "bg-background text-primary shadow-sm" : "text-foreground/70 hover:text-foreground hover:bg-background/70"
+                (pathname === '/' && link.isHashLink) || pathname === link.href ? "bg-background text-primary shadow-sm" : "text-foreground/70 hover:text-foreground hover:bg-background/70"
               )}
             >
               <Link href={link.href}>{link.label}</Link>
@@ -196,7 +196,7 @@ export function Header() {
                 {navLinks.map((link) => (
                   <Button
                     key={link.label}
-                    variant={pathname === link.href ? "secondary" : "ghost"}
+                    variant={(pathname === '/' && link.isHashLink) || pathname === link.href ? "secondary" : "ghost"}
                     asChild
                     className="justify-start text-md"
                     onClick={() => setIsSheetOpen(false)}

@@ -135,16 +135,16 @@ export function Header() {
     if (currentUser) {
       return (
         <>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} className="w-full justify-start py-1.5 text-base">Dashboard</Button>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} className="w-full justify-start py-1.5 text-base">Mi Perfil</Button>
-          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} className="w-full justify-start py-1.5 text-base text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} size="sm" className="w-full justify-start py-1.5 px-3 text-sm">Dashboard</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} size="sm" className="w-full justify-start py-1.5 px-3 text-sm">Mi Perfil</Button>
+          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} size="sm" className="w-full justify-start py-1.5 px-3 text-sm text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
         </>
       );
     }
     return (
       <>
-        <Button variant="ghost" onClick={() => handleLinkClick('/login')} className="w-full justify-start py-1.5 text-base">Iniciar Sesión</Button>
-        <Button onClick={() => handleLinkClick('/signup')} className="w-full py-1.5 text-base">Comenzar</Button>
+        <Button variant="ghost" onClick={() => handleLinkClick('/login')} size="sm" className="w-full justify-start py-1.5 px-3 text-sm">Iniciar Sesión</Button>
+        <Button onClick={() => handleLinkClick('/signup')} size="sm" className="w-full py-1.5 px-3 text-sm">Comenzar</Button>
       </>
     );
   }
@@ -153,7 +153,6 @@ export function Header() {
 
   const isLinkActive = (href: string, isHash: boolean) => {
     if (isHash) {
-      // For hash links, consider active if on homepage and hash matches, or if path matches and no hash is present
       const currentHash = typeof window !== 'undefined' ? window.location.hash : '';
       return pathname === '/' && (href === currentHash || (currentHash === '' && href === '/#'));
     }
@@ -199,23 +198,25 @@ export function Header() {
                 <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
                  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)}/>
               </SheetHeader>
-              <nav className="grid gap-px px-2 py-2 flex-grow"> {/* Reduced gap to gap-px or gap-0.5 */}
+              <nav className="grid gap-1 px-2 py-2 flex-grow">
                 {navLinks.map((link) => (
-                  <Button
+                  <Link
                     key={link.label}
-                    variant={isLinkActive(link.href, link.isHashLink) ? "secondary" : "ghost"}
-                    asChild
-                    className="justify-start text-base px-2 py-1.5 rounded-md flex items-center gap-2" // Reduced py, px and gap
+                    href={link.href}
+                    className={cn(
+                      "flex items-center gap-2 justify-start text-sm rounded-md px-3 py-2", // Explicit padding
+                      isLinkActive(link.href, link.isHashLink)
+                        ? "bg-muted text-primary font-medium"
+                        : "text-foreground/80 hover:bg-muted/50 hover:text-foreground"
+                    )}
                     onClick={() => setIsSheetOpen(false)}
                   >
-                    <Link href={link.href} className="flex items-center w-full"> {/* Ensure Link takes full width */}
-                       <link.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary"/>
-                      {link.label}
-                    </Link>
-                  </Button>
+                    <link.icon className="h-4 w-4 text-muted-foreground" />
+                    {link.label}
+                  </Link>
                 ))}
               </nav>
-              <div className="border-t p-2 space-y-1"> {/* Reduced padding and space-y */}
+              <div className="border-t p-2 space-y-1">
                  {renderMobileAuthSection(() => setIsSheetOpen(false))}
               </div>
             </SheetContent>
@@ -225,4 +226,5 @@ export function Header() {
     </header>
   );
 }
+
     

@@ -134,16 +134,16 @@ export function Header() {
     if (currentUser) {
       return (
         <>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} className="w-full flex items-center h-10 justify-start text-sm px-3">Dashboard</Button>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} className="w-full flex items-center h-10 justify-start text-sm px-3">Mi Perfil</Button>
-          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} className="w-full flex items-center h-10 justify-start text-sm px-3 text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} className="w-full flex items-center h-10 justify-start text-sm px-3 py-1.5">Dashboard</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} className="w-full flex items-center h-10 justify-start text-sm px-3 py-1.5">Mi Perfil</Button>
+          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} className="w-full flex items-center h-10 justify-start text-sm px-3 py-1.5 text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
         </>
       );
     }
     return (
       <>
-        <Button variant="ghost" onClick={() => handleLinkClick('/login')} className="w-full flex items-center h-10 justify-start text-sm px-3">Iniciar Sesión</Button>
-        <Button onClick={() => handleLinkClick('/signup')} className="w-full flex items-center h-10 justify-start text-sm px-3">Comenzar</Button>
+        <Button variant="ghost" onClick={() => handleLinkClick('/login')} className="w-full flex items-center h-10 justify-start text-sm px-3 py-1.5">Iniciar Sesión</Button>
+        <Button onClick={() => handleLinkClick('/signup')} className="w-full flex items-center h-10 justify-start text-sm px-3 py-1.5">Comenzar</Button>
       </>
     );
   }
@@ -152,8 +152,12 @@ export function Header() {
 
   const isLinkActive = (href: string, isHash: boolean) => {
     if (isHash) {
-      const currentHash = typeof window !== 'undefined' ? window.location.hash : '';
-      return pathname === '/' && (href === currentHash || (currentHash === '' && href === '/#'));
+      // For client-side, ensure window is defined before accessing location
+      if (typeof window !== 'undefined') {
+        const currentHash = window.location.hash;
+        return pathname === '/' && (href === currentHash || (currentHash === '' && href === '/#'));
+      }
+      return false; // Default to false if window is not available (e.g., during SSR pre-check)
     }
     return pathname === href;
   };
@@ -192,18 +196,18 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] flex flex-col p-0">
-              <SheetHeader className="border-b p-4">
+              <SheetHeader className="border-b p-4"> {/* Restored p-4 */}
                 <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
                 <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
                  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)}/>
               </SheetHeader>
-              <nav className="grid gap-1 px-2 py-2 flex-grow">
+              <nav className="flex flex-col gap-1 px-2 py-2 flex-grow"> {/* Changed to flex flex-col gap-1 */}
                 {navLinks.map((link) => (
                   <Link
                     key={link.label}
                     href={link.href}
                     className={cn(
-                      "flex items-center h-10 gap-2 justify-start text-sm rounded-md px-3", 
+                      "flex items-center h-10 gap-2 justify-start text-sm rounded-md px-3", // Kept h-10, items-center, px-3 for horizontal padding
                       isLinkActive(link.href, link.isHashLink)
                         ? "bg-muted text-primary font-medium"
                         : "text-foreground/80 hover:bg-muted/50 hover:text-foreground"
@@ -215,7 +219,7 @@ export function Header() {
                   </Link>
                 ))}
               </nav>
-              <div className="border-t p-2 space-y-1">
+              <div className="border-t p-2 mt-auto space-y-1"> {/* Added mt-auto for spacing and p-2 */}
                  {renderMobileAuthSection(() => setIsSheetOpen(false))}
               </div>
             </SheetContent>

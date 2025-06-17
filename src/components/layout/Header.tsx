@@ -135,16 +135,16 @@ export function Header() {
     if (currentUser) {
       return (
         <>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} className="w-full justify-start py-2.5 text-base">Dashboard</Button>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} className="w-full justify-start py-2.5 text-base">Mi Perfil</Button>
-          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} className="w-full justify-start py-2.5 text-base text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} className="w-full justify-start py-2 text-base">Dashboard</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} className="w-full justify-start py-2 text-base">Mi Perfil</Button>
+          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} className="w-full justify-start py-2 text-base text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
         </>
       );
     }
     return (
       <>
-        <Button variant="ghost" onClick={() => handleLinkClick('/login')} className="w-full justify-start py-2.5 text-base">Iniciar Sesión</Button>
-        <Button onClick={() => handleLinkClick('/signup')} className="w-full py-2.5 text-base">Comenzar</Button>
+        <Button variant="ghost" onClick={() => handleLinkClick('/login')} className="w-full justify-start py-2 text-base">Iniciar Sesión</Button>
+        <Button onClick={() => handleLinkClick('/signup')} className="w-full py-2 text-base">Comenzar</Button>
       </>
     );
   }
@@ -197,13 +197,13 @@ export function Header() {
                 <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
                  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)}/>
               </SheetHeader>
-              <nav className="grid gap-1 p-4 flex-grow"> 
+              <nav className="grid gap-0.5 px-4 py-2 flex-grow"> 
                 {navLinks.map((link) => (
                   <Button
                     key={link.label}
                     variant={isLinkActive(link.href, link.isHashLink) ? "secondary" : "ghost"}
                     asChild
-                    className="justify-start text-base h-auto py-2.5 px-3 rounded-md"
+                    className="justify-start text-base h-auto py-2 px-3 rounded-md"
                     onClick={() => setIsSheetOpen(false)}
                   >
                     <Link href={link.href} className="flex items-center gap-3">
@@ -223,3 +223,4 @@ export function Header() {
     </header>
   );
 }
+

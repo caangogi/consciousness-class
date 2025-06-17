@@ -28,7 +28,7 @@ const navLinks = [
   { href: '/#faq', label: 'FAQ', icon: HelpCircleIcon, isHashLink: true },
 ];
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebaseapp.com/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
 
 export function Header() {
   const { currentUser, userRole, loading, logout } = useAuth();

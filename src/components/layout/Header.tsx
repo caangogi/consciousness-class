@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -152,12 +153,11 @@ export function Header() {
 
   const isLinkActive = (href: string, isHash: boolean) => {
     if (isHash) {
-      // For client-side, ensure window is defined before accessing location
       if (typeof window !== 'undefined') {
         const currentHash = window.location.hash;
         return pathname === '/' && (href === currentHash || (currentHash === '' && href === '/#'));
       }
-      return false; // Default to false if window is not available (e.g., during SSR pre-check)
+      return false;
     }
     return pathname === href;
   };
@@ -196,18 +196,18 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] flex flex-col p-0">
-              <SheetHeader className="border-b p-4"> {/* Restored p-4 */}
+              <SheetHeader className="border-b p-4">
                 <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
                 <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
                  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)}/>
               </SheetHeader>
-              <nav className="flex flex-col gap-1 px-2 py-2 flex-grow"> {/* Changed to flex flex-col gap-1 */}
+              <nav className="flex flex-col gap-1 px-2 py-2 flex-grow">
                 {navLinks.map((link) => (
                   <Link
                     key={link.label}
                     href={link.href}
                     className={cn(
-                      "flex items-center h-10 gap-2 justify-start text-sm rounded-md px-3", // Kept h-10, items-center, px-3 for horizontal padding
+                      "flex items-center h-10 gap-2 justify-start text-sm rounded-md px-3",
                       isLinkActive(link.href, link.isHashLink)
                         ? "bg-muted text-primary font-medium"
                         : "text-foreground/80 hover:bg-muted/50 hover:text-foreground"
@@ -219,7 +219,7 @@ export function Header() {
                   </Link>
                 ))}
               </nav>
-              <div className="border-t p-2 mt-auto space-y-1"> {/* Added mt-auto for spacing and p-2 */}
+              <div className="border-t p-2 mt-auto space-y-1">
                  {renderMobileAuthSection(() => setIsSheetOpen(false))}
               </div>
             </SheetContent>

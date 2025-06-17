@@ -6,7 +6,7 @@ import { GraduationCap } from 'lucide-react';
 interface LogoProps {
   imageUrl?: string;
   altText?: string;
-  useIconOnly?: boolean; 
+  useIconOnly?: boolean;
   className?: string;
   onClick?: () => void;
   width?: number;
@@ -19,20 +19,21 @@ export function Logo({
   useIconOnly = false,
   className,
   onClick,
-  width = 150, 
-  height = 40, 
+  width = 150,
+  height = 40,
 }: LogoProps) {
   let content;
 
   if (imageUrl) {
     content = (
       <Image
+        key={imageUrl} // Added key
         src={imageUrl}
         alt={altText}
         width={width}
         height={height}
-        priority 
-        className="object-contain" 
+        priority // Added priority
+        className="object-contain"
       />
     );
   } else {
@@ -65,5 +66,3 @@ export function Logo({
     </Link>
   );
 }
-
-    

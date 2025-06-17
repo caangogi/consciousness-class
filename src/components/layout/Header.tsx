@@ -1,8 +1,7 @@
-
 'use client';
 
 import Link from 'next/link';
-import React from 'react'; // Imported React for useState and useEffect
+import React, { useState, useEffect } from 'react'; // Ensured useEffect is imported
 import { Logo } from '@/components/shared/Logo';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -65,19 +64,20 @@ export function Header() {
   };
 
   const renderAuthSection = () => {
-    // This function is now called only if hasMounted is true
     if (loading) {
       return (
         <div className="flex items-center gap-3">
-          <Skeleton className="h-9 w-24 rounded-md" />
-          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-9 w-24 rounded-md hidden md:inline-flex" /> {/* Matched structure for desktop buttons */}
+          <Skeleton className="h-9 w-9 rounded-full hidden md:inline-flex" /> {/* User avatar / menu trigger */}
+          <Skeleton className="h-9 w-16 rounded-md md:hidden" /> {/* Mobile Login */}
+          <Skeleton className="h-9 w-16 rounded-md md:hidden" /> {/* Mobile Signup */}
         </div>
       );
     }
 
     if (currentUser) {
       return (
-        <div className="flex items-center gap-3"> {/* Ensured consistent class with loading state */}
+        <div className="flex items-center gap-3">
            <Button variant="outline" size="sm" asChild className="hidden sm:inline-flex">
             <Link href="/dashboard">
               <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
@@ -121,26 +121,22 @@ export function Header() {
     }
 
     // Logged out state
-    // The error diff indicated this block had "hidden md:flex items-center gap-2"
-    // while loading had "flex items-center gap-3".
-    // To prevent hydration mismatch for the wrapper div, we ensure its classes are consistent with loading.
-    // The "hidden md:flex" logic can be applied internally if needed, or adjusted.
-    // For now, making the wrapper div classes the same as the 'loading' and 'currentUser' states.
     return (
-      <div className="flex items-center gap-3"> {/* Changed class to match other states */}
-        <Button variant="ghost" asChild className="text-foreground/80 hover:text-foreground hidden md:inline-flex"> {/* Added hidden md:inline-flex here */}
+      <div className="flex items-center gap-3"> {/* Consistent class with loading and logged-in states */}
+        <Button variant="ghost" asChild className="text-foreground/80 hover:text-foreground hidden md:inline-flex">
           <Link href="/login">Iniciar Sesión</Link>
         </Button>
-        <Button asChild className="rounded-full shadow-sm hover:shadow-md transition-shadow bg-foreground text-background hover:bg-foreground/80 hidden md:inline-flex"> {/* Added hidden md:inline-flex here */}
+        <Button asChild className="rounded-full shadow-sm hover:shadow-md transition-shadow bg-foreground text-background hover:bg-foreground/80 hidden md:inline-flex">
           <Link href="/signup">Comenzar</Link>
         </Button>
-         {/* Mobile specific login/signup buttons if needed, or handled by sheet menu */}
+        {/* Mobile specific login/signup buttons */}
         <div className="md:hidden flex items-center gap-2">
            <Button variant="ghost" size="sm" asChild>
              <Link href="/login">Login</Link>
            </Button>
-           <Button size="sm" asChild>
-             <Link href="/signup">Signup</Link>
+           {/* Changed Button for mobile "Signup" to avoid asChild with Link for this specific error case */}
+           <Button size="sm" onClick={() => router.push('/signup')}>
+             Signup
            </Button>
         </div>
       </div>
@@ -209,12 +205,12 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Conditional rendering based on hasMounted */}
           {hasMounted ? renderAuthSection() : (
-            // This skeleton MUST match the structure of the 'loading' state in renderAuthSection
             <div className="flex items-center gap-3">
-              <Skeleton className="h-9 w-24 rounded-md" />
-              <Skeleton className="h-9 w-9 rounded-full" />
+              <Skeleton className="h-9 w-24 rounded-md hidden md:inline-flex" />
+              <Skeleton className="h-9 w-9 rounded-full hidden md:inline-flex" />
+              <Skeleton className="h-9 w-16 rounded-md md:hidden" />
+              <Skeleton className="h-9 w-16 rounded-md md:hidden" />
             </div>
           )}
 
@@ -250,7 +246,6 @@ export function Header() {
                 ))}
               </nav>
               <div className="border-t p-2 mt-auto space-y-1">
-                 {/* For mobile sheet, direct rendering is fine as it's client-interaction driven */}
                  {renderMobileAuthSection(() => setIsSheetOpen(false))}
               </div>
             </SheetContent>

@@ -199,7 +199,7 @@ export function Header() {
               <SheetHeader className="border-b p-4">
                 <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
                 <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
-                 <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)}/>
+                 <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)} width={120} height={32}/>
               </SheetHeader>
               <nav className="flex flex-col gap-1 px-2 py-2 flex-grow">
                 {navLinks.map((link) => (

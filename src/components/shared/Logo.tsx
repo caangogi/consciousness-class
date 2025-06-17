@@ -19,20 +19,19 @@ export function Logo({
   useIconOnly = false,
   className,
   onClick,
-  width = 150,
-  height = 40,
+  width = 150, // Default width for desktop
+  height = 40, // Default height for desktop
 }: LogoProps) {
   let content;
 
   if (imageUrl) {
     content = (
       <Image
-        key={imageUrl} // Added key
         src={imageUrl}
         alt={altText}
         width={width}
         height={height}
-        priority // Added priority
+        priority // Logos are usually important
         className="object-contain"
       />
     );

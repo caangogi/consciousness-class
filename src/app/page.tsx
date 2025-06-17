@@ -3,10 +3,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap, Award, Users as UsersIcon, Clock } from 'lucide-react'; // Added Award, UsersIcon, Clock
+import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap, Award, Users as UsersIcon, Clock, Edit3, Loader2 } from 'lucide-react'; // Added Award, UsersIcon, Clock, Edit3, Loader2
 import { motion } from 'framer-motion';
-import { CourseCard, type CourseCardData } from '@/components/CourseCard'; // Import CourseCard
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
+import { CourseCard, type CourseCardData } from '@/components/CourseCard';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import React, { useState, useEffect } from 'react'; // Import useState and useEffect
+import { Skeleton } from '@/components/ui/skeleton'; // For loading state
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -48,48 +50,6 @@ const partnerLogos = [
   { name: 'Synergy Solutions', src: 'https://placehold.co/100x40.png', dataAiHint: 'solutions logo' },
   { name: 'Global Education', src: 'https://placehold.co/100x40.png', dataAiHint: 'global logo' },
   { name: 'NextGen Skills', src: 'https://placehold.co/100x40.png', dataAiHint: 'skills logo' },
-];
-
-const featuredCoursesData: CourseCardData[] = [
-  {
-    id: 'course-1',
-    nombre: 'Desarrollo Web Moderno con React y Next.js',
-    descripcionCorta: 'Aprende a construir aplicaciones web rápidas y escalables con las tecnologías más demandadas.',
-    precio: 79.99,
-    imagenPortadaUrl: 'https://placehold.co/600x400.png',
-    dataAiHintImagenPortada: 'web development react',
-    categoria: 'Desarrollo Web',
-    duracionEstimada: '40 horas',
-    ratingPromedio: 4.9,
-    totalEstudiantes: 1250,
-    creadorNombre: 'Carlos Estevez',
-  },
-  {
-    id: 'course-2',
-    nombre: 'Mindfulness y Reducción de Estrés (MBSR)',
-    descripcionCorta: 'Descubre técnicas de mindfulness para mejorar tu bienestar y manejar el estrés diario.',
-    precio: 49.00,
-    imagenPortadaUrl: 'https://placehold.co/600x400.png',
-    dataAiHintImagenPortada: 'mindfulness meditation',
-    categoria: 'Bienestar',
-    duracionEstimada: '8 semanas',
-    ratingPromedio: 4.8,
-    totalEstudiantes: 870,
-    creadorNombre: 'Elena García',
-  },
-  {
-    id: 'course-3',
-    nombre: 'Introducción a la Inteligencia Artificial',
-    descripcionCorta: 'Explora los fundamentos de la IA y sus aplicaciones prácticas en el mundo real.',
-    precio: 99.50,
-    imagenPortadaUrl: 'https://placehold.co/600x400.png',
-    dataAiHintImagenPortada: 'artificial intelligence',
-    categoria: 'Tecnología',
-    duracionEstimada: '30 horas',
-    ratingPromedio: 4.7,
-    totalEstudiantes: 920,
-    creadorNombre: 'Dr. Alan Turing Jr.',
-  },
 ];
 
 const keyBenefits = [
@@ -140,6 +100,30 @@ const testimonials = [
 
 
 export default function HomePage() {
+  const [featuredCourses, setFeaturedCourses] = useState<CourseCardData[]>([]);
+  const [isLoadingCourses, setIsLoadingCourses] = useState(true);
+
+  useEffect(() => {
+    async function fetchCourses() {
+      setIsLoadingCourses(true);
+      try {
+        const response = await fetch('/api/courses');
+        if (!response.ok) {
+          throw new Error('Failed to fetch courses');
+        }
+        const data = await response.json();
+        // Take only the first 3 courses for the homepage, or fewer if not enough available
+        setFeaturedCourses(data.courses ? data.courses.slice(0, 3) : []);
+      } catch (error) {
+        console.error("Error fetching courses for homepage:", error);
+        setFeaturedCourses([]); // Set to empty array on error
+      } finally {
+        setIsLoadingCourses(false);
+      }
+    }
+    fetchCourses();
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
@@ -279,32 +263,98 @@ export default function HomePage() {
           >
             Seleccionados por nuestros expertos para ofrecerte el mejor contenido y transformar tus habilidades.
           </motion.p>
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.1 }}
-          >
-            {featuredCoursesData.map((course, index) => (
-              <motion.div key={course.id} variants={itemVariants} className="flex">
-                <CourseCard course={course} />
-              </motion.div>
-            ))}
-          </motion.div>
-          <motion.div 
-            className="text-center mt-12"
-            initial={{ opacity:0, y: 20 }}
-            whileInView={{ opacity:1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <Button size="lg" asChild className="rounded-full px-8 py-6 text-base shadow-md hover:shadow-lg transition-shadow">
-              <Link href="/courses">Ver Todos los Cursos <ArrowRight className="ml-2 h-5 w-5" /></Link>
-            </Button>
-          </motion.div>
+          
+          {isLoadingCourses ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex flex-col overflow-hidden shadow-lg rounded-lg bg-card">
+                  <Skeleton className="aspect-[16/9] w-full" />
+                  <div className="p-5 space-y-3">
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                  <div className="p-5 border-t bg-secondary/30 flex justify-between items-center">
+                    <Skeleton className="h-8 w-1/4" />
+                    <Skeleton className="h-9 w-1/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : featuredCourses.length > 0 ? (
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.1 }}
+            >
+              {featuredCourses.map((course) => (
+                <motion.div key={course.id} variants={itemVariants} className="flex">
+                  <CourseCard course={course} />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div 
+              className="text-center py-10 bg-card rounded-xl shadow-md"
+              variants={itemVariants} initial="hidden" whileInView="visible" viewport={{once: true, amount: 0.5}}
+            >
+              <Edit3 size={48} className="mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-xl font-semibold mb-2">¡Sé el Primero en Crear un Curso!</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">Actualmente no hay cursos destacados. ¿Tienes conocimiento para compartir? Únete como creator.</p>
+              <Button size="lg" asChild className="rounded-full">
+                <Link href="/signup?role=creator">Conviértete en Creator <Zap className="ml-2 h-5 w-5" /></Link>
+              </Button>
+            </motion.div>
+          )}
+
+          {featuredCourses.length > 0 && (
+            <motion.div 
+              className="text-center mt-12"
+              initial={{ opacity:0, y: 20 }}
+              whileInView={{ opacity:1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <Button size="lg" asChild className="rounded-full px-8 py-6 text-base shadow-md hover:shadow-lg transition-shadow">
+                <Link href="/courses">Ver Todos los Cursos <ArrowRight className="ml-2 h-5 w-5" /></Link>
+              </Button>
+            </motion.div>
+          )}
         </div>
       </motion.section>
+
+      {/* Become a Creator CTA Section */}
+      { (isLoadingCourses || featuredCourses.length === 0) && ( // Show CTA if no courses or still loading
+        <motion.section
+          className="py-16 md:py-24 bg-primary/5"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="container mx-auto px-4 md:px-6 text-center">
+            <motion.div
+              variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
+            >
+              <Zap size={48} className="mx-auto text-primary mb-6" />
+              <h2 className="font-headline text-3xl md:text-4xl font-bold mb-5">¿Tienes Conocimiento para Compartir?</h2>
+              <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10">
+                Únete a MentorBloom como Creator y transforma tu experiencia en cursos online impactantes. Ayuda a otros a crecer mientras generas ingresos.
+              </p>
+              <Button size="lg" asChild className="rounded-full px-10 py-7 text-lg shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105">
+                <Link href="/signup?role=creator">
+                  Conviértete en Creator Hoy
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+            </motion.div>
+          </div>
+        </motion.section>
+      )}
+
 
       {/* Key Benefits Section */}
       <motion.section 

@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn, ShoppingCart, Repeat, Edit, Info } from 'lucide-react'; // Added Info
+import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn, ShoppingCart, Repeat, Edit, Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
@@ -24,8 +24,13 @@ interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
 }
 
+// This interface now expects creator details to be part of the course object
+interface CourseWithCreatorDetails extends CourseProperties {
+  creadorNombre?: string;
+  creadorAvatarUrl?: string | null;
+}
 interface CourseStructureData {
-  course: CourseProperties;
+  course: CourseWithCreatorDetails;
   modules: ModuleWithLessons[];
 }
 
@@ -372,12 +377,15 @@ export default function CourseDetailPage() {
   const isCourseFree = course.tipoAcceso === 'unico' && course.precio <= 0;
   const isSubscription = course.tipoAcceso === 'suscripcion';
 
+  const creatorNameFallback = `Creator ${course.creadorUid.substring(0, 6)}`;
+  const creatorInitialsFallback = (course.creadorNombre || creatorNameFallback).substring(0,2).toUpperCase();
+  
   const creatorDisplay = {
     id: course.creadorUid,
-    nombre: `Creator ${course.creadorUid.substring(0, 6)}`, // Placeholder, en una app real se buscaría el nombre del creador
-    avatarUrl: `https://placehold.co/80x80.png?text=${course.creadorUid.substring(0,2).toUpperCase()}`,
+    nombre: course.creadorNombre || creatorNameFallback,
+    avatarUrl: course.creadorAvatarUrl || `https://placehold.co/80x80.png?text=${creatorInitialsFallback}`,
     dataAiHint: "instructor avatar",
-    bio: 'Instructor apasionado con experiencia en la industria.', // Placeholder
+    bio: 'Instructor apasionado con experiencia en la industria.',
   };
 
   const renderActionButton = () => {
@@ -464,7 +472,7 @@ export default function CourseDetailPage() {
               <div className="flex items-center space-x-4 pt-2">
                 <Avatar className="h-12 w-12 border-2 border-accent shadow-md">
                   <AvatarImage src={creatorDisplay.avatarUrl} alt={creatorDisplay.nombre} data-ai-hint={creatorDisplay.dataAiHint} />
-                  <AvatarFallback>{creatorDisplay.nombre.substring(0,2).toUpperCase()}</AvatarFallback>
+                  <AvatarFallback>{(creatorDisplay.nombre || '').substring(0,2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="text-sm">Creado por</p>
@@ -621,7 +629,7 @@ export default function CourseDetailPage() {
               <CardContent className="text-center">
                 <Avatar className="h-24 w-24 mx-auto mb-4 border-4 border-primary shadow-md">
                   <AvatarImage src={creatorDisplay.avatarUrl} alt={creatorDisplay.nombre} data-ai-hint={creatorDisplay.dataAiHint}/>
-                  <AvatarFallback>{creatorDisplay.nombre.substring(0,2).toUpperCase()}</AvatarFallback>
+                  <AvatarFallback>{(creatorDisplay.nombre || '').substring(0,2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <h3 className="text-xl font-semibold text-primary mb-1">{creatorDisplay.nombre}</h3>
                 <p className="text-sm text-muted-foreground mt-2 mb-4 px-2">{creatorDisplay.bio}</p>
@@ -658,5 +666,4 @@ export default function CourseDetailPage() {
     </motion.div>
   );
 }
-
     

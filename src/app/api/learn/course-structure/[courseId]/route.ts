@@ -9,18 +9,26 @@ import { FirebaseModuleRepository } from '@/features/course/infrastructure/repos
 import { FirebaseLessonRepository } from '@/features/course/infrastructure/repositories/firebase-lesson.repository';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
 import type { LessonProperties } from '@/features/course/domain/entities/lesson.entity';
+import { adminDb } from '@/lib/firebase/admin'; // Import adminDb to fetch creator profile
+import type { UserProperties } from '@/features/user/domain/entities/user.entity';
 
 // Define a type for the module with its lessons
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
 }
 
+// Define an augmented CourseProperties type for the API response
+interface CourseWithCreatorDetails extends CourseProperties {
+  creadorNombre?: string;
+  creadorAvatarUrl?: string | null;
+}
+
 interface RouteContext {
   params: { courseId: string };
 }
 
-export async function GET(request: NextRequest, context: RouteContext) { // context is the second argument
-  const params = await context.params; // Await context.params as per Next.js error doc
+export async function GET(request: NextRequest, context: RouteContext) { 
+  const params = await context.params;
   const courseId = params.courseId; 
   console.log(`[API /learn/course-structure] Received request for courseId: ${courseId}`);
   try {
@@ -47,10 +55,25 @@ export async function GET(request: NextRequest, context: RouteContext) { // cont
       return NextResponse.json({ error: 'Course not found.' }, { status: 404 });
     }
     console.log(`[API /learn/course-structure] Course found: ${course.nombre}`);
-     // Ensure course is published for public learn access (can be bypassed for creators/admins if needed)
-    // if (course.estado !== 'publicado') {
-    //   return NextResponse.json({ error: 'Course not available.' }, { status: 403 });
-    // }
+
+    let courseWithCreatorDetails: CourseWithCreatorDetails = course.toPlainObject();
+
+    // Fetch creator details
+    if (course.creadorUid) {
+      try {
+        const creatorDoc = await adminDb.collection('usuarios').doc(course.creadorUid).get();
+        if (creatorDoc.exists) {
+          const creatorData = creatorDoc.data() as UserProperties;
+          courseWithCreatorDetails.creadorNombre = creatorData.displayName || `${creatorData.nombre} ${creatorData.apellido}`.trim();
+          courseWithCreatorDetails.creadorAvatarUrl = creatorData.photoURL || null;
+          console.log(`[API /learn/course-structure] Creator details found for UID ${course.creadorUid}: Name - ${courseWithCreatorDetails.creadorNombre}`);
+        } else {
+          console.warn(`[API /learn/course-structure] Creator profile not found for UID: ${course.creadorUid}`);
+        }
+      } catch (creatorError) {
+        console.error(`[API /learn/course-structure] Error fetching creator profile for UID ${course.creadorUid}:`, creatorError);
+      }
+    }
 
 
     // 2. Fetch modules for the course (already ordered by ModuleService)
@@ -60,18 +83,18 @@ export async function GET(request: NextRequest, context: RouteContext) { // cont
 
     // 3. Fetch lessons for each module (already ordered by LessonService)
     const modulesWithLessons: ModuleWithLessons[] = [];
-    for (const module of modules) {
-      console.log(`[API /learn/course-structure] Fetching lessons for module ID: ${module.id} (Course: ${courseId})`);
-      const lessons = await lessonService.getLessonsByModuleId(courseId, module.id);
-      console.log(`[API /learn/course-structure] Found ${lessons.length} lessons for module ID: ${module.id}`);
+    for (const moduleItem of modules) {
+      console.log(`[API /learn/course-structure] Fetching lessons for module ID: ${moduleItem.id} (Course: ${courseId})`);
+      const lessons = await lessonService.getLessonsByModuleId(courseId, moduleItem.id);
+      console.log(`[API /learn/course-structure] Found ${lessons.length} lessons for module ID: ${moduleItem.id}`);
       modulesWithLessons.push({
-        ...module.toPlainObject(),
+        ...moduleItem.toPlainObject(),
         lessons: lessons.map(lesson => lesson.toPlainObject()),
       });
     }
     console.log(`[API /learn/course-structure] Successfully assembled course structure for course ID: ${courseId}`);
     return NextResponse.json({
-      course: course.toPlainObject(),
+      course: courseWithCreatorDetails,
       modules: modulesWithLessons,
     }, { status: 200 });
 

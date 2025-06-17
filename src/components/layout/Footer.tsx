@@ -44,5 +44,4 @@ export function Footer() {
     </footer>
   );
 }
-
     

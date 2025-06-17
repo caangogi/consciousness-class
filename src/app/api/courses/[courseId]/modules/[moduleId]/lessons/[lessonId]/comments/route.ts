@@ -22,7 +22,7 @@ interface Comment {
 // GET handler to retrieve comments for a lesson
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
-    const { courseId, moduleId, lessonId } = context.params;
+    const { courseId, moduleId, lessonId } = await context.params; // CORREGIDO: await context.params
     if (!courseId || !moduleId || !lessonId) {
       return NextResponse.json({ error: 'Bad Request: Missing IDs in path.' }, { status: 400 });
     }
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 // POST handler to create a new comment for a lesson
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
-    const { courseId, moduleId, lessonId } = context.params;
+    const { courseId, moduleId, lessonId } = await context.params; // CORREGIDO: await context.params
     if (!courseId || !moduleId || !lessonId) {
       return NextResponse.json({ error: 'Bad Request: Missing IDs in path.' }, { status: 400 });
     }
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const userDocSnap = await adminDb.collection('usuarios').doc(userId).get();
     const courseDocSnap = await adminDb.collection('cursos').doc(courseId).get();
 
-    if (!userDocSnap.exists() || !courseDocSnap.exists()) {
+    if (!userDocSnap.exists || !courseDocSnap.exists) { // CORREGIDO: .exists en lugar de .exists()
         return NextResponse.json({ error: 'User or Course not found' }, { status: 404 });
     }
     const userData = userDocSnap.data() as UserProfile; // Asegúrate que UserProfile tiene cursosInscritos
@@ -140,8 +140,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ message: 'Comment posted successfully', comment: createdComment }, { status: 201 });
 
   } catch (error: any) {
-    console.error(`Error in POST /api/courses/.../comments:`, error);
+    // Para asegurar que params está disponible en caso de error antes de su asignación
+    const paramsForErrorLog = context.params || { courseId: '[unknown]', moduleId: '[unknown]', lessonId: '[unknown]'};
+    console.error(`Error in POST /api/courses/[${paramsForErrorLog.courseId}]/.../comments:`, error);
     // Podrías tener un manejo de errores más específico aquí
     return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
 }
+

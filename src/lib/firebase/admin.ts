@@ -9,21 +9,12 @@ if (!admin.apps.length) {
   try {
     const projectIdFromEnv = process.env.FIREBASE_ADMIN_PROJECT_ID;
     const clientEmailFromEnv = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-    const privateKeyFromEnv = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+    let privateKeyFromEnv = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
 
     console.log('[Firebase Admin] Attempting to initialize Admin SDK...');
     console.log('[Firebase Admin] Raw FIREBASE_ADMIN_PROJECT_ID from env:', projectIdFromEnv);
     console.log('[Firebase Admin] Raw FIREBASE_ADMIN_CLIENT_EMAIL from env:', clientEmailFromEnv ? 'SET' : 'NOT SET');
-    console.log('[Firebase Admin] Raw FIREBASE_ADMIN_PRIVATE_KEY from env:', privateKeyFromEnv ? 'SET (content details below)' : 'NOT SET');
-
-    if (privateKeyFromEnv) {
-      console.log(`[Firebase Admin] Length of FIREBASE_ADMIN_PRIVATE_KEY: ${privateKeyFromEnv.length}`);
-      console.log(`[Firebase Admin] FIREBASE_ADMIN_PRIVATE_KEY starts with: "${privateKeyFromEnv.substring(0, 30)}..."`);
-      console.log(`[Firebase Admin] FIREBASE_ADMIN_PRIVATE_KEY ends with: "...${privateKeyFromEnv.substring(privateKeyFromEnv.length - 30)}"`);
-      console.log(`[Firebase Admin] FIREBASE_ADMIN_PRIVATE_KEY contains '\\n' (literal string slash-n): ${privateKeyFromEnv.includes('\\n')}`);
-      console.log(`[Firebase Admin] FIREBASE_ADMIN_PRIVATE_KEY contains actual newline characters (char code 10): ${privateKeyFromEnv.includes('\n')}`);
-    }
-
+    console.log('[Firebase Admin] Raw FIREBASE_ADMIN_PRIVATE_KEY from env (initial check):', privateKeyFromEnv ? 'SET' : 'NOT SET');
 
     if (!projectIdFromEnv || !clientEmailFromEnv || !privateKeyFromEnv) {
       console.error(
@@ -31,14 +22,26 @@ if (!admin.apps.length) {
       );
       console.error('[Firebase Admin] Values checked: projectId=' + projectIdFromEnv + ', clientEmail=' + (clientEmailFromEnv ? 'Exists' : 'Missing') + ', privateKey=' + (privateKeyFromEnv ? 'Exists' : 'Missing'));
     } else {
-      // Replace \\n with \n in the private key because .env files might escape them.
-      const formattedPrivateKey = privateKeyFromEnv.replace(/\\n/g, '\n');
-      
-      if (privateKeyFromEnv.includes('\\n') && !formattedPrivateKey.includes('\n')) {
-        console.warn("[Firebase Admin] Replacement of '\\n' to actual newlines might not have occurred as expected. This could happen if the original key already had actual newlines or no '\\n' strings.");
-      } else if (privateKeyFromEnv.includes('\\n')) {
-        console.log("[Firebase Admin] Successfully replaced '\\n' with actual newlines in private key.");
+      console.log(`[Firebase Admin] Original privateKeyFromEnv (first 30 chars): "${privateKeyFromEnv.substring(0, 30)}..."`);
+      console.log(`[Firebase Admin] Original privateKeyFromEnv (last 30 chars): "...${privateKeyFromEnv.substring(privateKeyFromEnv.length - 30)}"`);
+
+      // Trim whitespace
+      privateKeyFromEnv = privateKeyFromEnv.trim();
+      console.log(`[Firebase Admin] privateKeyFromEnv after trim (first 30): "${privateKeyFromEnv.substring(0, 30)}..."`);
+
+      // Remove leading/trailing quotes if present
+      if (privateKeyFromEnv.startsWith('"') && privateKeyFromEnv.endsWith('"')) {
+        privateKeyFromEnv = privateKeyFromEnv.substring(1, privateKeyFromEnv.length - 1);
+        console.log('[Firebase Admin] Removed leading/trailing double quotes.');
+        console.log(`[Firebase Admin] privateKeyFromEnv after quote removal (first 30): "${privateKeyFromEnv.substring(0, 30)}..."`);
       }
+
+      // Replace \\n with \n in the private key
+      const formattedPrivateKey = privateKeyFromEnv.replace(/\\n/g, '\n');
+      console.log(`[Firebase Admin] formattedPrivateKey after newline replacement (first 30): "${formattedPrivateKey.substring(0, 30)}..."`);
+      console.log(`[Firebase Admin] formattedPrivateKey after newline replacement (last 30): "...${formattedPrivateKey.substring(formattedPrivateKey.length - 30)}"`);
+      console.log(`[Firebase Admin] Does formattedPrivateKey contain literal \\n now? ${formattedPrivateKey.includes('\\n')}`);
+      console.log(`[Firebase Admin] Does formattedPrivateKey contain actual newlines (char code 10)? ${formattedPrivateKey.includes('\n')}`);
 
 
       const credentialConfig = {
@@ -53,17 +56,18 @@ if (!admin.apps.length) {
         credential: admin.credential.cert(credentialConfig),
       });
       
-      console.log('Firebase Admin SDK initialized successfully using separate environment variables. Project ID used: ' + projectIdFromEnv);
+      console.log('Firebase Admin SDK initialized successfully. Project ID used: ' + projectIdFromEnv);
       adminAuth = admin.auth();
       adminDb = admin.firestore();
       adminStorage = admin.storage();
     }
   } catch (error: any) {
     console.error(
-      'CRITICAL: Firebase Admin SDK initialization failed unexpectedly during admin.initializeApp() with separate variables:',
+      'CRITICAL: Firebase Admin SDK initialization failed unexpectedly:',
       error.message,
       error.stack
     );
+    console.error('[Firebase Admin] Error details (if any):', error);
   }
 } else {
   const currentApp = admin.app();

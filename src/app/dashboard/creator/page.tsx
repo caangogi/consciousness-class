@@ -20,7 +20,7 @@ interface CreatorCourseSummary extends Pick<CourseProperties, 'id' | 'nombre' | 
 interface CreatorStats {
   totalStudents: number;
   totalCreatorEarningsPending: number;
-  avgRating: number;     // Placeholder
+  avgRating: number;
   activeCourses: number;
 }
 
@@ -28,16 +28,15 @@ export default function CreatorDashboardPage() {
   const { currentUser, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   const [courses, setCourses] = useState<CreatorCourseSummary[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true); // Single loading state
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [coursesError, setCoursesError] = useState<string | null>(null);
   const [stats, setStats] = useState<CreatorStats>({
     totalStudents: 0,
     totalCreatorEarningsPending: 0.00,
-    avgRating: 0.0,
+    avgRating: 0.0, // Se mantiene como placeholder
     activeCourses: 0,
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
-
 
   const calculateAndUpdateStats = useCallback((loadedCourses: CreatorCourseSummary[], currentBalance: number | undefined) => {
     const totalStudents = loadedCourses.reduce((sum, course) => sum + (course.totalEstudiantes || 0), 0);
@@ -47,10 +46,9 @@ export default function CreatorDashboardPage() {
       totalStudents,
       activeCourses,
       totalCreatorEarningsPending: currentBalance || 0.00,
-      avgRating: 0.0, // Placeholder - Real calculation would be backend
+      avgRating: 0.0, // Mantener como placeholder, se podría calcular si tuviéramos ratings
     });
   }, []);
-
 
   const fetchCreatorData = useCallback(async () => {
     if (!currentUser || !auth.currentUser) {
@@ -61,11 +59,6 @@ export default function CreatorDashboardPage() {
     setIsLoadingData(true);
     setCoursesError(null);
     try {
-      // First, refresh user profile to get latest balance
-      // Not calling refreshUserProfile directly if it triggers re-renders causing infinite loops
-      // Assuming currentUser from AuthContext is up-to-date or will be updated by a separate mechanism if needed
-      // For now, use the balance from the existing currentUser context.
-
       const idToken = await auth.currentUser.getIdToken(true);
       const response = await fetch('/api/creator/courses', {
         headers: {
@@ -86,12 +79,13 @@ export default function CreatorDashboardPage() {
         descripcionCorta: c.descripcionCorta,
       })) || [];
       setCourses(loadedCourses);
+      // Usar el balance del currentUser que ya fue refrescado (potencialmente) por handleRefreshData
       calculateAndUpdateStats(loadedCourses, currentUser?.balanceIngresosPendientes);
 
     } catch (err: any) {
       setCoursesError(err.message);
       toast({
-        title: 'Error al Cargar Datos',
+        title: 'Error al Cargar Datos del Creator',
         description: err.message,
         variant: 'destructive',
       });
@@ -103,25 +97,33 @@ export default function CreatorDashboardPage() {
   const handleRefreshData = async () => {
     setIsRefreshing(true);
     toast({ title: "Actualizando Datos...", description: "Estamos refrescando tu panel de creador."});
-    await refreshUserProfile(); // This will update currentUser in context
-    await fetchCreatorData();   // This will use the (potentially updated) currentUser
-    setIsRefreshing(false);
-    toast({ title: "Datos Actualizados", description: "Tu panel de creador ha sido actualizado."});
+    try {
+      await refreshUserProfile(); // Esto actualiza currentUser en el contexto
+      // fetchCreatorData se disparará por el useEffect que depende de currentUser, o lo llamamos explícitamente
+      // Para asegurar que se usa el currentUser más reciente después de refreshUserProfile, 
+      // es mejor que fetchCreatorData dependa directamente de currentUser.
+      // No es necesario llamar fetchCreatorData aquí si el useEffect de abajo lo hace.
+    } catch (error) {
+      console.error("Error during data refresh:", error);
+      toast({ title: "Error al Actualizar", description: "No se pudieron refrescar los datos.", variant: "destructive" });
+    } finally {
+      setIsRefreshing(false);
+      // Si fetchCreatorData no se dispara automáticamente por cambio de currentUser, llamarlo aquí.
+      // Pero la dependencia en el useEffect debería ser suficiente.
+    }
   };
 
-
   useEffect(() => {
-    fetchCreatorData();
-  }, [fetchCreatorData]);
+    if (currentUser) { // Asegurarse de que currentUser no es null
+        fetchCreatorData();
+    }
+  }, [currentUser, fetchCreatorData]); // fetchCreatorData ahora depende de currentUser
   
   useEffect(() => {
-    // This effect specifically reacts to currentUser updates (like balanceIngresosPendientes)
-    // and recalculates stats if courses are already loaded.
     if (currentUser && courses.length > 0 && !isLoadingData) {
       calculateAndUpdateStats(courses, currentUser.balanceIngresosPendientes);
     }
   }, [currentUser, courses, isLoadingData, calculateAndUpdateStats]);
-
 
   const getStatusBadgeVariant = (status: CourseProperties['estado']) => {
     switch (status) {
@@ -142,7 +144,7 @@ export default function CreatorDashboardPage() {
   };
 
   const renderCourseTableContent = () => {
-    if (isLoadingData && courses.length === 0) { // Show skeletons only on initial full load
+    if (isLoadingData && courses.length === 0) {
       return (
         <TableBody>
           {[...Array(2)].map((_, i) => (
@@ -221,7 +223,6 @@ export default function CreatorDashboardPage() {
     );
   };
 
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -258,7 +259,7 @@ export default function CreatorDashboardPage() {
           </CardHeader>
           <CardContent>
             {isLoadingData ? <Skeleton className="h-7 w-12"/> : <div className="text-2xl font-bold">{stats.totalStudents}</div>}
-            <p className="text-xs text-muted-foreground">Suma de todos tus cursos.</p>
+            <p className="text-xs text-muted-foreground">Suma de todos tus cursos cargados.</p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -278,7 +279,7 @@ export default function CreatorDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.avgRating.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">De todos tus cursos (Próximamente).</p>
+            <p className="text-xs text-muted-foreground">Global de tus cursos (Próximamente).</p>
           </CardContent>
         </Card>
       </div>
@@ -344,3 +345,5 @@ export default function CreatorDashboardPage() {
     </div>
   );
 }
+
+      

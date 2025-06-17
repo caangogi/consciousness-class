@@ -31,8 +31,9 @@ export function Logo({
         alt={altText}
         width={width}
         height={height}
-        // priority // Temporarily removed for hydration debugging
         className="object-contain"
+        priority // Re-added priority
+        sizes={`${width}px`} // Added sizes prop
       />
     );
   } else {

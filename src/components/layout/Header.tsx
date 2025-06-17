@@ -135,16 +135,16 @@ export function Header() {
     if (currentUser) {
       return (
         <>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} className="w-full justify-start py-2 text-base">Dashboard</Button>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} className="w-full justify-start py-2 text-base">Mi Perfil</Button>
-          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} className="w-full justify-start py-2 text-base text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} className="w-full justify-start py-1.5 text-base">Dashboard</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} className="w-full justify-start py-1.5 text-base">Mi Perfil</Button>
+          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} className="w-full justify-start py-1.5 text-base text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
         </>
       );
     }
     return (
       <>
-        <Button variant="ghost" onClick={() => handleLinkClick('/login')} className="w-full justify-start py-2 text-base">Iniciar Sesión</Button>
-        <Button onClick={() => handleLinkClick('/signup')} className="w-full py-2 text-base">Comenzar</Button>
+        <Button variant="ghost" onClick={() => handleLinkClick('/login')} className="w-full justify-start py-1.5 text-base">Iniciar Sesión</Button>
+        <Button onClick={() => handleLinkClick('/signup')} className="w-full py-1.5 text-base">Comenzar</Button>
       </>
     );
   }
@@ -153,7 +153,6 @@ export function Header() {
 
   const isLinkActive = (href: string, isHash: boolean) => {
     if (isHash) {
-      // For hash links, consider active if on homepage, or adjust as needed for specific section highlighting
       return pathname === '/'; 
     }
     return pathname === href;
@@ -203,7 +202,7 @@ export function Header() {
                     key={link.label}
                     variant={isLinkActive(link.href, link.isHashLink) ? "secondary" : "ghost"}
                     asChild
-                    className="justify-start text-base h-auto py-2 px-3 rounded-md"
+                    className="justify-start text-base h-auto py-1.5 px-3 rounded-md" 
                     onClick={() => setIsSheetOpen(false)}
                   >
                     <Link href={link.href} className="flex items-center gap-3">
@@ -223,4 +222,3 @@ export function Header() {
     </header>
   );
 }
-

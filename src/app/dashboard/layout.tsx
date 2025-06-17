@@ -13,9 +13,10 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebaseapp.com/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
 
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -79,12 +80,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <span className="sr-only">Abrir menú</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="sm:max-w-xs flex flex-col">
+            <SheetContent side="left" className="sm:max-w-xs flex flex-col p-0">
              <SheetHeader className="sr-only"> 
                 <SheetTitle>Navegación del Dashboard</SheetTitle>
                 <SheetDescription>Enlaces y opciones del panel de control.</SheetDescription>
              </SheetHeader>
-              <div className="flex items-center gap-2 border-b pb-4 mb-4">
+              <div className="flex items-center gap-2 border-b p-4">
                 <Avatar className="h-9 w-9">
                     <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} />
                     <AvatarFallback>{getInitials(currentUser.displayName)}</AvatarFallback>
@@ -94,22 +95,27 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
                 </div>
               </div>
-              <nav className="grid gap-3 text-base font-medium flex-grow overflow-y-auto">
+              <nav className="grid gap-1 px-2 py-2 flex-grow overflow-y-auto">
                 {filteredNavItems.map((item) => (
                   <Link
                     key={item.href + item.label} 
                     href={item.href}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
+                    className={cn(
+                        "flex items-center h-10 gap-3 rounded-lg px-3 text-muted-foreground hover:text-foreground transition-colors text-sm",
+                        (router.pathname === item.href || (item.href !== '/dashboard' && router.pathname.startsWith(item.href)) ) && 'bg-primary/10 text-primary font-semibold'
+                    )}
                   >
-                    <item.icon className="h-5 w-5" />
+                    <item.icon className="h-4 w-4" />
                     {item.label}
                   </Link>
                 ))}
               </nav>
-              <Button variant="ghost" onClick={handleLogout} className="w-full justify-start mt-auto border-t pt-4">
-                <LogOut className="mr-2 h-4 w-4" />
-                Cerrar Sesión
-              </Button>
+              <div className="border-t p-2 mt-auto">
+                <Button variant="ghost" onClick={handleLogout} className="w-full flex items-center h-10 justify-start px-3 text-sm">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Cerrar Sesión
+                </Button>
+              </div>
             </SheetContent>
           </Sheet>
            <div className="md:hidden">
@@ -144,5 +150,3 @@ function AwardIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-
-    

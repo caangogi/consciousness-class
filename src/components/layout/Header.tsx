@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -29,7 +28,7 @@ const navLinks = [
   { href: '/#faq', label: 'FAQ', icon: HelpCircleIcon, isHashLink: true },
 ];
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebaseapp.com/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
 
 export function Header() {
   const { currentUser, userRole, loading, logout } = useAuth();
@@ -126,7 +125,7 @@ export function Header() {
 
   const renderMobileAuthSection = (closeSheet?: () => void) => {
     if (loading) {
-      return <Skeleton className="h-8 w-full mt-4" />
+      return <Skeleton className="h-10 w-full mt-4" />
     }
     const handleLinkClick = (href: string) => {
       router.push(href);
@@ -135,16 +134,16 @@ export function Header() {
     if (currentUser) {
       return (
         <>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} size="sm" className="w-full justify-start py-1.5 px-3 text-sm">Dashboard</Button>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} size="sm" className="w-full justify-start py-1.5 px-3 text-sm">Mi Perfil</Button>
-          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} size="sm" className="w-full justify-start py-1.5 px-3 text-sm text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} className="w-full flex items-center h-10 justify-start text-sm px-3">Dashboard</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} className="w-full flex items-center h-10 justify-start text-sm px-3">Mi Perfil</Button>
+          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} className="w-full flex items-center h-10 justify-start text-sm px-3 text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
         </>
       );
     }
     return (
       <>
-        <Button variant="ghost" onClick={() => handleLinkClick('/login')} size="sm" className="w-full justify-start py-1.5 px-3 text-sm">Iniciar Sesión</Button>
-        <Button onClick={() => handleLinkClick('/signup')} size="sm" className="w-full py-1.5 px-3 text-sm">Comenzar</Button>
+        <Button variant="ghost" onClick={() => handleLinkClick('/login')} className="w-full flex items-center h-10 justify-start text-sm px-3">Iniciar Sesión</Button>
+        <Button onClick={() => handleLinkClick('/signup')} className="w-full flex items-center h-10 justify-start text-sm px-3">Comenzar</Button>
       </>
     );
   }
@@ -204,7 +203,7 @@ export function Header() {
                     key={link.label}
                     href={link.href}
                     className={cn(
-                      "flex items-center gap-2 justify-start text-sm rounded-md px-3 py-2", // Explicit padding
+                      "flex items-center h-10 gap-2 justify-start text-sm rounded-md px-3", 
                       isLinkActive(link.href, link.isHashLink)
                         ? "bg-muted text-primary font-medium"
                         : "text-foreground/80 hover:bg-muted/50 hover:text-foreground"
@@ -226,5 +225,3 @@ export function Header() {
     </header>
   );
 }
-
-    

@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback }
 from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation'; // Added usePathname
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CheckCircle, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, PlayCircle, Info, HelpCircle, Loader2, AlertTriangle, Menu, Send } from 'lucide-react'; // Added Send
+import { CheckCircle, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, PlayCircle, Info, HelpCircle, Loader2, AlertTriangle, Menu, Send, StarIcon } from 'lucide-react'; // Added StarIcon
 import { Progress } from '@/components/ui/progress';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
@@ -24,6 +24,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescri
 import { auth } from '@/lib/firebase/config';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge'; // Added Badge
 
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
@@ -40,13 +41,14 @@ interface QuestionAnswerItem {
   userDisplayName: string;
   userPhotoURL: string | null;
   texto: string;
-  createdAt: Date; // Firestore Timestamp o Date para el cliente
+  createdAt: Date; 
 }
 
 
 export default function LessonPage() {
   const params = useParams<{ courseId: string; lessonId: string }>();
   const router = useRouter();
+  const pathname = usePathname(); // Get current pathname
   const { currentUser } = useAuth();
   const { toast } = useToast();
 
@@ -66,7 +68,6 @@ export default function LessonPage() {
   const [isLoadingLessonContent, setIsLoadingLessonContent] = useState(false);
   const [courseLoadError, setCourseLoadError] = useState<string | null>(null);
 
-  // State for Q&A
   const [questionsList, setQuestionsList] = useState<QuestionAnswerItem[]>([]);
   const [newQuestionText, setNewQuestionText] = useState('');
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
@@ -100,7 +101,7 @@ export default function LessonPage() {
   }, []);
 
   const fetchUserProgress = useCallback(async (courseIdToFetch: string) => {
-    if (!currentUser || !courseIdToFetch) return;
+    if (!currentUser || !courseIdToFetch || !auth.currentUser) return; // Added !auth.currentUser check
     console.log(`[LessonPage] Fetching user progress for ${courseIdToFetch}`);
     try {
       const idToken = await auth.currentUser?.getIdToken(true);
@@ -127,7 +128,7 @@ export default function LessonPage() {
       const response = await fetch(`/api/courses/${params.courseId}/modules/${currentModule.id}/lessons/${currentLesson.id}/comments`);
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.details || 'Error al cargar preguntas.');
+        throw new Error(errorData.details || errorData.error || 'Error al cargar preguntas.');
       }
       const data = await response.json();
       setQuestionsList(data.comments.map((q: any) => ({...q, createdAt: new Date(q.createdAt)})));
@@ -139,10 +140,10 @@ export default function LessonPage() {
   }, [params.courseId, currentModule?.id, currentLesson?.id, toast]);
 
   useEffect(() => {
-    if (currentLesson?.id) { // Fetch questions when current lesson is set
+    if (currentLesson?.id && currentModule?.id) { 
       fetchQuestions();
     }
-  }, [currentLesson?.id, fetchQuestions]);
+  }, [currentLesson?.id, currentModule?.id, fetchQuestions]);
 
 
   useEffect(() => {
@@ -153,7 +154,7 @@ export default function LessonPage() {
       setCourseStructure(null);    
       setCurrentLesson(null);      
       setCompletedLessons(new Set());
-      setQuestionsList([]); // Reset questions list
+      setQuestionsList([]); 
 
       fetchCourseStructureData(params.courseId);
       if (currentUser) {
@@ -219,7 +220,7 @@ export default function LessonPage() {
 
 
   const toggleLessonComplete = async () => {
-    if (!currentUser || !currentLesson || !courseStructure) return;
+    if (!currentUser || !currentLesson || !courseStructure || !auth.currentUser) return; // Added !auth.currentUser
     setIsTogglingCompletion(true);
     try {
       const idToken = await auth.currentUser?.getIdToken(true);
@@ -266,7 +267,7 @@ export default function LessonPage() {
   };
 
   const handlePostQuestion = async () => {
-    if (!currentUser || !currentLesson || !currentModule || newQuestionText.trim() === '') return;
+    if (!currentUser || !currentLesson || !currentModule || newQuestionText.trim() === '' || !auth.currentUser) return; // Added !auth.currentUser
     setIsPostingQuestion(true);
     try {
       const idToken = await auth.currentUser?.getIdToken(true);
@@ -283,7 +284,7 @@ export default function LessonPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.details || 'Error al publicar la pregunta.');
+        throw new Error(errorData.details || errorData.error || 'Error al publicar la pregunta.');
       }
       
       const { comment: postedComment } = await response.json();
@@ -549,30 +550,35 @@ export default function LessonPage() {
                       <p className="text-sm text-muted-foreground text-center py-4">Sé el primero en hacer una pregunta sobre esta lección.</p>
                     ) : (
                       <div className="space-y-6">
-                        {questionsList.map((q) => (
-                          <Card key={q.id} className="shadow-sm">
-                            <CardContent className="p-4 flex gap-3">
-                              <Avatar className="h-10 w-10 mt-1">
-                                <AvatarImage src={q.userPhotoURL || `https://placehold.co/40x40.png?text=${q.userDisplayName.substring(0,1)}`} alt={q.userDisplayName} data-ai-hint="user avatar q&a" />
-                                <AvatarFallback>{q.userDisplayName.substring(0,1)}</AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-semibold text-sm">{q.userDisplayName}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatDistanceToNow(q.createdAt, { addSuffix: true, locale: es })}
-                                  </span>
+                        {questionsList.map((q) => {
+                          const isInstructor = q.userId === courseStructure?.course.creadorUid;
+                          return (
+                            <Card key={q.id} className={`shadow-sm ${isInstructor ? 'bg-primary/5 border-primary/20' : ''}`}>
+                              <CardContent className="p-4 flex gap-3">
+                                <Avatar className="h-10 w-10 mt-1">
+                                  <AvatarImage src={q.userPhotoURL || `https://placehold.co/40x40.png?text=${q.userDisplayName.substring(0,1)}`} alt={q.userDisplayName} data-ai-hint="user avatar q&a" />
+                                  <AvatarFallback>{q.userDisplayName.substring(0,1)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold text-sm">{q.userDisplayName}</span>
+                                      {isInstructor && (
+                                        <Badge variant="default" className="h-5 px-1.5 py-0 text-xs">
+                                          <StarIcon className="h-3 w-3 mr-1"/> Instructor
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">
+                                      {formatDistanceToNow(q.createdAt, { addSuffix: true, locale: es })}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-foreground/80 mt-0.5 whitespace-pre-wrap">{q.texto}</p>
                                 </div>
-                                <p className="text-sm text-foreground/80 mt-0.5 whitespace-pre-wrap">{q.texto}</p>
-                                {/* Placeholder para respuestas - Futura mejora
-                                {currentUser?.uid === courseStructure?.course.creadorUid && (
-                                  <Button variant="link" size="sm" className="p-0 h-auto text-xs mt-1">Responder</Button>
-                                )}
-                                */}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                       </div>
                     )}
                   </CardContent>
@@ -585,4 +591,5 @@ export default function LessonPage() {
     </div>
   );
 }
+
     

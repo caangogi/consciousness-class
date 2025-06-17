@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn, ShoppingCart, Repeat } from 'lucide-react'; // Added Repeat
+import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn, ShoppingCart, Repeat, Edit } from 'lucide-react'; // Added Edit
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
@@ -50,6 +50,8 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const isUserEnrolled = currentUser?.cursosInscritos?.includes(courseIdFromPath) ?? false;
+  const isCreatorOfCourse = currentUser?.uid === courseData?.course.creadorUid;
+
 
   useEffect(() => {
     const refCodeFromUrl = searchParams.get('ref');
@@ -396,6 +398,20 @@ export default function CourseDetailPage() {
             </Button>
         );
     }
+
+    if (isCreatorOfCourse) {
+      return (
+          <div className="space-y-2">
+            <Button size="lg" className={commonButtonClasses} asChild>
+               <Link href={`/learn/${course.id}/${firstLessonIdIfAny}`}>Ir al Contenido (Vista Estudiante)</Link>
+            </Button>
+             <Button size="sm" variant="outline" className="w-full" asChild>
+               <Link href={`/dashboard/creator/courses/${course.id}`}>Gestionar Curso</Link>
+            </Button>
+          </div>
+        );
+    }
+    
     if (isUserEnrolled) {
         return (
             <Button size="lg" className={commonButtonClasses} asChild>

@@ -153,10 +153,13 @@ export function Header() {
 
   const isLinkActive = (href: string, isHash: boolean) => {
     if (isHash) {
-      return pathname === '/'; 
+      // For hash links, consider active if on homepage and hash matches, or if path matches and no hash is present
+      const currentHash = typeof window !== 'undefined' ? window.location.hash : '';
+      return pathname === '/' && (href === currentHash || (currentHash === '' && href === '/#'));
     }
     return pathname === href;
   };
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
@@ -191,28 +194,28 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] flex flex-col p-0">
-              <SheetHeader className="border-b p-4"> 
+              <SheetHeader className="border-b p-4">
                 <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
                 <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
                  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)}/>
               </SheetHeader>
-              <nav className="grid gap-0.5 px-4 py-2 flex-grow"> 
+              <nav className="grid gap-px px-2 py-2 flex-grow"> {/* Reduced gap to gap-px or gap-0.5 */}
                 {navLinks.map((link) => (
                   <Button
                     key={link.label}
                     variant={isLinkActive(link.href, link.isHashLink) ? "secondary" : "ghost"}
                     asChild
-                    className="justify-start text-base h-auto py-1.5 px-3 rounded-md" 
+                    className="justify-start text-base px-2 py-1.5 rounded-md flex items-center gap-2" // Reduced py, px and gap
                     onClick={() => setIsSheetOpen(false)}
                   >
-                    <Link href={link.href} className="flex items-center gap-3">
+                    <Link href={link.href} className="flex items-center w-full"> {/* Ensure Link takes full width */}
                        <link.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary"/>
                       {link.label}
                     </Link>
                   </Button>
                 ))}
               </nav>
-              <div className="border-t p-4 space-y-2">
+              <div className="border-t p-2 space-y-1"> {/* Reduced padding and space-y */}
                  {renderMobileAuthSection(() => setIsSheetOpen(false))}
               </div>
             </SheetContent>
@@ -222,3 +225,4 @@ export function Header() {
     </header>
   );
 }
+    

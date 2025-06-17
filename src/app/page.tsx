@@ -617,9 +617,14 @@ export default function HomePage() {
         transition={{ duration: 0.7 }}
       >
         <div className="container mx-auto px-4 md:px-6 text-center relative">
-          {/* Decorative spinning loader removed as per request */}
+           <div
+            className="absolute inset-0 flex items-center justify-center -z-10 opacity-20 overflow-hidden pointer-events-none"
+            aria-hidden="true"
+          >
+            <div className="spinning-loader w-[300px] h-[300px] md:w-[450px] md:h-[450px]" data-ai-hint="growth spiral modern"></div>
+          </div>
           <motion.h2
-            className="font-headline text-5xl md:text-5xl font-bold mb-6 pt-12"
+            className="font-headline text-5xl md:text-5xl font-bold mb-6 pt-12" 
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
             ¿Listo para Iniciar tu Viaje de Aprendizaje?

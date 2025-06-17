@@ -13,7 +13,6 @@ const SUBSCRIPTIONS_COLLECTION = 'suscripciones'; // Subcolección bajo usuarios
 
 async function writeWebhookLog(eventId: string, step: string, details: any) {
   const timestamp = new Date().toISOString();
-  // Ensure undefined values are converted to null for Firestore
   const sanitizedDetails: Record<string, any> = {};
   for (const key in details) {
     if (details[key] !== undefined) {
@@ -89,7 +88,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
         try {
             const subscriptionObject = await stripe.subscriptions.retrieve(stripeSubscriptionId);
             
-            // Robust timestamp handling for subscription object
             const currentPeriodStartISO = typeof subscriptionObject.current_period_start === 'number'
                 ? new Date(subscriptionObject.current_period_start * 1000).toISOString()
                 : null;
@@ -98,12 +96,20 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
                 : null;
             const createdAtISO = typeof subscriptionObject.created === 'number'
                 ? new Date(subscriptionObject.created * 1000).toISOString()
-                : new Date().toISOString(); // Fallback
+                : new Date().toISOString(); 
 
             console.log(`[Stripe Webhook - InitialSub] Timestamps - start_raw: ${subscriptionObject.current_period_start}, start_iso: ${currentPeriodStartISO}`);
             console.log(`[Stripe Webhook - InitialSub] Timestamps - end_raw: ${subscriptionObject.current_period_end}, end_iso: ${currentPeriodEndISO}`);
             console.log(`[Stripe Webhook - InitialSub] Timestamps - created_raw: ${subscriptionObject.created}, created_iso: ${createdAtISO}`);
             
+            if (!createdAtISO) {
+                console.error(`[Stripe Webhook - InitialSub] CRITICAL: createdAt timestamp is missing or invalid for subscription ${stripeSubscriptionId}.`);
+                throw new Error(`Stripe createdAt timestamp is missing or invalid for subscription ${stripeSubscriptionId}.`);
+            }
+            if (!currentPeriodStartISO || !currentPeriodEndISO) {
+                console.warn(`[Stripe Webhook - InitialSub] current_period_start or current_period_end is null after conversion for subscription ${stripeSubscriptionId}. This might be acceptable for some statuses. Proceeding with available data.`);
+            }
+
             const userSubscriptionRef = adminDb!.collection('usuarios').doc(buyerUserId).collection(SUBSCRIPTIONS_COLLECTION).doc(stripeSubscriptionId);
             
             const subscriptionDataToStore: any = {
@@ -119,6 +125,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 
             if (currentPeriodStartISO) subscriptionDataToStore.currentPeriodStart = currentPeriodStartISO;
             if (currentPeriodEndISO) subscriptionDataToStore.currentPeriodEnd = currentPeriodEndISO;
+            
+            Object.keys(subscriptionDataToStore).forEach(key => {
+                if (subscriptionDataToStore[key] === undefined) {
+                    delete subscriptionDataToStore[key];
+                }
+            });
 
             await userSubscriptionRef.set(subscriptionDataToStore, { merge: true });
             console.log(`[Stripe Webhook] Initial subscription record created/merged for user ${buyerUserId}, subscription ${stripeSubscriptionId}, course ${courseIdPurchased}.`);
@@ -164,7 +176,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
                   referenteUid: referrerUser.uid,
                   referidoUid: buyerUserId,
                   courseIdComprado: courseIdPurchased,
-                  nombreCursoComprado: coursePurchasedEntity.nombre,
+                  nombreCursoComprado: coursePurchasedEntity.nombre, // Include course name
                   promotedCourseId: promotedCourseId,
                   stripeSessionId: session.id,
                   montoCompra: purchaseAmount,
@@ -209,7 +221,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 
 async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription, eventId: string, eventType: string) {
     const userId = subscription.metadata?.platform_user_id;
-    // Intenta obtener courseId de los metadatos de la suscripción, luego de los metadatos del price del primer item
     const courseId = subscription.metadata?.platform_course_id || subscription.items.data[0]?.price?.metadata?.platform_course_id || null;
     const stripeSubscriptionId = subscription.id;
 
@@ -229,7 +240,6 @@ async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription
     const userSubscriptionRef = adminDb.collection('usuarios').doc(userId).collection(SUBSCRIPTIONS_COLLECTION).doc(stripeSubscriptionId);
 
     try {
-        // Robust timestamp handling
         const currentPeriodStartISO = typeof subscription.current_period_start === 'number'
             ? new Date(subscription.current_period_start * 1000).toISOString()
             : null;
@@ -238,32 +248,34 @@ async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription
             : null;
         const createdAtISO = typeof subscription.created === 'number'
             ? new Date(subscription.created * 1000).toISOString()
-            : new Date().toISOString(); // Fallback to now if 'created' is missing
+            : new Date().toISOString(); 
 
         console.log(`[Stripe Webhook] ${eventType}: Timestamps - start_raw: ${subscription.current_period_start}, start_iso: ${currentPeriodStartISO}`);
         console.log(`[Stripe Webhook] ${eventType}: Timestamps - end_raw: ${subscription.current_period_end}, end_iso: ${currentPeriodEndISO}`);
         console.log(`[Stripe Webhook] ${eventType}: Timestamps - created_raw: ${subscription.created}, created_iso: ${createdAtISO}`);
         
-        // Conditional check if essential dates are missing, can be adjusted based on strictness
-        if (!currentPeriodStartISO || !currentPeriodEndISO) {
+        if (!createdAtISO) { // Only critical check for createdAt
+             console.error(`[Stripe Webhook] ${eventType}: CRITICAL: createdAt timestamp is missing or invalid for subscription ${stripeSubscriptionId}.`);
+             throw new Error(`Stripe createdAt timestamp is missing or invalid for subscription ${stripeSubscriptionId}.`);
+        }
+        if (currentPeriodStartISO === null || currentPeriodEndISO === null) { // Warn but proceed if current period dates are null
              console.warn(`[Stripe Webhook] ${eventType}: current_period_start or current_period_end is null after conversion for subscription ${stripeSubscriptionId}. This might be acceptable for some statuses. Proceeding with available data.`);
         }
         
         const subscriptionDataToStore: any = {
             stripeSubscriptionId: stripeSubscriptionId,
             stripeCustomerId: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
-            stripePriceId: subscription.items.data[0]?.price?.id || subscription.items.data[0]?.id || null, // Improved price ID fetching
-            courseId: courseId, // Already determined above
+            stripePriceId: subscription.items.data[0]?.price?.id || subscription.items.data[0]?.id || null,
+            courseId: courseId,
             status: subscription.status,
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
-            createdAt: createdAtISO,
+            createdAt: createdAtISO, 
             updatedAt: new Date().toISOString(), 
         };
 
         if (currentPeriodStartISO) subscriptionDataToStore.currentPeriodStart = currentPeriodStartISO;
         if (currentPeriodEndISO) subscriptionDataToStore.currentPeriodEnd = currentPeriodEndISO;
         
-        // Remove any undefined properties before saving to Firestore
         Object.keys(subscriptionDataToStore).forEach(key => {
             if (subscriptionDataToStore[key] === undefined) {
                 delete subscriptionDataToStore[key];
@@ -368,7 +380,7 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         await writeWebhookLog(eventId, 'invoice.payment_succeeded_received', { invoiceId: invoice.id, subscriptionId: invoice.subscription, customer: invoice.customer, billing_reason: invoice.billing_reason });
-        if (invoice.subscription && typeof invoice.subscription === 'string') { // No need to check billing_reason here, let handleCustomerSubscriptionEvent update based on status
+        if (invoice.subscription && typeof invoice.subscription === 'string') { 
              const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
              console.log(`[Stripe Webhook] Invoice paid (ID: ${invoice.id}) for subscription: ${invoice.subscription}. Ensuring subscription status is updated.`);
              await handleCustomerSubscriptionEvent(subscription, eventId, 'invoice.payment_succeeded_subscription_update');
@@ -400,6 +412,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook processing failed.', details: error.message }, { status: 500 });
   }
 }
-    
-
     

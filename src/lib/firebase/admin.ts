@@ -14,17 +14,33 @@ if (!admin.apps.length) {
     console.log('[Firebase Admin] Attempting to initialize Admin SDK...');
     console.log('[Firebase Admin] Raw FIREBASE_ADMIN_PROJECT_ID from env:', projectIdFromEnv);
     console.log('[Firebase Admin] Raw FIREBASE_ADMIN_CLIENT_EMAIL from env:', clientEmailFromEnv ? 'SET' : 'NOT SET');
-    console.log('[Firebase Admin] Raw FIREBASE_ADMIN_PRIVATE_KEY from env:', privateKeyFromEnv ? 'SET' : 'NOT SET');
+    console.log('[Firebase Admin] Raw FIREBASE_ADMIN_PRIVATE_KEY from env:', privateKeyFromEnv ? 'SET (content details below)' : 'NOT SET');
+
+    if (privateKeyFromEnv) {
+      console.log(`[Firebase Admin] Length of FIREBASE_ADMIN_PRIVATE_KEY: ${privateKeyFromEnv.length}`);
+      console.log(`[Firebase Admin] FIREBASE_ADMIN_PRIVATE_KEY starts with: "${privateKeyFromEnv.substring(0, 30)}..."`);
+      console.log(`[Firebase Admin] FIREBASE_ADMIN_PRIVATE_KEY ends with: "...${privateKeyFromEnv.substring(privateKeyFromEnv.length - 30)}"`);
+      console.log(`[Firebase Admin] FIREBASE_ADMIN_PRIVATE_KEY contains '\\n' (literal string slash-n): ${privateKeyFromEnv.includes('\\n')}`);
+      console.log(`[Firebase Admin] FIREBASE_ADMIN_PRIVATE_KEY contains actual newline characters (char code 10): ${privateKeyFromEnv.includes('\n')}`);
+    }
+
 
     if (!projectIdFromEnv || !clientEmailFromEnv || !privateKeyFromEnv) {
       console.error(
-        'CRITICAL: Firebase Admin SDK initialization failed: One or more required environment variables (FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY) are not defined. Please check your .env.local file.'
+        'CRITICAL: Firebase Admin SDK initialization failed: One or more required environment variables (FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY) are not defined. Please check your .env.local file or Vercel environment variables.'
       );
       console.error('[Firebase Admin] Values checked: projectId=' + projectIdFromEnv + ', clientEmail=' + (clientEmailFromEnv ? 'Exists' : 'Missing') + ', privateKey=' + (privateKeyFromEnv ? 'Exists' : 'Missing'));
     } else {
       // Replace \\n with \n in the private key because .env files might escape them.
       const formattedPrivateKey = privateKeyFromEnv.replace(/\\n/g, '\n');
       
+      if (privateKeyFromEnv.includes('\\n') && !formattedPrivateKey.includes('\n')) {
+        console.warn("[Firebase Admin] Replacement of '\\n' to actual newlines might not have occurred as expected. This could happen if the original key already had actual newlines or no '\\n' strings.");
+      } else if (privateKeyFromEnv.includes('\\n')) {
+        console.log("[Firebase Admin] Successfully replaced '\\n' with actual newlines in private key.");
+      }
+
+
       const credentialConfig = {
         projectId: projectIdFromEnv,
         clientEmail: clientEmailFromEnv,

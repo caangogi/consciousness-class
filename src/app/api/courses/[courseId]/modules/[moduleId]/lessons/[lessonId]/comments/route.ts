@@ -17,7 +17,7 @@ export interface Comment {
   texto: string;
   createdAt: FirebaseFirestore.Timestamp | Date;
   updatedAt?: FirebaseFirestore.Timestamp | Date | null;
-  parentId: string | null; // ID of the comment this is a reply to, null for root comments/questions
+  parentId: string | null; 
   courseId: string;
   moduleId: string;
   lessonId: string;
@@ -50,16 +50,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
         createdAt: (data.createdAt as FirebaseFirestore.Timestamp).toDate(),
         updatedAt: data.updatedAt ? (data.updatedAt as FirebaseFirestore.Timestamp).toDate() : null,
         parentId: data.parentId || null,
-        courseId: data.courseId || courseId, // Fallback to route param if not in doc
-        moduleId: data.moduleId || moduleId, // Fallback
-        lessonId: data.lessonId || lessonId, // Fallback
+        courseId: data.courseId || courseId, 
+        moduleId: data.moduleId || moduleId, 
+        lessonId: data.lessonId || lessonId, 
       };
     });
 
     return NextResponse.json({ comments }, { status: 200 });
 
   } catch (error: any) {
-    console.error(`Error in GET /api/courses/.../comments:`, error);
+    const paramsForErrorLog = await context.params;
+    console.error(`Error in GET /api/courses/${paramsForErrorLog?.courseId}/modules/${paramsForErrorLog?.moduleId}/lessons/${paramsForErrorLog?.lessonId}/comments:`, error);
     return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
 }
@@ -123,13 +124,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .collection('comentarios')
       .doc();
 
-    const newCommentData: Omit<Comment, 'id' | 'createdAt' | 'updatedAt'> &amp; { createdAt: FieldValue, updatedAt: FieldValue | null } = {
+    const newCommentData: Omit<Comment, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: FieldValue, updatedAt: FieldValue | null } = {
       userId,
       userDisplayName,
       userPhotoURL,
       texto: texto.trim(),
       parentId: parentId || null,
-      courseId, // Store denormalized IDs
+      courseId, 
       moduleId,
       lessonId,
       createdAt: FieldValue.serverTimestamp(),
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   } catch (error: any) {
     const paramsForErrorLog = await context.params;
-    console.error(`Error in POST /api/courses/[${paramsForErrorLog.courseId}]/.../comments:`, error);
+    console.error(`Error in POST /api/courses/${paramsForErrorLog?.courseId}/modules/${paramsForErrorLog?.moduleId}/lessons/${paramsForErrorLog?.lessonId}/comments:`, error);
     return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
 }

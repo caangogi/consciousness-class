@@ -32,8 +32,7 @@ export function Logo({
         width={width}
         height={height}
         className="object-contain"
-        priority // Re-added priority
-        sizes={`${width}px`} // Added sizes prop
+        // priority y sizes eliminadas temporalmente para restaurar visibilidad
       />
     );
   } else {

@@ -15,16 +15,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { auth } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 
-// Esta interfaz puede simplificarse si no se necesitan todos los campos de CourseProperties aquí
 interface CreatorCourseSummary extends Pick<CourseProperties, 'id' | 'nombre' | 'estado' | 'totalEstudiantes' | 'descripcionCorta'> {}
 
-// Placeholder data for stats (actual implementation can be added later)
-const placeholderStats = {
-  totalStudents: 0, // Será calculado o un placeholder
-  totalEarnings: 0.00,
-  avgRating: 0.0,
-  activeCourses: 0,
-};
+interface CreatorStats {
+  totalStudents: number;
+  totalEarnings: number; // Placeholder
+  avgRating: number;     // Placeholder
+  activeCourses: number;
+}
 
 export default function CreatorDashboardPage() {
   const { currentUser } = useAuth();
@@ -32,6 +30,24 @@ export default function CreatorDashboardPage() {
   const [courses, setCourses] = useState<CreatorCourseSummary[]>([]);
   const [isLoadingCourses, setIsLoadingCourses] = useState(true);
   const [coursesError, setCoursesError] = useState<string | null>(null);
+  const [stats, setStats] = useState<CreatorStats>({
+    totalStudents: 0,
+    totalEarnings: 0.00,
+    avgRating: 0.0,
+    activeCourses: 0,
+  });
+
+  const calculateStats = (loadedCourses: CreatorCourseSummary[]): CreatorStats => {
+    const totalStudents = loadedCourses.reduce((sum, course) => sum + (course.totalEstudiantes || 0), 0);
+    const activeCourses = loadedCourses.filter(course => course.estado === 'publicado').length;
+    
+    return {
+      totalStudents,
+      activeCourses,
+      totalEarnings: 0.00, // Placeholder - Real calculation would be backend
+      avgRating: 0.0,      // Placeholder - Real calculation would be backend
+    };
+  };
 
   const fetchCreatorCourses = useCallback(async () => {
     if (!currentUser || !auth.currentUser) {
@@ -54,13 +70,16 @@ export default function CreatorDashboardPage() {
         throw new Error(errorData.details || errorData.error || 'Error al cargar los cursos.');
       }
       const data = await response.json();
-      setCourses((data.courses as CourseProperties[])?.map(c => ({
+      const loadedCourses = (data.courses as CourseProperties[])?.map(c => ({
         id: c.id,
         nombre: c.nombre,
         estado: c.estado,
         totalEstudiantes: c.totalEstudiantes,
         descripcionCorta: c.descripcionCorta,
-      })) || []);
+      })) || [];
+      setCourses(loadedCourses);
+      setStats(calculateStats(loadedCourses));
+
     } catch (err: any) {
       setCoursesError(err.message);
       toast({
@@ -195,8 +214,8 @@ export default function CreatorDashboardPage() {
             <DollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{placeholderStats.totalEarnings.toFixed(2)} €</div>
-            <p className="text-xs text-muted-foreground">Estadísticas (Próximamente).</p>
+            <div className="text-2xl font-bold">{stats.totalEarnings.toFixed(2)} €</div>
+            <p className="text-xs text-muted-foreground">Cálculo detallado (Próximamente).</p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -205,8 +224,8 @@ export default function CreatorDashboardPage() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{placeholderStats.totalStudents}</div>
-            <p className="text-xs text-muted-foreground">En todos tus cursos (Próximamente).</p>
+            {isLoadingCourses ? <Skeleton className="h-7 w-12"/> : <div className="text-2xl font-bold">{stats.totalStudents}</div>}
+            <p className="text-xs text-muted-foreground">Suma de todos tus cursos.</p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -215,8 +234,8 @@ export default function CreatorDashboardPage() {
             <BookOpen className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{courses.filter(c => c.estado === 'publicado').length}</div>
-            <p className="text-xs text-muted-foreground">Cursos publicados actualmente.</p>
+            {isLoadingCourses ? <Skeleton className="h-7 w-8"/> : <div className="text-2xl font-bold">{stats.activeCourses}</div>}
+            <p className="text-xs text-muted-foreground">Cursos actualmente publicados.</p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -225,7 +244,7 @@ export default function CreatorDashboardPage() {
             <Star className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{placeholderStats.avgRating.toFixed(1)}</div>
+            <div className="text-2xl font-bold">{stats.avgRating.toFixed(1)}</div>
             <p className="text-xs text-muted-foreground">De todos tus cursos (Próximamente).</p>
           </CardContent>
         </Card>
@@ -293,4 +312,3 @@ export default function CreatorDashboardPage() {
   );
 }
 
-    

@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import React from 'react';
+import React from 'react'; // Imported React for useState and useEffect
 import { Logo } from '@/components/shared/Logo';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,7 +29,7 @@ const navLinks = [
   { href: '/#faq', label: 'FAQ', icon: HelpCircleIcon, isHashLink: true },
 ];
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebaseapp.com/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
 
 export function Header() {
   const { currentUser, userRole, loading, logout } = useAuth();
@@ -37,6 +37,11 @@ export function Header() {
   const pathname = usePathname();
   const { toast } = useToast();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
+  const [hasMounted, setHasMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
 
   const handleLogout = async () => {
@@ -60,6 +65,7 @@ export function Header() {
   };
 
   const renderAuthSection = () => {
+    // This function is now called only if hasMounted is true
     if (loading) {
       return (
         <div className="flex items-center gap-3">
@@ -71,7 +77,7 @@ export function Header() {
 
     if (currentUser) {
       return (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3"> {/* Ensured consistent class with loading state */}
            <Button variant="outline" size="sm" asChild className="hidden sm:inline-flex">
             <Link href="/dashboard">
               <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
@@ -114,19 +120,35 @@ export function Header() {
       );
     }
 
+    // Logged out state
+    // The error diff indicated this block had "hidden md:flex items-center gap-2"
+    // while loading had "flex items-center gap-3".
+    // To prevent hydration mismatch for the wrapper div, we ensure its classes are consistent with loading.
+    // The "hidden md:flex" logic can be applied internally if needed, or adjusted.
+    // For now, making the wrapper div classes the same as the 'loading' and 'currentUser' states.
     return (
-      <div className="hidden md:flex items-center gap-2">
-        <Button variant="ghost" asChild className="text-foreground/80 hover:text-foreground">
+      <div className="flex items-center gap-3"> {/* Changed class to match other states */}
+        <Button variant="ghost" asChild className="text-foreground/80 hover:text-foreground hidden md:inline-flex"> {/* Added hidden md:inline-flex here */}
           <Link href="/login">Iniciar Sesión</Link>
         </Button>
-        <Button asChild className="rounded-full shadow-sm hover:shadow-md transition-shadow bg-foreground text-background hover:bg-foreground/80">
+        <Button asChild className="rounded-full shadow-sm hover:shadow-md transition-shadow bg-foreground text-background hover:bg-foreground/80 hidden md:inline-flex"> {/* Added hidden md:inline-flex here */}
           <Link href="/signup">Comenzar</Link>
         </Button>
+         {/* Mobile specific login/signup buttons if needed, or handled by sheet menu */}
+        <div className="md:hidden flex items-center gap-2">
+           <Button variant="ghost" size="sm" asChild>
+             <Link href="/login">Login</Link>
+           </Button>
+           <Button size="sm" asChild>
+             <Link href="/signup">Signup</Link>
+           </Button>
+        </div>
       </div>
     );
   };
 
   const renderMobileAuthSection = (closeSheet?: () => void) => {
+    // No hasMounted check here; this is for the sheet which is client-side only interaction
     if (loading) {
       return <Skeleton className="h-10 w-full mt-4" />
     }
@@ -187,7 +209,14 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2 md:gap-4">
-          {renderAuthSection()}
+          {/* Conditional rendering based on hasMounted */}
+          {hasMounted ? renderAuthSection() : (
+            // This skeleton MUST match the structure of the 'loading' state in renderAuthSection
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-9 w-24 rounded-md" />
+              <Skeleton className="h-9 w-9 rounded-full" />
+            </div>
+          )}
 
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
@@ -221,6 +250,7 @@ export function Header() {
                 ))}
               </nav>
               <div className="border-t p-2 mt-auto space-y-1">
+                 {/* For mobile sheet, direct rendering is fine as it's client-interaction driven */}
                  {renderMobileAuthSection(() => setIsSheetOpen(false))}
               </div>
             </SheetContent>

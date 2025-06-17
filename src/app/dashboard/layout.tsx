@@ -9,7 +9,7 @@ import { Menu as MenuIcon, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation'; // Correct import
+import { useRouter, usePathname } from 'next/navigation'; // Correct import
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -22,6 +22,7 @@ const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-clas
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { currentUser, userRole, loading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname(); // Added pathname here
   const { toast } = useToast();
 
   const handleLogout = async () => {
@@ -87,19 +88,28 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" width={120} height={32}/>
              </SheetHeader>
               <nav className="flex flex-col gap-1 px-2 py-2 flex-grow overflow-y-auto">
-                {filteredNavItems.map((item) => (
-                  <Link
-                    key={item.href + item.label} 
-                    href={item.href}
-                    className={cn(
-                        "flex items-center h-10 gap-3 rounded-lg px-3 text-muted-foreground hover:text-foreground transition-colors text-sm",
-                        (router.pathname === item.href || (typeof item.href === 'string' && item.href !== '/dashboard' && router.pathname.startsWith(item.href)) ) && 'bg-primary/10 text-primary font-semibold'
-                    )}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.label}
-                  </Link>
-                ))}
+                {filteredNavItems.map((item) => {
+                  const isActive = typeof pathname === 'string' && typeof item.href === 'string' &&
+                    (pathname === item.href || 
+                     (item.href !== '/dashboard' && 
+                      item.href !== '/dashboard/creator' && 
+                      item.href !== '/dashboard/student' && 
+                      item.href !== '/dashboard/superadmin' && 
+                      pathname.startsWith(item.href)));
+                  return (
+                    <Link
+                      key={item.href + item.label} 
+                      href={item.href}
+                      className={cn(
+                          "flex items-center h-10 gap-3 rounded-lg px-3 text-muted-foreground hover:text-foreground transition-colors text-sm",
+                          isActive && 'bg-primary/10 text-primary font-semibold'
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
               </nav>
               <div className="border-t p-2 mt-auto">
                 <Button variant="ghost" onClick={handleLogout} className="w-full flex items-center h-10 justify-start px-3 text-sm">

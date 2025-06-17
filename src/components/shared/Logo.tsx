@@ -31,9 +31,8 @@ export function Logo({
         alt={altText}
         width={width}
         height={height}
-        priority // Important for LCP
+        // priority // Temporarily removed for hydration debugging
         className="object-contain"
-        // Removed key={imageUrl} as it's not a standard prop and might cause hydration issues
       />
     );
   } else {

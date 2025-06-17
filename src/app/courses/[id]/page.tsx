@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn, ShoppingCart, Repeat, Edit } from 'lucide-react'; // Added Edit
+import { Star, Users, Clock, CheckCircle, PlayCircle, FileText, Download, MessageSquare, Edit3, Loader2, AlertTriangle, LogIn, ShoppingCart, Repeat, Edit, Info } from 'lucide-react'; // Added Info
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
@@ -374,15 +374,28 @@ export default function CourseDetailPage() {
 
   const creatorDisplay = {
     id: course.creadorUid,
-    nombre: `Creator ${course.creadorUid.substring(0, 6)}`,
+    nombre: `Creator ${course.creadorUid.substring(0, 6)}`, // Placeholder, en una app real se buscaría el nombre del creador
     avatarUrl: `https://placehold.co/80x80.png?text=${course.creadorUid.substring(0,2).toUpperCase()}`,
     dataAiHint: "instructor avatar",
-    bio: 'Instructor apasionado con experiencia en la industria.',
+    bio: 'Instructor apasionado con experiencia en la industria.', // Placeholder
   };
 
   const renderActionButton = () => {
     const processing = isProcessingEnrollment || isProcessingPayment;
     const commonButtonClasses = "w-full text-base py-6 rounded-lg shadow-md hover:shadow-lg transition-shadow";
+
+    if (isCreatorOfCourse) {
+      return (
+          <div className="space-y-2">
+            <Button size="lg" className={commonButtonClasses} asChild>
+               <Link href={`/learn/${course.id}/${firstLessonIdIfAny}`}>Ir al Contenido (Vista Estudiante)</Link>
+            </Button>
+             <Button size="sm" variant="outline" className="w-full" asChild>
+               <Link href={`/dashboard/creator/courses/${course.id}`}>Gestionar Curso</Link>
+            </Button>
+          </div>
+        );
+    }
 
     if (!currentUser) {
         return (
@@ -398,19 +411,6 @@ export default function CourseDetailPage() {
             </Button>
         );
     }
-
-    if (isCreatorOfCourse) {
-      return (
-          <div className="space-y-2">
-            <Button size="lg" className={commonButtonClasses} asChild>
-               <Link href={`/learn/${course.id}/${firstLessonIdIfAny}`}>Ir al Contenido (Vista Estudiante)</Link>
-            </Button>
-             <Button size="sm" variant="outline" className="w-full" asChild>
-               <Link href={`/dashboard/creator/courses/${course.id}`}>Gestionar Curso</Link>
-            </Button>
-          </div>
-        );
-    }
     
     if (isUserEnrolled) {
         return (
@@ -419,7 +419,7 @@ export default function CourseDetailPage() {
             </Button>
         );
     }
-    if (isCourseFree) { // Solo para tipoAcceso 'unico'
+    if (isCourseFree) {
         return (
             <Button size="lg" className={commonButtonClasses} onClick={handleFreeEnrollment} disabled={processing}>
                 {processing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5"/>}
@@ -427,7 +427,6 @@ export default function CourseDetailPage() {
             </Button>
         );
     }
-    // Para cursos de pago único o suscripciones
     return (
         <Button size="lg" className={commonButtonClasses} onClick={handlePaidCheckout} disabled={processing}>
              {processing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (isSubscription ? <Repeat className="mr-2 h-5 w-5" /> : <ShoppingCart className="mr-2 h-5 w-5"/>)}
@@ -576,9 +575,12 @@ export default function CourseDetailPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <Button variant="outline" className="mb-6 shadow-sm">
+                <Button variant="outline" className="mb-2 shadow-sm" disabled>
                   <Edit3 className="mr-2 h-4 w-4" /> Escribir una reseña
                 </Button>
+                 <p className="text-xs text-muted-foreground mb-6 flex items-center gap-1">
+                    <Info size={13}/> La funcionalidad para enviar reseñas estará disponible próximamente.
+                 </p>
                 <div className="space-y-6">
                   {placeholderReviews.map(comment => (
                     <div key={comment.id} className="flex gap-4 p-4 border rounded-lg bg-secondary/30 shadow-sm">
@@ -601,8 +603,12 @@ export default function CourseDetailPage() {
                     </div>
                   ))}
                 </div>
-                {placeholderReviews.length > 0 && <Button variant="link" className="mt-6 text-primary px-0">Ver todas las reseñas</Button>}
-                 {placeholderReviews.length === 0 && <p className="text-muted-foreground text-sm py-4">Aún no hay reseñas para este curso. ¡Sé el primero!</p>}
+                {placeholderReviews.length > 0 && 
+                    <Button variant="link" className="mt-6 text-primary px-0" disabled>Ver todas las reseñas (Próximamente)</Button>
+                }
+                 {placeholderReviews.length === 0 && course.totalResenas === 0 && 
+                    <p className="text-muted-foreground text-sm py-4">Aún no hay reseñas para este curso. ¡Sé el primero en cuanto se active la funcionalidad!</p>
+                 }
               </CardContent>
             </Card>
           </motion.div>
@@ -635,7 +641,7 @@ export default function CourseDetailPage() {
                     {course.requisitos.map((material, index) => (
                       <li key={index}>
                         <Button variant="link" asChild className="p-0 h-auto text-primary hover:underline flex items-center text-sm">
-                          <Link href="#" download>
+                          <Link href="#" download> {/* El enlace real de descarga se manejaría dinámicamente */}
                             <Download className="h-4 w-4 mr-2 shrink-0" /> {material} (Ej: Guía PDF)
                           </Link>
                         </Button>

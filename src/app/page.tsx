@@ -618,7 +618,7 @@ export default function HomePage() {
       >
         <div className="container mx-auto px-4 md:px-6 text-center relative">
            <div
-            className="absolute inset-0 flex items-center justify-center -z-10 opacity-10 overflow-hidden pointer-events-none"
+            className="absolute inset-0 flex items-center justify-center -z-10 opacity-20 overflow-hidden pointer-events-none"
             aria-hidden="true"
           >
             <div className="spinning-loader w-[300px] h-[300px] md:w-[450px] md:h-[450px]" data-ai-hint="growth spiral modern"></div>

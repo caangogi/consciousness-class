@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Activity, ArrowRight, BookOpen, BarChartBig, Users, Settings, Gift } from "lucide-react"; 
 
-// Placeholder: In a real app, this would be determined by user's role
-const userRole = 'student'; // 'student', 'creator', 'superadmin'
+
+const userRole = 'student'; 
 
 const roleSpecificLinks = {
   student: [
@@ -18,7 +18,7 @@ const roleSpecificLinks = {
   ],
   superadmin: [
     { title: "Gestión de Usuarios", description: "Administra todos los usuarios de la plataforma.", href: "/dashboard/superadmin/user-management", icon: Users },
-    { title: "Configuración Global", description: "Ajusta los parámetros generales de consciousness-class.", href: "/dashboard/superadmin/settings", icon: Settings },
+    { title: "Configuración Global", description: "Ajusta los parámetros generales de Consciousness Class.", href: "/dashboard/superadmin/settings", icon: Settings },
   ],
 };
 
@@ -30,7 +30,7 @@ export default function DashboardPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-headline">Bienvenido a tu Dashboard</CardTitle>
-          <CardDescription>Aquí puedes gestionar tu actividad en consciousness-class.</CardDescription>
+          <CardDescription>Aquí puedes gestionar tu actividad en Consciousness Class.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
@@ -47,7 +47,7 @@ export default function DashboardPage() {
             <BookOpen className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div> {/* Placeholder */}
+            <div className="text-2xl font-bold">5</div> 
             <p className="text-xs text-muted-foreground">Cursos en los que estás inscrito o gestionando.</p>
           </CardContent>
         </Card>
@@ -58,7 +58,7 @@ export default function DashboardPage() {
             <Activity className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+12</div> {/* Placeholder */}
+            <div className="text-2xl font-bold">+12</div> 
             <p className="text-xs text-muted-foreground">Nuevas lecciones o comentarios esta semana.</p>
           </CardContent>
         </Card>
@@ -67,10 +67,10 @@ export default function DashboardPage() {
           <Card className="shadow-md hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Recompensas de Referidos</CardTitle>
-              <Gift className="h-5 w-5 text-muted-foreground" /> {/* Changed icon to Gift */}
+              <Gift className="h-5 w-5 text-muted-foreground" /> 
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$25.00</div> {/* Placeholder */}
+              <div className="text-2xl font-bold">$25.00</div> 
               <p className="text-xs text-muted-foreground">Crédito disponible por referidos.</p>
             </CardContent>
           </Card>
@@ -100,3 +100,4 @@ export default function DashboardPage() {
   );
 }
 
+    

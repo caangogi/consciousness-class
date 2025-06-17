@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function PrivacyPage() {
@@ -12,7 +13,7 @@ export default function PrivacyPage() {
 
           <h2>1. Introducción</h2>
           <p>
-            consciousness-class ("nosotros", "nuestro", "Plataforma") se compromete a proteger su privacidad. Esta Política de
+            Consciousness Class ("nosotros", "nuestro", "Plataforma") se compromete a proteger su privacidad. Esta Política de
             Privacidad explica cómo recopilamos, usamos, divulgamos y salvaguardamos su información cuando visita
             nuestra plataforma. Lea esta política de privacidad detenidamente. Si no está de acuerdo con los términos de
             esta política de privacidad, no acceda a la plataforma.
@@ -122,7 +123,7 @@ export default function PrivacyPage() {
           <p>
             Si tiene preguntas o comentarios sobre esta Política de Privacidad, contáctenos en:
             <br />
-            consciousness-class
+            Consciousness Class
             <br />
             <a href="mailto:privacy@consciousness-class.com" className="text-primary hover:underline">privacy@consciousness-class.com</a>
           </p>
@@ -131,3 +132,5 @@ export default function PrivacyPage() {
     </div>
   );
 }
+
+    

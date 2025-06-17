@@ -102,7 +102,7 @@ const creatorBenefitsDetailed = [
     dataAiHint: "easy tools icon"
   },
   {
-    icon: UsersIcon, // Reusing icon
+    icon: UsersIcon, 
     title: "Comunidad y Soporte",
     description: "Únete a una red de instructores, comparte experiencias, recibe apoyo continuo y accede a recursos exclusivos.",
     dataAiHint: "creator community icon"
@@ -112,8 +112,8 @@ const creatorBenefitsDetailed = [
 const faqItems = [
   {
     id: "faq1",
-    question: "¿Qué es MentorBloom?",
-    answer: "MentorBloom es una plataforma de aprendizaje online donde puedes encontrar una amplia variedad de cursos para desarrollar nuevas habilidades y avanzar en tu carrera. También ofrecemos a los expertos la posibilidad de crear y vender sus propios cursos."
+    question: "¿Qué es Consciousness Class?",
+    answer: "Consciousness Class es una plataforma de aprendizaje online donde puedes encontrar una amplia variedad de cursos para desarrollar nuevas habilidades y avanzar en tu carrera. También ofrecemos a los expertos la posibilidad de crear y vender sus propios cursos."
   },
   {
     id: "faq2",
@@ -122,7 +122,7 @@ const faqItems = [
   },
   {
     id: "faq3",
-    question: "¿Puedo ser instructor en MentorBloom?",
+    question: "¿Puedo ser instructor en Consciousness Class?",
     answer: "¡Sí! Si tienes conocimientos para compartir, te invitamos a convertirte en Creator. Ofrecemos herramientas para crear tu curso, definir precios, comisiones por referido y gestionar tus estudiantes."
   },
   {
@@ -140,7 +140,7 @@ const testimonials = [
     role: 'Desarrolladora Web',
     avatarUrl: 'https://placehold.co/80x80.png',
     dataAiHint: 'woman portrait',
-    quote: "MentorBloom me ayudó a actualizar mis habilidades en React de una forma muy práctica. ¡Los cursos son de alta calidad!"
+    quote: "Consciousness Class me ayudó a actualizar mis habilidades en React de una forma muy práctica. ¡Los cursos son de alta calidad!"
   },
   {
     id: 't2',
@@ -226,7 +226,7 @@ export default function HomePage() {
             className="inline-flex items-center gap-2 bg-secondary/70 text-secondary-foreground px-4 py-2 rounded-full text-sm mb-6 shadow-sm"
             variants={itemVariants}
           >
-            <User size={16} className="text-primary"/> MentorBloom Platform
+            <User size={16} className="text-primary"/> Consciousness Class Platform
           </motion.div>
           <motion.h1
             className="font-headline text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-8 text-foreground leading-tight"
@@ -424,10 +424,10 @@ export default function HomePage() {
               >
                 <Zap size={48} className="mx-auto text-primary mb-6" />
                 <h2 className="font-headline text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground">
-                  Transforma Tu Pasión en Ingresos como Creator en MentorBloom
+                  Transforma Tu Pasión en Ingresos como Creator en Consciousness Class
                 </h2>
                 <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-                  ¿Eres experto en un tema? ¿Te apasiona enseñar? MentorBloom te da las herramientas y la plataforma
+                  ¿Eres experto en un tema? ¿Te apasiona enseñar? Consciousness Class te da las herramientas y la plataforma
                   para crear cursos online impactantes, conectar con estudiantes y monetizar tu conocimiento.
                 </p>
               </motion.div>
@@ -481,7 +481,7 @@ export default function HomePage() {
             className="font-headline text-3xl md:text-4xl font-bold text-center mb-4"
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
-            Descubre lo que <span className="text-primary">MentorBloom</span> Te Ofrece
+            Descubre lo que <span className="text-primary">Consciousness Class</span> Te Ofrece
           </motion.h2>
           <motion.p
             className="text-center text-lg text-muted-foreground max-w-xl mx-auto mb-16"
@@ -529,7 +529,7 @@ export default function HomePage() {
             className="text-center text-lg text-muted-foreground max-w-xl mx-auto mb-16"
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
-            Experiencias reales de personas que están transformando sus vidas con MentorBloom.
+            Experiencias reales de personas que están transformando sus vidas con Consciousness Class.
           </motion.p>
           <motion.div
             className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto"
@@ -582,7 +582,7 @@ export default function HomePage() {
             className="text-center text-lg text-muted-foreground max-w-xl mx-auto mb-12"
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
-            Encuentra respuestas rápidas a las dudas más comunes sobre MentorBloom.
+            Encuentra respuestas rápidas a las dudas más comunes sobre Consciousness Class.
           </motion.p>
           <motion.div
             className="max-w-3xl mx-auto"
@@ -650,7 +650,7 @@ export default function HomePage() {
             className="text-lg md:text-xl max-w-xl mx-auto mb-10 opacity-90"
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
-            Únete a miles de estudiantes y creators que están alcanzando sus metas con MentorBloom.
+            Únete a miles de estudiantes y creators que están alcanzando sus metas con Consciousness Class.
           </motion.p>
           <motion.div
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
@@ -672,3 +672,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    

@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import { Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
 
@@ -8,7 +9,7 @@ export function Footer() {
       <div className="container py-12 px-4 md:px-6">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <h3 className="text-lg font-headline font-semibold mb-4">consciousness-class</h3>
+            <h3 className="text-lg font-headline font-semibold mb-4">Consciousness Class</h3>
             <p className="text-sm text-muted-foreground">Potenciando tu aprendizaje y crecimiento.</p>
           </div>
           <div>
@@ -17,7 +18,6 @@ export function Footer() {
               <li><Link href="/courses" className="text-muted-foreground hover:text-primary">Cursos</Link></li>
               <li><Link href="/#pricing" className="text-muted-foreground hover:text-primary">Precios</Link></li>
               <li><Link href="/#faq" className="text-muted-foreground hover:text-primary">FAQ</Link></li>
-              <li><Link href="/blog" className="text-muted-foreground hover:text-primary">Blog</Link></li>
             </ul>
           </div>
           <div>
@@ -38,9 +38,11 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
-          &copy; {currentYear} consciousness-class. Todos los derechos reservados.
+          &copy; {currentYear} Consciousness Class. Todos los derechos reservados.
         </div>
       </div>
     </footer>
   );
 }
+
+    

@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +38,7 @@ const blogPost = {
   dataAiHint: "online education",
   date: "15 de Julio, 2024",
   author: {
-    name: "Equipo consciousness-class",
+    name: "Equipo Consciousness Class",
     avatarUrl: "https://placehold.co/80x80.png",
     dataAiHint: "team avatar"
   },
@@ -149,3 +150,5 @@ export default function BlogPostPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    

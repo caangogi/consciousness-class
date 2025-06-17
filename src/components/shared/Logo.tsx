@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { GraduationCap } from 'lucide-react';
@@ -5,7 +6,7 @@ import { GraduationCap } from 'lucide-react';
 interface LogoProps {
   imageUrl?: string;
   altText?: string;
-  useIconOnly?: boolean; // Kept for potential future use, but image will take precedence
+  useIconOnly?: boolean; 
   className?: string;
   onClick?: () => void;
   width?: number;
@@ -14,12 +15,12 @@ interface LogoProps {
 
 export function Logo({
   imageUrl,
-  altText = "MentorBloom Logo",
+  altText = "Consciousness Class Logo",
   useIconOnly = false,
   className,
   onClick,
-  width = 150, // Default width for the image logo
-  height = 40, // Default height for the image logo
+  width = 150, 
+  height = 40, 
 }: LogoProps) {
   let content;
 
@@ -30,21 +31,21 @@ export function Logo({
         alt={altText}
         width={width}
         height={height}
-        priority // Prioritize loading the logo
-        className="object-contain" // Ensure the logo scales correctly
+        priority 
+        className="object-contain" 
       />
     );
   } else {
     content = (
       <>
         <GraduationCap className="h-7 w-7 md:h-8 md:w-8" />
-        {!useIconOnly && <span className="ml-2 text-xl md:text-2xl font-bold font-headline">MentorBloom</span>}
+        {!useIconOnly && <span className="ml-2 text-xl md:text-2xl font-bold font-headline">Consciousness Class</span>}
       </>
     );
   }
 
   const commonClasses = `flex items-center text-primary font-headline ${className || ''}`;
-  const ariaLabel = imageUrl ? altText : "MentorBloom Home";
+  const ariaLabel = imageUrl ? altText : "Consciousness Class Home";
 
   if (onClick) {
     return (
@@ -64,3 +65,5 @@ export function Logo({
     </Link>
   );
 }
+
+    

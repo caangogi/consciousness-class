@@ -2,10 +2,10 @@
 'use client';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
-import { DashboardSidebar, navItems } from '@/components/dashboard/DashboardSidebar'; // Import navItems
+import { DashboardSidebar, navItems } from '@/components/dashboard/DashboardSidebar'; 
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from '@/components/ui/sheet'; // Added SheetHeader
-import { Menu as MenuIcon, LogOut } from 'lucide-react'; // Removed unused icons
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from '@/components/ui/sheet'; 
+import { Menu as MenuIcon, LogOut } from 'lucide-react'; 
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,8 +14,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-// NavItem type is implicitly available via navItems import if DashboardSidebar exports it,
-// or defined locally if needed. For now, assume navItems from DashboardSidebar is sufficient.
 
 const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
 
@@ -36,7 +34,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   };
   
-  // Use the imported navItems and filter based on userRole
+  
   const filteredNavItems = userRole ? navItems.filter(item => item.roles.includes(userRole)) : [];
 
   const getInitials = (name?: string | null) => {
@@ -58,7 +56,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return (
        <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-2">
-          <Logo imageUrl={LOGO_URL} altText="MentorBloom Logo" />
+          <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" />
           <p className="text-muted-foreground">Cargando dashboard...</p>
           <div className="mt-4 w-64">
             <Skeleton className="h-4 w-full mb-2" />
@@ -82,7 +80,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="sm:max-w-xs flex flex-col">
-             <SheetHeader className="sr-only"> {/* Oculto visualmente */}
+             <SheetHeader className="sr-only"> 
                 <SheetTitle>Navegación del Dashboard</SheetTitle>
                 <SheetDescription>Enlaces y opciones del panel de control.</SheetDescription>
              </SheetHeader>
@@ -91,7 +89,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} />
                     <AvatarFallback>{getInitials(currentUser.displayName)}</AvatarFallback>
                 </Avatar>
-                 <div className="overflow-hidden"> {/* Added overflow-hidden */}
+                 <div className="overflow-hidden"> 
                     <p className="font-medium text-sm truncate">{currentUser.displayName || currentUser.email}</p>
                     <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
                 </div>
@@ -99,7 +97,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <nav className="grid gap-3 text-base font-medium flex-grow overflow-y-auto">
                 {filteredNavItems.map((item) => (
                   <Link
-                    key={item.href + item.label} // Ensure key is unique
+                    key={item.href + item.label} 
                     href={item.href}
                     className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
                   >
@@ -115,7 +113,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </SheetContent>
           </Sheet>
            <div className="md:hidden">
-             <Logo imageUrl={LOGO_URL} altText="MentorBloom Logo" />
+             <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" />
            </div>
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8 bg-background overflow-auto">
@@ -126,7 +124,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   );
 }
 
-// AwardIcon can remain here or be moved to a shared icons file if used elsewhere.
+
 function AwardIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -146,3 +144,5 @@ function AwardIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+    

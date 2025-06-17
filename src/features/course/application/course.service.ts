@@ -20,7 +20,7 @@ export class CourseService {
       if (!currentStripeProductId) {
         try {
           const product = await stripe.products.create({
-            name: `MentorBloom Course: ${course.nombre}`,
+            name: `Consciousness Class Course: ${course.nombre}`,
             metadata: { platform_course_id: course.id },
           });
           currentStripeProductId = product.id;

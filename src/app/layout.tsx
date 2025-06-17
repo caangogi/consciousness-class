@@ -1,7 +1,7 @@
 
-'use client'; // Convertir a Client Component para usar useEffect
+'use client'; 
 
-import type { Metadata } from 'next'; // Metadata sigue siendo útil para SSR inicial
+import type { Metadata } from 'next'; 
 import './globals.css';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Toaster } from "@/components/ui/toaster";
@@ -9,11 +9,6 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { useEffect }  from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 
-// Metadata puede definirse aquí o moverse a un componente Server Component padre si es necesario
-// export const metadata: Metadata = { // Esto ya no es válido en un Client Component raíz
-//   title: 'MentorBloom',
-//   description: 'Plataforma de Membresías y Cursos Online',
-// };
 
 export default function RootLayout({
   children,
@@ -26,9 +21,7 @@ export default function RootLayout({
   useEffect(() => {
     const referralCodeFromUrl = searchParams.get('ref');
     if (referralCodeFromUrl) {
-      // Validar formato básico del código si es necesario antes de guardarlo
-      // Por ejemplo, longitud o caracteres permitidos.
-      // Para el MVP, una validación simple:
+      
       if (referralCodeFromUrl.length > 3 && referralCodeFromUrl.length < 50 && /^[a-zA-Z0-9-_]+$/.test(referralCodeFromUrl)) {
         try {
           localStorage.setItem('referral_code', referralCodeFromUrl);
@@ -40,13 +33,13 @@ export default function RootLayout({
         console.warn(`[RootLayout] Invalid referral code format in URL: "${referralCodeFromUrl}". Not saving.`);
       }
     }
-  }, [searchParams, pathname]); // Re-run if searchParams or pathname changes
+  }, [searchParams, pathname]); 
 
   return (
     <html lang="es">
       <head>
-        {/* Metadata estática puede ir aquí si no se genera dinámicamente */}
-        <title>MentorBloom</title>
+        
+        <title>Consciousness Class</title>
         <meta name="description" content="Plataforma de Membresías y Cursos Online" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -61,3 +54,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    

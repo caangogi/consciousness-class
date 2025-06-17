@@ -170,7 +170,7 @@ export default function SignupPage() {
             <UserPlus className="h-10 w-10 text-primary" />
           </div>
           <CardTitle className="text-3xl font-headline">Crea tu Cuenta</CardTitle>
-          <CardDescription>Únete a MentorBloom y comienza tu viaje de aprendizaje.</CardDescription>
+          <CardDescription>Únete a Consciousness Class y comienza tu viaje de aprendizaje.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -278,4 +278,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
     

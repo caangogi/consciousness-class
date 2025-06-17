@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { BookOpen, LayoutDashboard, LogOut, UserCircle, Menu as MenuIcon, Briefcase, MessageCircleQuestion } from 'lucide-react';
+import { BookOpen, LayoutDashboard, LogOut, UserCircle, Menu as MenuIcon, Briefcase, MessageCircleQuestion, Home, HelpCircleIcon, DollarSignIcon } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,10 +24,9 @@ import { cn } from '@/lib/utils';
 
 
 const navLinks = [
-  { href: '/courses', label: 'Cursos', isHashLink: false },
-  { href: '/#pricing', label: 'Precios', isHashLink: true },
-  { href: '/#faq', label: 'FAQ', isHashLink: true },
-  // { href: '/blog', label: 'Blog', isHashLink: false }, // Blog link removed
+  { href: '/courses', label: 'Cursos', icon: BookOpen, isHashLink: false },
+  { href: '/#pricing', label: 'Precios', icon: DollarSignIcon, isHashLink: true },
+  { href: '/#faq', label: 'FAQ', icon: HelpCircleIcon, isHashLink: true },
 ];
 
 const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
@@ -50,7 +49,7 @@ export function Header() {
   };
 
   const getInitials = (name?: string | null) => {
-    if (!name) return 'MB';
+    if (!name) return 'CC'; // Updated fallback initials
     const names = name.split(' ');
     if (names.length > 1) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
@@ -136,26 +135,35 @@ export function Header() {
     if (currentUser) {
       return (
         <>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} className="w-full justify-start">Dashboard</Button>
-          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} className="w-full justify-start">Mi Perfil</Button>
-          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard')} className="w-full justify-start py-2.5 text-base">Dashboard</Button>
+          <Button variant="ghost" onClick={() => handleLinkClick('/dashboard/student')} className="w-full justify-start py-2.5 text-base">Mi Perfil</Button>
+          <Button variant="ghost" onClick={() => { handleLogout(); if (closeSheet) closeSheet(); }} className="w-full justify-start py-2.5 text-base text-destructive hover:text-destructive hover:bg-destructive/10">Cerrar Sesión</Button>
         </>
       );
     }
     return (
       <>
-        <Button variant="ghost" onClick={() => handleLinkClick('/login')} className="w-full justify-start">Iniciar Sesión</Button>
-        <Button onClick={() => handleLinkClick('/signup')} className="w-full">Comenzar</Button>
+        <Button variant="ghost" onClick={() => handleLinkClick('/login')} className="w-full justify-start py-2.5 text-base">Iniciar Sesión</Button>
+        <Button onClick={() => handleLinkClick('/signup')} className="w-full py-2.5 text-base">Comenzar</Button>
       </>
     );
   }
 
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
 
+  const isLinkActive = (href: string, isHash: boolean) => {
+    if (isHash) {
+      // For hash links, consider active if it's the homepage and potentially check hash later if needed
+      // For simplicity, let's assume if on homepage, hash links are contextually "active"
+      return pathname === '/'; 
+    }
+    return pathname === href;
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-[72px] items-center justify-between">
-        <Logo imageUrl={LOGO_URL} altText="MentorBloom Logo" />
+        <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" />
 
         <nav className="hidden md:flex items-center gap-1 bg-secondary/50 px-2 py-1.5 rounded-full shadow-sm">
           {navLinks.map((link) => (
@@ -166,7 +174,7 @@ export function Header() {
               asChild
               className={cn(
                 "rounded-full px-4 py-1.5 text-sm",
-                (pathname === '/' && link.isHashLink) || pathname === link.href ? "bg-background text-primary shadow-sm" : "text-foreground/70 hover:text-foreground hover:bg-background/70"
+                isLinkActive(link.href, link.isHashLink) ? "bg-background text-primary shadow-sm" : "text-foreground/70 hover:text-foreground hover:bg-background/70"
               )}
             >
               <Link href={link.href}>{link.label}</Link>
@@ -184,28 +192,29 @@ export function Header() {
                 <span className="sr-only">Abrir menú</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] flex flex-col">
-              <SheetHeader className="sr-only"> {/* Oculto visualmente para accesibilidad */}
-                <SheetTitle>Navegación Principal</SheetTitle>
-                <SheetDescription>Enlaces principales y opciones de autenticación.</SheetDescription>
+            <SheetContent side="left" className="w-[280px] flex flex-col p-0"> {/* Removed p-6 from here */}
+              <SheetHeader className="border-b p-4"> {/* Added padding to header */}
+                <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
+                <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
+                 <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)}/>
               </SheetHeader>
-              <div className="mb-6 border-b pb-4">
-                 <Logo imageUrl={LOGO_URL} altText="MentorBloom Logo" onClick={() => setIsSheetOpen(false)}/>
-              </div>
-              <nav className="grid gap-3 text-base font-medium flex-grow">
+              <nav className="grid gap-1 p-4 flex-grow"> {/* Reduced gap, added padding to nav */}
                 {navLinks.map((link) => (
                   <Button
                     key={link.label}
-                    variant={(pathname === '/' && link.isHashLink) || pathname === link.href ? "secondary" : "ghost"}
+                    variant={isLinkActive(link.href, link.isHashLink) ? "secondary" : "ghost"}
                     asChild
-                    className="justify-start text-md"
+                    className="justify-start text-base h-auto py-2.5 px-3 rounded-md" // Adjusted padding & height
                     onClick={() => setIsSheetOpen(false)}
                   >
-                    <Link href={link.href}>{link.label}</Link>
+                    <Link href={link.href} className="flex items-center gap-3">
+                       <link.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary"/>
+                      {link.label}
+                    </Link>
                   </Button>
                 ))}
               </nav>
-              <div className="mt-auto border-t pt-4 space-y-3">
+              <div className="border-t p-4 space-y-2"> {/* Reduced spacing */}
                  {renderMobileAuthSection(() => setIsSheetOpen(false))}
               </div>
             </SheetContent>
@@ -215,3 +224,5 @@ export function Header() {
     </header>
   );
 }
+
+    

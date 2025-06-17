@@ -9,7 +9,7 @@ import { Menu as MenuIcon, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, usePathname } from 'next/navigation'; // Correct import
+import { useRouter, usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -22,7 +22,7 @@ const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-clas
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { currentUser, userRole, loading, logout } = useAuth();
   const router = useRouter();
-  const pathname = usePathname(); // Added pathname here
+  const pathname = usePathname();
   const { toast } = useToast();
 
   const handleLogout = async () => {

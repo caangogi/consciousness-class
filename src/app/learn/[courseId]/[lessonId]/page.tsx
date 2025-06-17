@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CheckCircle, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, PlayCircle, Info, HelpCircle, Loader2, AlertTriangle, Menu } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Download, FileText, MessageSquare, PlayCircle, Info, HelpCircle, Loader2, AlertTriangle, Menu, Send } from 'lucide-react'; // Added Send
 import { Progress } from '@/components/ui/progress';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
@@ -22,6 +22,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { auth } from '@/lib/firebase/config';
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
@@ -31,6 +33,16 @@ interface CourseStructureData {
   course: CourseProperties;
   modules: ModuleWithLessons[];
 }
+
+interface QuestionAnswerItem {
+  id: string;
+  userId: string;
+  userDisplayName: string;
+  userPhotoURL: string | null;
+  texto: string;
+  createdAt: Date; // Firestore Timestamp o Date para el cliente
+}
+
 
 export default function LessonPage() {
   const params = useParams<{ courseId: string; lessonId: string }>();
@@ -53,6 +65,12 @@ export default function LessonPage() {
   const [isInitialCourseLoad, setIsInitialCourseLoad] = useState(true);
   const [isLoadingLessonContent, setIsLoadingLessonContent] = useState(false);
   const [courseLoadError, setCourseLoadError] = useState<string | null>(null);
+
+  // State for Q&A
+  const [questionsList, setQuestionsList] = useState<QuestionAnswerItem[]>([]);
+  const [newQuestionText, setNewQuestionText] = useState('');
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+  const [isPostingQuestion, setIsPostingQuestion] = useState(false);
 
   const getFlatLessons = useCallback((structure: CourseStructureData | null): LessonProperties[] => {
     if (!structure) return [];
@@ -102,6 +120,31 @@ export default function LessonPage() {
     }
   }, [currentUser, toast]);
 
+  const fetchQuestions = useCallback(async () => {
+    if (!params.courseId || !currentModule?.id || !currentLesson?.id) return;
+    setIsLoadingQuestions(true);
+    try {
+      const response = await fetch(`/api/courses/${params.courseId}/modules/${currentModule.id}/lessons/${currentLesson.id}/comments`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Error al cargar preguntas.');
+      }
+      const data = await response.json();
+      setQuestionsList(data.comments.map((q: any) => ({...q, createdAt: new Date(q.createdAt)})));
+    } catch (err: any) {
+      toast({ title: 'Error al Cargar Preguntas', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsLoadingQuestions(false);
+    }
+  }, [params.courseId, currentModule?.id, currentLesson?.id, toast]);
+
+  useEffect(() => {
+    if (currentLesson?.id) { // Fetch questions when current lesson is set
+      fetchQuestions();
+    }
+  }, [currentLesson?.id, fetchQuestions]);
+
+
   useEffect(() => {
     if (params.courseId) {
       console.log(`[LessonPage] Course ID changed or initial load: ${params.courseId}. Setting isInitialCourseLoad to true.`);
@@ -110,6 +153,7 @@ export default function LessonPage() {
       setCourseStructure(null);    
       setCurrentLesson(null);      
       setCompletedLessons(new Set());
+      setQuestionsList([]); // Reset questions list
 
       fetchCourseStructureData(params.courseId);
       if (currentUser) {
@@ -141,23 +185,23 @@ export default function LessonPage() {
 
     const flatLessonsArray = getFlatLessons(courseStructure);
     let foundCurrentModule: ModuleWithLessons | null = null;
-    let foundCurrentLesson: LessonProperties | null = null;
+    let foundCurrentLessonProp: LessonProperties | null = null;
 
     for (const moduleItem of courseStructure.modules) {
       const lesson = moduleItem.lessons.find(l => l.id === params.lessonId);
       if (lesson) {
-        foundCurrentLesson = lesson;
+        foundCurrentLessonProp = lesson;
         foundCurrentModule = moduleItem;
         break; 
       }
     }
     
     setCurrentModule(foundCurrentModule);
-    setCurrentLesson(foundCurrentLesson);
+    setCurrentLesson(foundCurrentLessonProp);
 
-    if (foundCurrentLesson) {
-      console.log(`[LessonPage] Current lesson set for ${params.lessonId}: ${foundCurrentLesson.nombre}`);
-      const currentIndex = flatLessonsArray.findIndex(l => l.id === foundCurrentLesson.id);
+    if (foundCurrentLessonProp) {
+      console.log(`[LessonPage] Current lesson set for ${params.lessonId}: ${foundCurrentLessonProp.nombre}`);
+      const currentIndex = flatLessonsArray.findIndex(l => l.id === foundCurrentLessonProp!.id);
       setPrevLesson(currentIndex > 0 ? flatLessonsArray[currentIndex - 1] : null);
       setNextLesson(currentIndex < flatLessonsArray.length - 1 ? flatLessonsArray[currentIndex + 1] : null);
     } else {
@@ -200,10 +244,10 @@ export default function LessonPage() {
       const updatedProgressData = await response.json();
       setCompletedLessons(prev => {
         const newSet = new Set(prev);
-        if (updatedProgressData.lessonIdsCompletadas.includes(currentLesson.id)) {
-            newSet.add(currentLesson.id);
+        if (updatedProgressData.lessonIdsCompletadas.includes(currentLesson!.id)) {
+            newSet.add(currentLesson!.id);
         } else {
-            newSet.delete(currentLesson.id);
+            newSet.delete(currentLesson!.id);
         }
         return newSet;
       });
@@ -218,6 +262,39 @@ export default function LessonPage() {
       console.error("Error toggling lesson completion:", err);
     } finally {
       setIsTogglingCompletion(false);
+    }
+  };
+
+  const handlePostQuestion = async () => {
+    if (!currentUser || !currentLesson || !currentModule || newQuestionText.trim() === '') return;
+    setIsPostingQuestion(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken(true);
+      if (!idToken) throw new Error("Token de autenticación no disponible.");
+
+      const response = await fetch(`/api/courses/${params.courseId}/modules/${currentModule.id}/lessons/${currentLesson.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ texto: newQuestionText }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Error al publicar la pregunta.');
+      }
+      
+      const { comment: postedComment } = await response.json();
+      setQuestionsList(prev => [...prev, {...postedComment, createdAt: new Date(postedComment.createdAt)}]);
+      setNewQuestionText('');
+      toast({ title: "Pregunta Publicada", description: "Tu pregunta ha sido enviada." });
+
+    } catch (err: any) {
+      toast({ title: "Error al Publicar", description: err.message, variant: "destructive" });
+    } finally {
+      setIsPostingQuestion(false);
     }
   };
   
@@ -433,16 +510,74 @@ export default function LessonPage() {
             </div>
 
             <Tabs defaultValue="description" className="mt-8">
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4 bg-card shadow-sm">
+              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-3 mb-4 bg-card shadow-sm">
                 <TabsTrigger value="description" className="text-xs sm:text-sm"><Info className="h-4 w-4 mr-1 md:mr-2" />Descrip.</TabsTrigger>
                 <TabsTrigger value="materials" className="text-xs sm:text-sm"><Download className="h-4 w-4 mr-1 md:mr-2" />Materiales</TabsTrigger>
-                <TabsTrigger value="q&a" className="text-xs sm:text-sm"><HelpCircle className="h-4 w-4 mr-1 md:mr-2" />Preguntas</TabsTrigger>
-                <TabsTrigger value="comments" className="text-xs sm:text-sm"><MessageSquare className="h-4 w-4 mr-1 md:mr-2" />Comentarios</TabsTrigger>
+                <TabsTrigger value="q&a" className="text-xs sm:text-sm"><HelpCircle className="h-4 w-4 mr-1 md:mr-2" />Preguntas y Respuestas</TabsTrigger>
               </TabsList>
               <TabsContent value="description"><Card><CardContent className="p-4 md:p-6 text-sm text-foreground/80"><p>{currentLesson?.descripcionBreve || "Descripción no disponible."}</p></CardContent></Card></TabsContent>
               <TabsContent value="materials"><Card><CardContent className="p-4 md:p-6 text-sm text-muted-foreground">No hay materiales adicionales para esta lección.</CardContent></Card></TabsContent>
-              <TabsContent value="q&a"><Card><CardHeader className="pb-4"><CardTitle className="text-lg">Preguntas</CardTitle></CardHeader><CardContent className="p-4 md:p-6"><Textarea placeholder="Escribe tu pregunta..." className="mb-3 text-sm" /><Button size="sm">Enviar</Button></CardContent></Card></TabsContent>
-              <TabsContent value="comments"><Card><CardHeader className="pb-4"><CardTitle className="text-lg">Comentarios</CardTitle></CardHeader><CardContent className="p-4 md:p-6"><Textarea placeholder="Escribe tu comentario..." className="mb-3 text-sm" /><Button size="sm">Publicar</Button></CardContent></Card></TabsContent>
+              <TabsContent value="q&a">
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg font-headline">Preguntas y Respuestas</CardTitle>
+                    <CardDescription>Haz preguntas sobre esta lección o ayuda a otros estudiantes.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 md:p-6">
+                    <div className="mb-6">
+                      <Textarea 
+                        placeholder="Escribe tu pregunta aquí..." 
+                        className="mb-2 text-sm" 
+                        value={newQuestionText}
+                        onChange={(e) => setNewQuestionText(e.target.value)}
+                        rows={3}
+                        disabled={isPostingQuestion || !currentUser}
+                      />
+                      <Button 
+                        size="sm" 
+                        onClick={handlePostQuestion}
+                        disabled={isPostingQuestion || !newQuestionText.trim() || !currentUser}
+                      >
+                        {isPostingQuestion ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        Publicar Pregunta
+                      </Button>
+                      {!currentUser && <p className="text-xs text-muted-foreground mt-1">Debes <Link href={`/login?redirect=${pathname}`} className="text-primary underline">iniciar sesión</Link> para preguntar.</p>}
+                    </div>
+                    {isLoadingQuestions ? (
+                      <div className="flex items-center justify-center py-6"><Loader2 className="mr-2 h-5 w-5 animate-spin"/> Cargando preguntas...</div>
+                    ) : questionsList.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">Sé el primero en hacer una pregunta sobre esta lección.</p>
+                    ) : (
+                      <div className="space-y-6">
+                        {questionsList.map((q) => (
+                          <Card key={q.id} className="shadow-sm">
+                            <CardContent className="p-4 flex gap-3">
+                              <Avatar className="h-10 w-10 mt-1">
+                                <AvatarImage src={q.userPhotoURL || `https://placehold.co/40x40.png?text=${q.userDisplayName.substring(0,1)}`} alt={q.userDisplayName} data-ai-hint="user avatar q&a" />
+                                <AvatarFallback>{q.userDisplayName.substring(0,1)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-sm">{q.userDisplayName}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatDistanceToNow(q.createdAt, { addSuffix: true, locale: es })}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-foreground/80 mt-0.5 whitespace-pre-wrap">{q.texto}</p>
+                                {/* Placeholder para respuestas - Futura mejora
+                                {currentUser?.uid === courseStructure?.course.creadorUid && (
+                                  <Button variant="link" size="sm" className="p-0 h-auto text-xs mt-1">Responder</Button>
+                                )}
+                                */}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
         </ScrollArea>

@@ -621,7 +621,7 @@ export default function HomePage() {
             className="absolute -top-16 left-1/2 -translate-x-1/2  w-32 h-32 md:w-40 md:h-40 opacity-20"
             animate={{ rotate: 360, transition: { duration: 20, repeat: Infinity, ease: "linear" } }}
           >
-            <Image src="https://placehold.co/200x200.png" alt="Decorative element" width={160} height={160} data-ai-hint="learning spiral" />
+            <Image src="https://placehold.co/200x200.png" alt="Decorative element" width={160} height={160} data-ai-hint="growth spiral modern" />
           </motion.div>
           <motion.h2
             className="font-headline text-3xl md:text-5xl font-bold mb-6"
@@ -645,7 +645,7 @@ export default function HomePage() {
               </Button>
             </motion.div>
             <motion.div variants={itemVariants}>
-              <Button size="lg" variant="outline" asChild className="rounded-full px-8 py-6 text-base border-2 border-primary-foreground text-primary-foreground bg-transparent hover:bg-primary-foreground hover:text-primary shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105">
+              <Button size="lg" variant="outline" asChild className="bg-transparent rounded-full px-8 py-6 text-base border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105">
                 <Link href="/courses">Explorar Cursos</Link>
               </Button>
             </motion.div>

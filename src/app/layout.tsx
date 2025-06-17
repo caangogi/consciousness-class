@@ -6,7 +6,7 @@ import './globals.css';
 import { AppLayout } from '@/components/layout/AppLayout'; // This contains Header and Footer
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
-import React, { useEffect, Suspense } from 'react'; // Added React and Suspense
+import React, { useEffect, Suspense } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 
 // Fallback component for Suspense
@@ -38,13 +38,8 @@ function RootLayoutFallback() {
   );
 }
 
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  // These hooks make RootLayout a Client Component and dynamic
+// New component to handle URL parameters and their effects
+function UrlParamEffects() {
   const searchParams = useSearchParams(); 
   const pathname = usePathname();
 
@@ -55,15 +50,26 @@ export default function RootLayout({
       if (referralCodeFromUrl.length > 3 && referralCodeFromUrl.length < 50 && /^[a-zA-Z0-9-_]+$/.test(referralCodeFromUrl)) {
         try {
           localStorage.setItem('referral_code', referralCodeFromUrl);
-          console.log(`[RootLayout] Referral code "${referralCodeFromUrl}" from URL saved to localStorage.`);
+          console.log(`[UrlParamEffects] Referral code "${referralCodeFromUrl}" from URL saved to localStorage.`);
         } catch (error) {
-          console.error("[RootLayout] Error saving referral code to localStorage:", error);
+          console.error("[UrlParamEffects] Error saving referral code to localStorage:", error);
         }
       } else {
-        console.warn(`[RootLayout] Invalid referral code format in URL: "${referralCodeFromUrl}". Not saving.`);
+        console.warn(`[UrlParamEffects] Invalid referral code format in URL: "${referralCodeFromUrl}". Not saving.`);
       }
     }
   }, [searchParams, pathname]); 
+
+  return null; // This component does not render any UI itself
+}
+
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  // Hooks useSearchParams and usePathname are now moved to UrlParamEffects
 
   return (
     <html lang="es">
@@ -79,6 +85,7 @@ export default function RootLayout({
         <AuthProvider>
           <Suspense fallback={<RootLayoutFallback />}>
             <AppLayout>{children}</AppLayout>
+            <UrlParamEffects /> {/* Render the new component here, inside Suspense */}
           </Suspense>
           <Toaster />
         </AuthProvider>

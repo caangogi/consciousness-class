@@ -17,14 +17,15 @@ export interface UserProfile extends FirebaseUser {
   role?: UserRole;
   nombre?: string;
   apellido?: string;
-  createdAt?: string; 
-  updatedAt?: string | null; 
+  createdAt?: string;
+  updatedAt?: string | null;
   referralCodeGenerated?: string;
-  referredBy?: string | null; 
+  referredBy?: string | null;
   cursosInscritos?: string[]; // Array of course IDs
   referidosExitosos?: number;
   balanceCredito?: number;
-  balanceComisionesPendientes?: number; 
+  balanceComisionesPendientes?: number;
+  balanceIngresosPendientes?: number; // Revenue from own courses pending payout
 }
 
 interface AuthContextType {
@@ -32,7 +33,7 @@ interface AuthContextType {
   userRole: UserRole;
   loading: boolean;
   logout: () => Promise<void>;
-  refreshUserProfile: () => Promise<void>; 
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,7 +59,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (user) {
       const userDocRef = doc(db, 'usuarios', user.uid);
       const userDocSnap = await getDoc(userDocRef);
-      let fetchedRole: UserRole = 'student'; 
+      let fetchedRole: UserRole = 'student';
       let userProfileData: Partial<UserProfile> = {};
 
       if (userDocSnap.exists()) {
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         userProfileData = {
           nombre: data.nombre,
           apellido: data.apellido,
-          photoURL: data.photoURL, 
+          photoURL: data.photoURL,
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
           referralCodeGenerated: data.referralCodeGenerated,
@@ -77,6 +78,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           referidosExitosos: data.referidosExitosos || 0,
           balanceCredito: data.balanceCredito || 0,
           balanceComisionesPendientes: data.balanceComisionesPendientes === undefined ? 0 : data.balanceComisionesPendientes,
+          balanceIngresosPendientes: data.balanceIngresosPendientes === undefined ? 0 : data.balanceIngresosPendientes,
         };
       } else {
          console.warn(`[AuthContext] User document for ${user.uid} not found in Firestore. Defaulting profile fields.`);
@@ -85,33 +87,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
              referidosExitosos: 0,
              balanceCredito: 0,
              balanceComisionesPendientes: 0,
+             balanceIngresosPendientes: 0,
          };
       }
-      
-      // --- TEMPORAL DEVELOPMENT OVERRIDE FOR SUPERADMIN ---
-      // Si el email del usuario coincide con el de desarrollo para superadmin, se le asigna ese rol.
-      // ¡¡¡RECUERDA QUITAR ESTO PARA PRODUCCIÓN!!!
-      if (user.email === SUPERADMIN_DEV_EMAIL) {
+
+      if (user.email === process.env.NEXT_PUBLIC_SUPERADMIN_DEV_EMAIL || user.email === SUPERADMIN_DEV_EMAIL) { // Check both env and fallback
         console.warn(`[AuthContext] DEV MODE: User ${user.email} is being assigned 'superadmin' role.`);
         fetchedRole = 'superadmin';
       }
-      // --- FIN DEL OVERRIDE TEMPORAL ---
+
 
       const combinedUser: UserProfile = {
-        ...(user as UserProfile), 
+        ...(user as UserProfile),
         displayName: userProfileData.nombre && userProfileData.apellido ? `${userProfileData.nombre} ${userProfileData.apellido}` : user.displayName,
-        photoURL: userProfileData.photoURL !== undefined ? userProfileData.photoURL : user.photoURL, 
-        ...userProfileData, 
+        photoURL: userProfileData.photoURL !== undefined ? userProfileData.photoURL : user.photoURL,
+        ...userProfileData,
         role: fetchedRole,
       };
-      
-      console.log('[AuthContext] fetchAndSetUserProfile - combinedUser to be set:', { 
-          uid: combinedUser.uid, 
-          email: combinedUser.email, 
-          role: combinedUser.role, 
+
+      console.log('[AuthContext] fetchAndSetUserProfile - combinedUser to be set:', {
+          uid: combinedUser.uid,
+          email: combinedUser.email,
+          role: combinedUser.role,
           cursosInscritosLength: combinedUser.cursosInscritos?.length,
           referidosExitosos: combinedUser.referidosExitosos,
           balanceComisionesPendientes: combinedUser.balanceComisionesPendientes,
+          balanceIngresosPendientes: combinedUser.balanceIngresosPendientes,
       });
       setCurrentUser(combinedUser);
       setUserRole(fetchedRole);
@@ -153,7 +154,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.log("[AuthContext] No current user to refresh.");
     }
   }, [fetchAndSetUserProfile]);
-  
+
   const value = {
     currentUser,
     userRole,
@@ -164,5 +165,3 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-    

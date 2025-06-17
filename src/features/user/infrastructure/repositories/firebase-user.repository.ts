@@ -10,8 +10,8 @@ import type { UserCourseProgressProperties } from '@/features/progress/domain/en
 
 
 const USERS_COLLECTION = 'usuarios';
-const COURSES_COLLECTION = 'cursos'; 
-const PROGRESS_SUBCOLLECTION = 'progresoCursos'; 
+const COURSES_COLLECTION = 'cursos';
+const PROGRESS_SUBCOLLECTION = 'progresoCursos';
 
 export class FirebaseUserRepository implements IUserRepository {
   private get usersCollection() {
@@ -91,7 +91,7 @@ export class FirebaseUserRepository implements IUserRepository {
     }
   }
 
-  async update(uid: string, data: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'referredBy' | 'displayName' | 'cursosInscritos' | 'photoURL' >>): Promise<UserEntity | null> {
+  async update(uid: string, data: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'referredBy' | 'displayName' | 'cursosInscritos' | 'photoURL' | 'balanceComisionesPendientes' | 'balanceIngresosPendientes'>>): Promise<UserEntity | null> {
     try {
       const userRef = this.usersCollection.doc(uid);
       const userSnap = await userRef.get();
@@ -101,7 +101,7 @@ export class FirebaseUserRepository implements IUserRepository {
       }
 
       const updateData: any = { ...data, updatedAt: new Date().toISOString() };
-      
+
       // Specific handling for displayName and photoURL if they are part of 'data'
       const currentData = userSnap.data() as UserProperties;
       const newNombre = data.nombre !== undefined ? data.nombre : currentData.nombre;
@@ -161,7 +161,7 @@ export class FirebaseUserRepository implements IUserRepository {
     };
     console.log(`[FirebaseUserRepository - addCourseToEnrolled] Attempting to update user '${userId}' with payload:`, JSON.stringify(updatePayload));
     try {
-      if (!adminDb) { 
+      if (!adminDb) {
         const errorMessage = 'Firebase Admin SDK (adminDb) not initialized in addCourseToEnrolled.';
         console.error(`[FirebaseUserRepository - addCourseToEnrolled] CRITICAL: ${errorMessage}`);
         throw new Error(errorMessage);
@@ -261,7 +261,7 @@ export class FirebaseUserRepository implements IUserRepository {
       throw new Error(`Firestore incrementSuccessfulReferrals operation failed: ${firebaseError.message}`);
     }
   }
-  
+
   async updateReferrerBalance(userId: string, commissionAmount: number): Promise<void> {
     const userRef = this.usersCollection.doc(userId);
     const updatePayload = {
@@ -279,7 +279,24 @@ export class FirebaseUserRepository implements IUserRepository {
     }
   }
 
-  async findAllUsers(limitCount: number = 10, orderByField: string = 'createdAt', orderDirection: 'asc' | 'desc' = 'desc'): Promise<UserEntity[]> {
+  async updateCreatorPendingRevenue(creatorUid: string, revenueAmount: number): Promise<void> {
+    const userRef = this.usersCollection.doc(creatorUid);
+    const updatePayload = {
+      balanceIngresosPendientes: FieldValue.increment(revenueAmount),
+      updatedAt: new Date().toISOString(),
+    };
+    console.log(`[FirebaseUserRepository] Attempting to update creator pending revenue for user '${creatorUid}' by ${revenueAmount}.`);
+    try {
+      await userRef.update(updatePayload);
+      console.log(`[FirebaseUserRepository] Successfully updated creator pending revenue for user '${creatorUid}'.`);
+    } catch (error: any) {
+      const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseUserRepository] Error updating creator pending revenue for user '${creatorUid}':`, firebaseError.message);
+      throw new Error(`Firestore updateCreatorPendingRevenue operation failed: ${firebaseError.message}`);
+    }
+  }
+
+  async findAllUsers(limitCount: number = 20, orderByField: string = 'createdAt', orderDirection: 'asc' | 'desc' = 'desc'): Promise<UserEntity[]> {
     try {
       let query: admin.firestore.Query = this.usersCollection;
       if (orderByField) {
@@ -288,7 +305,7 @@ export class FirebaseUserRepository implements IUserRepository {
       if (limitCount > 0) {
         query = query.limit(limitCount);
       }
-      
+
       const snapshot = await query.get();
       if (snapshot.empty) {
         console.log('[FirebaseUserRepository] No users found with current criteria.');
@@ -308,5 +325,3 @@ export class FirebaseUserRepository implements IUserRepository {
     }
   }
 }
-
-    

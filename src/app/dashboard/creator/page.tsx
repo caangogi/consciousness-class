@@ -19,45 +19,53 @@ interface CreatorCourseSummary extends Pick<CourseProperties, 'id' | 'nombre' | 
 
 interface CreatorStats {
   totalStudents: number;
-  totalEarnings: number; // Placeholder
+  totalCreatorEarningsPending: number;
   avgRating: number;     // Placeholder
   activeCourses: number;
 }
 
 export default function CreatorDashboardPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   const [courses, setCourses] = useState<CreatorCourseSummary[]>([]);
-  const [isLoadingCourses, setIsLoadingCourses] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true); // Single loading state
   const [coursesError, setCoursesError] = useState<string | null>(null);
   const [stats, setStats] = useState<CreatorStats>({
     totalStudents: 0,
-    totalEarnings: 0.00,
+    totalCreatorEarningsPending: 0.00,
     avgRating: 0.0,
     activeCourses: 0,
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const calculateStats = (loadedCourses: CreatorCourseSummary[]): CreatorStats => {
+
+  const calculateAndUpdateStats = useCallback((loadedCourses: CreatorCourseSummary[], currentBalance: number | undefined) => {
     const totalStudents = loadedCourses.reduce((sum, course) => sum + (course.totalEstudiantes || 0), 0);
     const activeCourses = loadedCourses.filter(course => course.estado === 'publicado').length;
-    
-    return {
+
+    setStats({
       totalStudents,
       activeCourses,
-      totalEarnings: 0.00, // Placeholder - Real calculation would be backend
-      avgRating: 0.0,      // Placeholder - Real calculation would be backend
-    };
-  };
+      totalCreatorEarningsPending: currentBalance || 0.00,
+      avgRating: 0.0, // Placeholder - Real calculation would be backend
+    });
+  }, []);
 
-  const fetchCreatorCourses = useCallback(async () => {
+
+  const fetchCreatorData = useCallback(async () => {
     if (!currentUser || !auth.currentUser) {
-      setIsLoadingCourses(false);
+      setIsLoadingData(false);
       setCoursesError("Usuario no autenticado.");
       return;
     }
-    setIsLoadingCourses(true);
+    setIsLoadingData(true);
     setCoursesError(null);
     try {
+      // First, refresh user profile to get latest balance
+      // Not calling refreshUserProfile directly if it triggers re-renders causing infinite loops
+      // Assuming currentUser from AuthContext is up-to-date or will be updated by a separate mechanism if needed
+      // For now, use the balance from the existing currentUser context.
+
       const idToken = await auth.currentUser.getIdToken(true);
       const response = await fetch('/api/creator/courses', {
         headers: {
@@ -78,23 +86,42 @@ export default function CreatorDashboardPage() {
         descripcionCorta: c.descripcionCorta,
       })) || [];
       setCourses(loadedCourses);
-      setStats(calculateStats(loadedCourses));
+      calculateAndUpdateStats(loadedCourses, currentUser?.balanceIngresosPendientes);
 
     } catch (err: any) {
       setCoursesError(err.message);
       toast({
-        title: 'Error al Cargar Cursos',
+        title: 'Error al Cargar Datos',
         description: err.message,
         variant: 'destructive',
       });
     } finally {
-      setIsLoadingCourses(false);
+      setIsLoadingData(false);
     }
-  }, [currentUser, toast]);
+  }, [currentUser, toast, calculateAndUpdateStats]);
+
+  const handleRefreshData = async () => {
+    setIsRefreshing(true);
+    toast({ title: "Actualizando Datos...", description: "Estamos refrescando tu panel de creador."});
+    await refreshUserProfile(); // This will update currentUser in context
+    await fetchCreatorData();   // This will use the (potentially updated) currentUser
+    setIsRefreshing(false);
+    toast({ title: "Datos Actualizados", description: "Tu panel de creador ha sido actualizado."});
+  };
+
 
   useEffect(() => {
-    fetchCreatorCourses();
-  }, [fetchCreatorCourses]);
+    fetchCreatorData();
+  }, [fetchCreatorData]);
+  
+  useEffect(() => {
+    // This effect specifically reacts to currentUser updates (like balanceIngresosPendientes)
+    // and recalculates stats if courses are already loaded.
+    if (currentUser && courses.length > 0 && !isLoadingData) {
+      calculateAndUpdateStats(courses, currentUser.balanceIngresosPendientes);
+    }
+  }, [currentUser, courses, isLoadingData, calculateAndUpdateStats]);
+
 
   const getStatusBadgeVariant = (status: CourseProperties['estado']) => {
     switch (status) {
@@ -115,7 +142,7 @@ export default function CreatorDashboardPage() {
   };
 
   const renderCourseTableContent = () => {
-    if (isLoadingCourses) {
+    if (isLoadingData && courses.length === 0) { // Show skeletons only on initial full load
       return (
         <TableBody>
           {[...Array(2)].map((_, i) => (
@@ -137,7 +164,7 @@ export default function CreatorDashboardPage() {
             <TableCell colSpan={4} className="text-center py-6">
               <AlertTriangle className="mx-auto h-8 w-8 text-destructive mb-2" />
               <p className="text-destructive text-sm">{coursesError}</p>
-              <Button onClick={fetchCreatorCourses} variant="link" size="sm" className="mt-2">Reintentar</Button>
+              <Button onClick={handleRefreshData} variant="link" size="sm" className="mt-2">Reintentar</Button>
             </TableCell>
           </TableRow>
         </TableBody>
@@ -199,23 +226,29 @@ export default function CreatorDashboardPage() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-3xl font-bold font-headline">Panel de Creator</h1>
-        <Button asChild>
-          <Link href="/dashboard/creator/courses/new">
-            <PlusCircle className="mr-2 h-5 w-5" /> Crear Nuevo Curso
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+            <Button onClick={handleRefreshData} variant="outline" size="sm" disabled={isRefreshing || isLoadingData}>
+                {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
+                Actualizar Datos
+            </Button>
+            <Button asChild>
+            <Link href="/dashboard/creator/courses/new">
+                <PlusCircle className="mr-2 h-5 w-5" /> Crear Nuevo Curso
+            </Link>
+            </Button>
+        </div>
       </div>
 
       {/* Quick Stats Section */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
+            <CardTitle className="text-sm font-medium">Ingresos Pendientes</CardTitle>
             <DollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalEarnings.toFixed(2)} €</div>
-            <p className="text-xs text-muted-foreground">Cálculo detallado (Próximamente).</p>
+            {isLoadingData ? <Skeleton className="h-7 w-20"/> : <div className="text-2xl font-bold">{stats.totalCreatorEarningsPending.toFixed(2)} €</div>}
+            <p className="text-xs text-muted-foreground">Balance pendiente de liquidación.</p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -224,7 +257,7 @@ export default function CreatorDashboardPage() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoadingCourses ? <Skeleton className="h-7 w-12"/> : <div className="text-2xl font-bold">{stats.totalStudents}</div>}
+            {isLoadingData ? <Skeleton className="h-7 w-12"/> : <div className="text-2xl font-bold">{stats.totalStudents}</div>}
             <p className="text-xs text-muted-foreground">Suma de todos tus cursos.</p>
           </CardContent>
         </Card>
@@ -234,7 +267,7 @@ export default function CreatorDashboardPage() {
             <BookOpen className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoadingCourses ? <Skeleton className="h-7 w-8"/> : <div className="text-2xl font-bold">{stats.activeCourses}</div>}
+            {isLoadingData ? <Skeleton className="h-7 w-8"/> : <div className="text-2xl font-bold">{stats.activeCourses}</div>}
             <p className="text-xs text-muted-foreground">Cursos actualmente publicados.</p>
           </CardContent>
         </Card>
@@ -249,7 +282,7 @@ export default function CreatorDashboardPage() {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* My Courses Table Section */}
       <Card className="shadow-lg">
         <CardHeader>
@@ -311,4 +344,3 @@ export default function CreatorDashboardPage() {
     </div>
   );
 }
-

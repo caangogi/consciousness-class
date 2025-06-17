@@ -11,6 +11,10 @@ const LOGS_COLLECTION = 'webhookLogs';
 const COMMISSIONS_COLLECTION = 'comisionesRegistradas';
 const SUBSCRIPTIONS_COLLECTION = 'suscripciones'; // Subcolección bajo usuarios
 
+// Definir la comisión de la plataforma (ej. 20%)
+const PLATFORM_COMMISSION_PERCENTAGE = 0.20;
+
+
 async function writeWebhookLog(eventId: string, step: string, details: any) {
   const timestamp = new Date().toISOString();
   const sanitizedDetails: Record<string, any> = {};
@@ -18,7 +22,7 @@ async function writeWebhookLog(eventId: string, step: string, details: any) {
     if (details[key] !== undefined) {
       sanitizedDetails[key] = details[key];
     } else {
-      sanitizedDetails[key] = null; 
+      sanitizedDetails[key] = null;
     }
   }
 
@@ -29,7 +33,7 @@ async function writeWebhookLog(eventId: string, step: string, details: any) {
     }
     await adminDb
       .collection(LOGS_COLLECTION)
-      .add({ eventId, timestamp, step, details: sanitizedDetails }); 
+      .add({ eventId, timestamp, step, details: sanitizedDetails });
     console.log(`[Stripe Webhook Log] Logged: ${step} for event ${eventId}`);
   } catch (err) {
     console.error('[Stripe Webhook Log] writeWebhookLog failed:', err);
@@ -48,7 +52,6 @@ export const config = {
   },
 };
 
-// Helper function to handle checkout.session.completed logic
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, eventId: string) {
   console.log(`[Stripe Webhook] Processing 'checkout.session.completed'. Session ID: ${session.id}, Payment Status: ${session.payment_status}`);
   await writeWebhookLog(eventId, 'checkout.session.completed_received', { sessionId: session.id, payment_status: session.payment_status, metadata: session.metadata });
@@ -60,8 +63,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
     const courseIdPurchased = session.metadata?.courseId;
     const referralCodeUsed = session.metadata?.referralCodeUsed;
     const promotedCourseId = session.metadata?.promotedCourseId;
-    const tipoAcceso = session.metadata?.tipoAcceso; 
-    const stripeSubscriptionId = session.subscription as string | null; 
+    const tipoAcceso = session.metadata?.tipoAcceso;
+    const stripeSubscriptionId = session.subscription as string | null;
 
     console.log('[Stripe Webhook] Raw Metadata from Stripe session:', JSON.stringify(session.metadata));
     console.log(`[Stripe Webhook] Extracted - Buyer User ID: ${buyerUserId}, Course ID Purchased: ${courseIdPurchased}, Referral Code Used: ${referralCodeUsed}, Promoted Course ID: ${promotedCourseId}, Tipo Acceso: ${tipoAcceso}, Stripe Subscription ID: ${stripeSubscriptionId}`);
@@ -70,11 +73,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
     if (!buyerUserId || !courseIdPurchased) {
       console.error(`[Stripe Webhook] CRITICAL: Missing essential metadata. Buyer User ID: ${buyerUserId}, Course ID Purchased: ${courseIdPurchased}. Cannot proceed for session ${session.id}.`);
       await writeWebhookLog(eventId, 'missing_metadata_error_core', { buyerUserId, courseIdPurchased, rawMetadata: session.metadata });
-      return; 
+      return;
     }
 
-    // ---- Enrollment Logic ----
-    console.log(`[Stripe Webhook] Enrollment Metadata OK. Calling EnrollmentService for User: ${buyerUserId}, Course: ${courseIdPurchased}`);
     const userRepository = new FirebaseUserRepository();
     const courseRepository = new FirebaseCourseRepository();
     const enrollmentService = new EnrollmentService(userRepository, courseRepository);
@@ -83,41 +84,58 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
     console.log(`[Stripe Webhook] EnrollmentService.enrollStudentToCourse completed successfully for User: ${buyerUserId}, Course: ${courseIdPurchased}.`);
     await writeWebhookLog(eventId, 'enrollment_service_success', { buyerUserId, courseIdPurchased });
 
-    // ---- Subscription Initial Record (if it's a subscription) ----
+    // ---- Creator Revenue and Course Revenue Logic ----
+    try {
+        const coursePurchasedEntity = await courseRepository.findById(courseIdPurchased);
+        if (coursePurchasedEntity && coursePurchasedEntity.creadorUid && session.amount_total) {
+            const grossAmount = session.amount_total / 100; // Convert from cents
+            const platformFee = grossAmount * PLATFORM_COMMISSION_PERCENTAGE;
+            const creatorNetRevenue = grossAmount - platformFee;
+
+            await courseRepository.incrementCourseRevenue(courseIdPurchased, grossAmount);
+            console.log(`[Stripe Webhook] Course ${courseIdPurchased} gross revenue incremented by ${grossAmount.toFixed(2)}.`);
+            await writeWebhookLog(eventId, 'course_revenue_incremented', { courseId: courseIdPurchased, amount: grossAmount });
+            
+            await userRepository.updateCreatorPendingRevenue(coursePurchasedEntity.creadorUid, creatorNetRevenue);
+            console.log(`[Stripe Webhook] Creator ${coursePurchasedEntity.creadorUid} pending revenue updated by ${creatorNetRevenue.toFixed(2)} for course ${courseIdPurchased}.`);
+            await writeWebhookLog(eventId, 'creator_revenue_updated', { creatorUid: coursePurchasedEntity.creadorUid, amount: creatorNetRevenue, courseId: courseIdPurchased });
+        } else {
+            console.warn(`[Stripe Webhook] Could not process creator revenue. Course: ${!!coursePurchasedEntity}, CreatorUID: ${coursePurchasedEntity?.creadorUid}, AmountTotal: ${session.amount_total}`);
+            await writeWebhookLog(eventId, 'creator_revenue_processing_skipped', { courseId: courseIdPurchased, courseExists: !!coursePurchasedEntity, creatorUid: coursePurchasedEntity?.creadorUid, amount_total: session.amount_total });
+        }
+    } catch (revError: any) {
+        console.error(`[Stripe Webhook] Error processing creator/course revenue for course ${courseIdPurchased}:`, revError.message);
+        await writeWebhookLog(eventId, 'creator_course_revenue_error', { courseId: courseIdPurchased, error: revError.message, stack: revError.stack });
+    }
+
+
     if (tipoAcceso === 'suscripcion' && stripeSubscriptionId) {
         try {
             const subscriptionObject = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-            
-            const currentPeriodStartISO = typeof subscriptionObject.current_period_start === 'number'
-                ? new Date(subscriptionObject.current_period_start * 1000).toISOString()
-                : null;
-            const currentPeriodEndISO = typeof subscriptionObject.current_period_end === 'number'
-                ? new Date(subscriptionObject.current_period_end * 1000).toISOString()
-                : null;
-            const createdAtISO = typeof subscriptionObject.created === 'number'
-                ? new Date(subscriptionObject.created * 1000).toISOString()
-                : new Date().toISOString(); 
 
-            console.log(`[Stripe Webhook - InitialSub] Timestamps - start_raw: ${subscriptionObject.current_period_start}, start_iso: ${currentPeriodStartISO}`);
-            console.log(`[Stripe Webhook - InitialSub] Timestamps - end_raw: ${subscriptionObject.current_period_end}, end_iso: ${currentPeriodEndISO}`);
-            console.log(`[Stripe Webhook - InitialSub] Timestamps - created_raw: ${subscriptionObject.created}, created_iso: ${createdAtISO}`);
-            
+            const createdAtISO = typeof subscriptionObject.created === 'number' ? new Date(subscriptionObject.created * 1000).toISOString() : new Date().toISOString();
+            const currentPeriodStartISO = typeof subscriptionObject.current_period_start === 'number' ? new Date(subscriptionObject.current_period_start * 1000).toISOString() : null;
+            const currentPeriodEndISO = typeof subscriptionObject.current_period_end === 'number' ? new Date(subscriptionObject.current_period_end * 1000).toISOString() : null;
+
+            console.log(`[Stripe Webhook - InitialSub CS] Timestamps - created_raw: ${subscriptionObject.created}, created_iso: ${createdAtISO}`);
+            console.log(`[Stripe Webhook - InitialSub CS] Timestamps - start_raw: ${subscriptionObject.current_period_start}, start_iso: ${currentPeriodStartISO}`);
+            console.log(`[Stripe Webhook - InitialSub CS] Timestamps - end_raw: ${subscriptionObject.current_period_end}, end_iso: ${currentPeriodEndISO}`);
+
             if (!createdAtISO) {
-                console.error(`[Stripe Webhook - InitialSub] CRITICAL: createdAt timestamp is missing or invalid for subscription ${stripeSubscriptionId}.`);
+                console.error(`[Stripe Webhook - InitialSub CS] CRITICAL: createdAt timestamp is missing or invalid for subscription ${stripeSubscriptionId}.`);
                 throw new Error(`Stripe createdAt timestamp is missing or invalid for subscription ${stripeSubscriptionId}.`);
             }
-            if (!currentPeriodStartISO || !currentPeriodEndISO) {
-                console.warn(`[Stripe Webhook - InitialSub] current_period_start or current_period_end is null after conversion for subscription ${stripeSubscriptionId}. This might be acceptable for some statuses. Proceeding with available data.`);
+             if (!currentPeriodStartISO || !currentPeriodEndISO) {
+                 console.warn(`[Stripe Webhook - InitialSub CS] current_period_start or current_period_end is null after conversion for subscription ${stripeSubscriptionId}. This might be acceptable for some statuses. Proceeding with available data.`);
             }
 
             const userSubscriptionRef = adminDb!.collection('usuarios').doc(buyerUserId).collection(SUBSCRIPTIONS_COLLECTION).doc(stripeSubscriptionId);
-            
             const subscriptionDataToStore: any = {
                 stripeSubscriptionId: stripeSubscriptionId,
                 stripeCustomerId: typeof subscriptionObject.customer === 'string' ? subscriptionObject.customer : subscriptionObject.customer.id,
                 stripePriceId: session.metadata?.stripePriceId || subscriptionObject.items.data[0]?.price?.id || subscriptionObject.items.data[0]?.id || null,
                 courseId: courseIdPurchased,
-                status: subscriptionObject.status, 
+                status: subscriptionObject.status,
                 cancelAtPeriodEnd: subscriptionObject.cancel_at_period_end,
                 createdAt: createdAtISO,
                 updatedAt: new Date().toISOString(),
@@ -125,24 +143,22 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 
             if (currentPeriodStartISO) subscriptionDataToStore.currentPeriodStart = currentPeriodStartISO;
             if (currentPeriodEndISO) subscriptionDataToStore.currentPeriodEnd = currentPeriodEndISO;
-            
-            Object.keys(subscriptionDataToStore).forEach(key => {
+
+             Object.keys(subscriptionDataToStore).forEach(key => {
                 if (subscriptionDataToStore[key] === undefined) {
                     delete subscriptionDataToStore[key];
                 }
             });
 
             await userSubscriptionRef.set(subscriptionDataToStore, { merge: true });
-            console.log(`[Stripe Webhook] Initial subscription record created/merged for user ${buyerUserId}, subscription ${stripeSubscriptionId}, course ${courseIdPurchased}.`);
-            await writeWebhookLog(eventId, 'initial_subscription_record_created', { buyerUserId, stripeSubscriptionId, courseIdPurchased, dataStored: subscriptionDataToStore });
+            console.log(`[Stripe Webhook] Initial subscription record created/merged from checkout.session for user ${buyerUserId}, subscription ${stripeSubscriptionId}, course ${courseIdPurchased}.`);
+            await writeWebhookLog(eventId, 'initial_subscription_record_checkout_created', { buyerUserId, stripeSubscriptionId, courseIdPurchased, dataStored: subscriptionDataToStore });
         } catch (subError: any) {
-            console.error(`[Stripe Webhook] Error creating initial subscription record for user ${buyerUserId}, subscription ${stripeSubscriptionId}:`, subError.message, subError.stack);
-            await writeWebhookLog(eventId, 'initial_subscription_record_error', { buyerUserId, stripeSubscriptionId, error: subError.message, stack: subError.stack });
+            console.error(`[Stripe Webhook] Error creating initial subscription record from checkout.session for user ${buyerUserId}, subscription ${stripeSubscriptionId}:`, subError.message, subError.stack);
+            await writeWebhookLog(eventId, 'initial_subscription_record_checkout_error', { buyerUserId, stripeSubscriptionId, error: subError.message, stack: subError.stack });
         }
     }
 
-
-    // ---- Referral and Commission Logic ----
     console.log(`[Stripe Webhook] Checking conditions for referral processing: referralCodeUsed ('${referralCodeUsed}') and buyerUserId ('${buyerUserId}') must be present.`);
     if (referralCodeUsed && buyerUserId) {
       console.log(`[Stripe Webhook] Referral code "${referralCodeUsed}" found. Processing referral for buyer ${buyerUserId}...`);
@@ -168,15 +184,14 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 
               if (courseIdPurchased === promotedCourseId) {
                 console.log(`[Stripe Webhook] Purchased course ${courseIdPurchased} MATCHES promoted course ${promotedCourseId}. Calculating commission.`);
-                const commissionPercentage = coursePurchasedEntity.comisionReferidoPorcentaje / 100;
-                const purchaseAmount = session.amount_total ? session.amount_total / 100 : 0; 
-                const commissionAmount = purchaseAmount * commissionPercentage;
+                const purchaseAmount = session.amount_total ? session.amount_total / 100 : 0;
+                const commissionAmount = purchaseAmount * (coursePurchasedEntity.comisionReferidoPorcentaje / 100);
 
                 const commissionData = {
                   referenteUid: referrerUser.uid,
                   referidoUid: buyerUserId,
                   courseIdComprado: courseIdPurchased,
-                  nombreCursoComprado: coursePurchasedEntity.nombre, // Include course name
+                  nombreCursoComprado: coursePurchasedEntity.nombre,
                   promotedCourseId: promotedCourseId,
                   stripeSessionId: session.id,
                   montoCompra: purchaseAmount,
@@ -221,7 +236,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 
 async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription, eventId: string, eventType: string) {
     const userId = subscription.metadata?.platform_user_id;
-    const courseId = subscription.metadata?.platform_course_id || subscription.items.data[0]?.price?.metadata?.platform_course_id || null;
+    const courseIdFromSubMetadata = subscription.metadata?.platform_course_id;
+    const courseIdFromPriceMetadata = subscription.items.data[0]?.price?.metadata?.platform_course_id;
+    const courseId = courseIdFromSubMetadata || courseIdFromPriceMetadata || null;
+
     const stripeSubscriptionId = subscription.id;
 
     console.log(`[Stripe Webhook] ${eventType}: Processing for subscription ${stripeSubscriptionId}. Platform UserID: ${userId}, Platform CourseID (from metadata/price): ${courseId}`);
@@ -240,28 +258,22 @@ async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription
     const userSubscriptionRef = adminDb.collection('usuarios').doc(userId).collection(SUBSCRIPTIONS_COLLECTION).doc(stripeSubscriptionId);
 
     try {
-        const currentPeriodStartISO = typeof subscription.current_period_start === 'number'
-            ? new Date(subscription.current_period_start * 1000).toISOString()
-            : null;
-        const currentPeriodEndISO = typeof subscription.current_period_end === 'number'
-            ? new Date(subscription.current_period_end * 1000).toISOString()
-            : null;
-        const createdAtISO = typeof subscription.created === 'number'
-            ? new Date(subscription.created * 1000).toISOString()
-            : new Date().toISOString(); 
+        const createdAtISO = typeof subscription.created === 'number' ? new Date(subscription.created * 1000).toISOString() : new Date().toISOString();
+        const currentPeriodStartISO = typeof subscription.current_period_start === 'number' ? new Date(subscription.current_period_start * 1000).toISOString() : null;
+        const currentPeriodEndISO = typeof subscription.current_period_end === 'number' ? new Date(subscription.current_period_end * 1000).toISOString() : null;
 
+        console.log(`[Stripe Webhook] ${eventType}: Timestamps - created_raw: ${subscription.created}, created_iso: ${createdAtISO}`);
         console.log(`[Stripe Webhook] ${eventType}: Timestamps - start_raw: ${subscription.current_period_start}, start_iso: ${currentPeriodStartISO}`);
         console.log(`[Stripe Webhook] ${eventType}: Timestamps - end_raw: ${subscription.current_period_end}, end_iso: ${currentPeriodEndISO}`);
-        console.log(`[Stripe Webhook] ${eventType}: Timestamps - created_raw: ${subscription.created}, created_iso: ${createdAtISO}`);
-        
-        if (!createdAtISO) { // Only critical check for createdAt
+
+        if (!createdAtISO) {
              console.error(`[Stripe Webhook] ${eventType}: CRITICAL: createdAt timestamp is missing or invalid for subscription ${stripeSubscriptionId}.`);
              throw new Error(`Stripe createdAt timestamp is missing or invalid for subscription ${stripeSubscriptionId}.`);
         }
-        if (currentPeriodStartISO === null || currentPeriodEndISO === null) { // Warn but proceed if current period dates are null
+        if (currentPeriodStartISO === null || currentPeriodEndISO === null) {
              console.warn(`[Stripe Webhook] ${eventType}: current_period_start or current_period_end is null after conversion for subscription ${stripeSubscriptionId}. This might be acceptable for some statuses. Proceeding with available data.`);
         }
-        
+
         const subscriptionDataToStore: any = {
             stripeSubscriptionId: stripeSubscriptionId,
             stripeCustomerId: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
@@ -269,13 +281,13 @@ async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription
             courseId: courseId,
             status: subscription.status,
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
-            createdAt: createdAtISO, 
-            updatedAt: new Date().toISOString(), 
+            createdAt: createdAtISO,
+            updatedAt: new Date().toISOString(),
         };
 
         if (currentPeriodStartISO) subscriptionDataToStore.currentPeriodStart = currentPeriodStartISO;
         if (currentPeriodEndISO) subscriptionDataToStore.currentPeriodEnd = currentPeriodEndISO;
-        
+
         Object.keys(subscriptionDataToStore).forEach(key => {
             if (subscriptionDataToStore[key] === undefined) {
                 delete subscriptionDataToStore[key];
@@ -294,10 +306,77 @@ async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription
             console.log(`[Stripe Webhook] ${eventType}: Ensured enrollment for user ${userId} to course ${courseId}.`);
             await writeWebhookLog(eventId, `${eventType}_enrollment_ensured`, { userId, courseId });
         }
-        
+
     } catch (error: any) {
         console.error(`[Stripe Webhook] ${eventType}: Error processing subscription ${stripeSubscriptionId} for user ${userId}:`, error.message, error.stack);
         await writeWebhookLog(eventId, `${eventType}_processing_error`, { userId, stripeSubscriptionId, error: error.message, stack: error.stack });
+    }
+}
+
+
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: string) {
+    console.log(`[Stripe Webhook] Processing 'invoice.payment_succeeded'. Invoice ID: ${invoice.id}, Subscription ID: ${invoice.subscription}, Billing Reason: ${invoice.billing_reason}, Customer: ${invoice.customer}`);
+    await writeWebhookLog(eventId, 'invoice.payment_succeeded_received', {
+        invoiceId: invoice.id,
+        subscriptionId: invoice.subscription,
+        customer: invoice.customer,
+        billing_reason: invoice.billing_reason,
+        amount_paid: invoice.amount_paid,
+    });
+
+    if (typeof invoice.subscription !== 'string') {
+        console.log(`[Stripe Webhook] Invoice ${invoice.id} is not related to a subscription or subscription ID is not a string. Skipping further subscription processing.`);
+        await writeWebhookLog(eventId, 'invoice.payment_succeeded_not_subscription', { invoiceId: invoice.id, subscription: invoice.subscription });
+        return;
+    }
+
+    const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+    if (subscription) {
+        console.log(`[Stripe Webhook] Invoice paid (ID: ${invoice.id}) for subscription: ${invoice.subscription}. Ensuring subscription status is updated.`);
+        await handleCustomerSubscriptionEvent(subscription, eventId, 'invoice.payment_succeeded_subscription_update');
+
+        // Logic for creator revenue for recurring payments
+        if (invoice.billing_reason === 'subscription_cycle' || invoice.billing_reason === 'subscription_create') { // Also handle initial creation if it comes through here
+            const courseIdFromSubMetadata = subscription.metadata?.platform_course_id;
+            const courseIdFromPriceMetadata = subscription.items.data[0]?.price?.metadata?.platform_course_id;
+            const courseId = courseIdFromSubMetadata || courseIdFromPriceMetadata || null;
+
+            const creatorUidFromSubMetadata = subscription.metadata?.platform_creator_uid; // Assuming you add this to subscription metadata
+            
+            let creatorUid = creatorUidFromSubMetadata;
+
+            if (!creatorUid && courseId) {
+                const courseRepository = new FirebaseCourseRepository();
+                const courseEntity = await courseRepository.findById(courseId);
+                if (courseEntity) {
+                    creatorUid = courseEntity.creadorUid;
+                }
+            }
+            
+            if (courseId && creatorUid && invoice.amount_paid) {
+                const grossAmount = invoice.amount_paid / 100;
+                const platformFee = grossAmount * PLATFORM_COMMISSION_PERCENTAGE;
+                const creatorNetRevenue = grossAmount - platformFee;
+
+                const courseRepository = new FirebaseCourseRepository();
+                const userRepository = new FirebaseUserRepository();
+
+                await courseRepository.incrementCourseRevenue(courseId, grossAmount);
+                console.log(`[Stripe Webhook] Course ${courseId} gross revenue incremented by ${grossAmount.toFixed(2)} from invoice ${invoice.id}.`);
+                await writeWebhookLog(eventId, 'course_revenue_incremented_invoice', { courseId, amount: grossAmount, invoiceId: invoice.id });
+
+                await userRepository.updateCreatorPendingRevenue(creatorUid, creatorNetRevenue);
+                console.log(`[Stripe Webhook] Creator ${creatorUid} pending revenue updated by ${creatorNetRevenue.toFixed(2)} for course ${courseId} from invoice ${invoice.id}.`);
+                await writeWebhookLog(eventId, 'creator_revenue_updated_invoice', { creatorUid, amount: creatorNetRevenue, courseId, invoiceId: invoice.id });
+            } else {
+                 console.warn(`[Stripe Webhook] Could not process creator revenue from invoice ${invoice.id}. Missing data: courseId=${courseId}, creatorUid=${creatorUid}, amount_paid=${invoice.amount_paid}`);
+                 await writeWebhookLog(eventId, 'creator_revenue_invoice_skipped_missing_data', { invoiceId: invoice.id, courseId, creatorUid, amount_paid: invoice.amount_paid });
+            }
+        }
+
+    } else {
+        console.warn(`[Stripe Webhook] Could not retrieve subscription ${invoice.subscription} for invoice ${invoice.id}.`);
+        await writeWebhookLog(eventId, 'invoice.payment_succeeded_subscription_not_found', { invoiceId: invoice.id, subscriptionId: invoice.subscription });
     }
 }
 
@@ -371,7 +450,7 @@ export async function POST(request: NextRequest) {
         await handleCustomerSubscriptionEvent(subscription, eventId, 'customer.subscription.updated');
         break;
       }
-      case 'customer.subscription.deleted': { 
+      case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         await writeWebhookLog(eventId, 'customer.subscription.deleted_received', { subscriptionId: subscription.id, status: subscription.status });
         await handleCustomerSubscriptionEvent(subscription, eventId, 'customer.subscription.deleted');
@@ -379,18 +458,13 @@ export async function POST(request: NextRequest) {
       }
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        await writeWebhookLog(eventId, 'invoice.payment_succeeded_received', { invoiceId: invoice.id, subscriptionId: invoice.subscription, customer: invoice.customer, billing_reason: invoice.billing_reason });
-        if (invoice.subscription && typeof invoice.subscription === 'string') { 
-             const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
-             console.log(`[Stripe Webhook] Invoice paid (ID: ${invoice.id}) for subscription: ${invoice.subscription}. Ensuring subscription status is updated.`);
-             await handleCustomerSubscriptionEvent(subscription, eventId, 'invoice.payment_succeeded_subscription_update');
-        }
+        await handleInvoicePaymentSucceeded(invoice, eventId);
         break;
       }
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         await writeWebhookLog(eventId, 'invoice.payment_failed_received', { invoiceId: invoice.id, subscriptionId: invoice.subscription, customer: invoice.customer });
-        if (invoice.subscription && typeof invoice.subscription === 'string') {
+        if (typeof invoice.subscription === 'string') {
             const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
             await handleCustomerSubscriptionEvent(subscription, eventId, 'invoice.payment_failed_subscription_update');
         }
@@ -412,4 +486,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook processing failed.', details: error.message }, { status: 500 });
   }
 }
-    

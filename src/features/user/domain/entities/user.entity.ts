@@ -9,7 +9,7 @@ export interface UserProperties {
   apellido: string;
   displayName: string;
   role: UserRole;
-  photoURL: string | null; 
+  photoURL: string | null;
   createdAt: string; // ISO Date string
   updatedAt: string | null; // ISO Date string
   referralCodeGenerated: string;
@@ -18,6 +18,7 @@ export interface UserProperties {
   referidosExitosos: number;
   balanceCredito: number; // For general platform credits or rewards
   balanceComisionesPendientes?: number; // Specifically for referral commissions
+  balanceIngresosPendientes?: number; // Revenue from own courses pending payout
 }
 
 export class UserEntity {
@@ -36,6 +37,7 @@ export class UserEntity {
   referidosExitosos: number;
   balanceCredito: number;
   balanceComisionesPendientes: number;
+  balanceIngresosPendientes: number;
 
   constructor(props: UserProperties) {
     this.uid = props.uid;
@@ -53,6 +55,7 @@ export class UserEntity {
     this.referidosExitosos = props.referidosExitosos || 0;
     this.balanceCredito = props.balanceCredito || 0;
     this.balanceComisionesPendientes = props.balanceComisionesPendientes || 0;
+    this.balanceIngresosPendientes = props.balanceIngresosPendientes || 0;
   }
 
   static create(
@@ -64,20 +67,21 @@ export class UserEntity {
       role?: UserRole;
       photoURL?: string | null;
       referredBy?: string | null;
-      referralCodeGenerated?: string; 
+      referralCodeGenerated?: string;
       cursosInscritos?: string[];
       referidosExitosos?: number;
       balanceCredito?: number;
       balanceComisionesPendientes?: number;
+      balanceIngresosPendientes?: number;
     }
   ): UserEntity {
     const now = new Date().toISOString();
     const displayName = inputProps.nombre + ' ' + inputProps.apellido;
-    
-    const generatedReferralCode = 
-      inputProps.referralCodeGenerated || 
-      ('CONSCIOUS-' + 
-       inputProps.uid.substring(0, 6).toUpperCase() + 
+
+    const generatedReferralCode =
+      inputProps.referralCodeGenerated ||
+      ('CONSCIOUS-' +
+       inputProps.uid.substring(0, 6).toUpperCase() +
        Math.random().toString(36).substring(2, 6).toUpperCase());
 
     const entityConstructorProps: UserProperties = {
@@ -89,19 +93,20 @@ export class UserEntity {
       role: inputProps.role || 'student',
       photoURL: inputProps.photoURL === undefined ? null : inputProps.photoURL,
       createdAt: now,
-      updatedAt: now, 
+      updatedAt: now,
       referralCodeGenerated: generatedReferralCode,
       referredBy: inputProps.referredBy === undefined ? null : inputProps.referredBy,
       cursosInscritos: inputProps.cursosInscritos || [],
       referidosExitosos: inputProps.referidosExitosos || 0,
       balanceCredito: inputProps.balanceCredito || 0,
       balanceComisionesPendientes: inputProps.balanceComisionesPendientes || 0,
+      balanceIngresosPendientes: inputProps.balanceIngresosPendientes || 0,
     };
-    
+
     return new UserEntity(entityConstructorProps);
   }
 
-  updateProfile(data: Partial<Pick<UserProperties, 'nombre' | 'apellido' | 'photoURL' | 'balanceComisionesPendientes'>>) {
+  updateProfile(data: Partial<Pick<UserProperties, 'nombre' | 'apellido' | 'photoURL' | 'balanceComisionesPendientes' | 'balanceIngresosPendientes'>>) {
     if (data.nombre) this.nombre = data.nombre;
     if (data.apellido) this.apellido = data.apellido;
     if (data.nombre || data.apellido) {
@@ -109,6 +114,7 @@ export class UserEntity {
     }
     if (data.photoURL !== undefined) this.photoURL = data.photoURL;
     if (data.balanceComisionesPendientes !== undefined) this.balanceComisionesPendientes = data.balanceComisionesPendientes;
+    if (data.balanceIngresosPendientes !== undefined) this.balanceIngresosPendientes = data.balanceIngresosPendientes;
     this.updatedAt = new Date();
   }
 
@@ -129,8 +135,7 @@ export class UserEntity {
       referidosExitosos: this.referidosExitosos,
       balanceCredito: this.balanceCredito,
       balanceComisionesPendientes: this.balanceComisionesPendientes,
+      balanceIngresosPendientes: this.balanceIngresosPendientes,
     };
   }
 }
-
-    

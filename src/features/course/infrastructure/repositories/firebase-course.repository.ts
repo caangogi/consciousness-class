@@ -62,7 +62,7 @@ export class FirebaseCourseRepository implements ICourseRepository {
     try {
       const snapshot = await this.coursesCollection
         .where('estado', '==', 'publicado')
-        .orderBy('fechaPublicacion', 'desc') 
+        .orderBy('fechaPublicacion', 'desc')
         .get();
       // console.log(`[FirebaseCourseRepository] findAllPublic query found ${snapshot.docs.length} documents.`);
       if (snapshot.empty) {
@@ -96,6 +96,23 @@ export class FirebaseCourseRepository implements ICourseRepository {
       console.error(`[FirebaseCourseRepository - incrementStudentCount] Firestore specific error details: Code='${firebaseError.code}', Message='${firebaseError.message}', Stack='${firebaseError.stack}'`);
       console.error(`[FirebaseCourseRepository - incrementStudentCount] CRITICAL ERROR updating course '${courseId}' to increment student count:`, firebaseError.message, firebaseError.stack);
       throw new Error(`Firestore incrementStudentCount operation failed for course ${courseId}: ${firebaseError.message}`);
+    }
+  }
+
+  async incrementCourseRevenue(courseId: string, amount: number): Promise<void> {
+    const courseRef = this.coursesCollection.doc(courseId);
+    const updatePayload = {
+      ingresosBrutosGenerados: FieldValue.increment(amount),
+      fechaActualizacion: new Date().toISOString(),
+    };
+    console.log(`[FirebaseCourseRepository - incrementCourseRevenue] Attempting to update course '${courseId}' with revenue increment:`, JSON.stringify(updatePayload));
+    try {
+      await courseRef.update(updatePayload);
+      console.log(`[FirebaseCourseRepository - incrementCourseRevenue] Course revenue incremented for ID: ${courseId}.`);
+    } catch (error: any) {
+      const firebaseError = error as FirebaseError;
+      console.error(`[FirebaseCourseRepository - incrementCourseRevenue] Error incrementing revenue for course '${courseId}':`, firebaseError.message);
+      throw new Error(`Firestore incrementCourseRevenue operation failed for course ${courseId}: ${firebaseError.message}`);
     }
   }
 }

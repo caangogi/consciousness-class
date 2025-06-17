@@ -88,24 +88,44 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
     if (tipoAcceso === 'suscripcion' && stripeSubscriptionId) {
         try {
             const subscriptionObject = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+            
+            // Robust timestamp handling for subscription object
+            const currentPeriodStartISO = typeof subscriptionObject.current_period_start === 'number'
+                ? new Date(subscriptionObject.current_period_start * 1000).toISOString()
+                : null;
+            const currentPeriodEndISO = typeof subscriptionObject.current_period_end === 'number'
+                ? new Date(subscriptionObject.current_period_end * 1000).toISOString()
+                : null;
+            const createdAtISO = typeof subscriptionObject.created === 'number'
+                ? new Date(subscriptionObject.created * 1000).toISOString()
+                : new Date().toISOString(); // Fallback
+
+            console.log(`[Stripe Webhook - InitialSub] Timestamps - start_raw: ${subscriptionObject.current_period_start}, start_iso: ${currentPeriodStartISO}`);
+            console.log(`[Stripe Webhook - InitialSub] Timestamps - end_raw: ${subscriptionObject.current_period_end}, end_iso: ${currentPeriodEndISO}`);
+            console.log(`[Stripe Webhook - InitialSub] Timestamps - created_raw: ${subscriptionObject.created}, created_iso: ${createdAtISO}`);
+            
             const userSubscriptionRef = adminDb!.collection('usuarios').doc(buyerUserId).collection(SUBSCRIPTIONS_COLLECTION).doc(stripeSubscriptionId);
-            await userSubscriptionRef.set({
+            
+            const subscriptionDataToStore: any = {
                 stripeSubscriptionId: stripeSubscriptionId,
                 stripeCustomerId: typeof subscriptionObject.customer === 'string' ? subscriptionObject.customer : subscriptionObject.customer.id,
-                stripePriceId: session.metadata?.stripePriceId || subscriptionObject.items.data[0]?.price.id,
+                stripePriceId: session.metadata?.stripePriceId || subscriptionObject.items.data[0]?.price?.id || subscriptionObject.items.data[0]?.id || null,
                 courseId: courseIdPurchased,
                 status: subscriptionObject.status, 
-                currentPeriodStart: new Date(subscriptionObject.current_period_start * 1000).toISOString(),
-                currentPeriodEnd: new Date(subscriptionObject.current_period_end * 1000).toISOString(),
                 cancelAtPeriodEnd: subscriptionObject.cancel_at_period_end,
-                createdAt: new Date(subscriptionObject.created * 1000).toISOString(),
+                createdAt: createdAtISO,
                 updatedAt: new Date().toISOString(),
-            }, { merge: true });
+            };
+
+            if (currentPeriodStartISO) subscriptionDataToStore.currentPeriodStart = currentPeriodStartISO;
+            if (currentPeriodEndISO) subscriptionDataToStore.currentPeriodEnd = currentPeriodEndISO;
+
+            await userSubscriptionRef.set(subscriptionDataToStore, { merge: true });
             console.log(`[Stripe Webhook] Initial subscription record created/merged for user ${buyerUserId}, subscription ${stripeSubscriptionId}, course ${courseIdPurchased}.`);
-            await writeWebhookLog(eventId, 'initial_subscription_record_created', { buyerUserId, stripeSubscriptionId, courseIdPurchased });
+            await writeWebhookLog(eventId, 'initial_subscription_record_created', { buyerUserId, stripeSubscriptionId, courseIdPurchased, dataStored: subscriptionDataToStore });
         } catch (subError: any) {
-            console.error(`[Stripe Webhook] Error creating initial subscription record for user ${buyerUserId}, subscription ${stripeSubscriptionId}:`, subError.message);
-            await writeWebhookLog(eventId, 'initial_subscription_record_error', { buyerUserId, stripeSubscriptionId, error: subError.message });
+            console.error(`[Stripe Webhook] Error creating initial subscription record for user ${buyerUserId}, subscription ${stripeSubscriptionId}:`, subError.message, subError.stack);
+            await writeWebhookLog(eventId, 'initial_subscription_record_error', { buyerUserId, stripeSubscriptionId, error: subError.message, stack: subError.stack });
         }
     }
 
@@ -144,14 +164,14 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
                   referenteUid: referrerUser.uid,
                   referidoUid: buyerUserId,
                   courseIdComprado: courseIdPurchased,
-                  nombreCursoComprado: coursePurchasedEntity.nombre, // <-- AÑADIDO
+                  nombreCursoComprado: coursePurchasedEntity.nombre,
                   promotedCourseId: promotedCourseId,
                   stripeSessionId: session.id,
                   montoCompra: purchaseAmount,
                   porcentajeComisionCurso: coursePurchasedEntity.comisionReferidoPorcentaje,
                   montoComisionCalculado: commissionAmount,
                   fechaCreacion: new Date().toISOString(),
-                  estadoPagoComision: 'pendiente',
+                  estadoPagoComision: 'pendiente' as 'pendiente' | 'pagada' | 'cancelada',
                 };
                 await adminDb!.collection(COMMISSIONS_COLLECTION).add(commissionData);
                 console.log(`[Stripe Webhook] Commission registered in '${COMMISSIONS_COLLECTION}' for referrer ${referrerUser.uid} for course ${courseIdPurchased}. Amount: ${commissionAmount.toFixed(2)}`);
@@ -189,8 +209,11 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 
 async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription, eventId: string, eventType: string) {
     const userId = subscription.metadata?.platform_user_id;
-    const courseId = subscription.metadata?.platform_course_id; 
+    // Intenta obtener courseId de los metadatos de la suscripción, luego de los metadatos del price del primer item
+    const courseId = subscription.metadata?.platform_course_id || subscription.items.data[0]?.price?.metadata?.platform_course_id || null;
     const stripeSubscriptionId = subscription.id;
+
+    console.log(`[Stripe Webhook] ${eventType}: Processing for subscription ${stripeSubscriptionId}. Platform UserID: ${userId}, Platform CourseID (from metadata/price): ${courseId}`);
 
     if (!userId || !stripeSubscriptionId) {
         console.error(`[Stripe Webhook] ${eventType}: Missing platform_user_id or subscription ID in metadata for subscription ${stripeSubscriptionId}. Metadata:`, subscription.metadata);
@@ -206,32 +229,52 @@ async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription
     const userSubscriptionRef = adminDb.collection('usuarios').doc(userId).collection(SUBSCRIPTIONS_COLLECTION).doc(stripeSubscriptionId);
 
     try {
-        const currentPeriodStartISO = subscription.current_period_start ? new Date(subscription.current_period_start * 1000).toISOString() : null;
-        const currentPeriodEndISO = subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null;
-        const createdAtISO = subscription.created ? new Date(subscription.created * 1000).toISOString() : null;
+        // Robust timestamp handling
+        const currentPeriodStartISO = typeof subscription.current_period_start === 'number'
+            ? new Date(subscription.current_period_start * 1000).toISOString()
+            : null;
+        const currentPeriodEndISO = typeof subscription.current_period_end === 'number'
+            ? new Date(subscription.current_period_end * 1000).toISOString()
+            : null;
+        const createdAtISO = typeof subscription.created === 'number'
+            ? new Date(subscription.created * 1000).toISOString()
+            : new Date().toISOString(); // Fallback to now if 'created' is missing
 
-        if (!currentPeriodStartISO || !currentPeriodEndISO || !createdAtISO) {
-            throw new Error('One or more required Stripe timestamps are missing or invalid from the subscription object.');
+        console.log(`[Stripe Webhook] ${eventType}: Timestamps - start_raw: ${subscription.current_period_start}, start_iso: ${currentPeriodStartISO}`);
+        console.log(`[Stripe Webhook] ${eventType}: Timestamps - end_raw: ${subscription.current_period_end}, end_iso: ${currentPeriodEndISO}`);
+        console.log(`[Stripe Webhook] ${eventType}: Timestamps - created_raw: ${subscription.created}, created_iso: ${createdAtISO}`);
+        
+        // Conditional check if essential dates are missing, can be adjusted based on strictness
+        if (!currentPeriodStartISO || !currentPeriodEndISO) {
+             console.warn(`[Stripe Webhook] ${eventType}: current_period_start or current_period_end is null after conversion for subscription ${stripeSubscriptionId}. This might be acceptable for some statuses. Proceeding with available data.`);
         }
         
-        const subscriptionDataToStore = {
+        const subscriptionDataToStore: any = {
             stripeSubscriptionId: stripeSubscriptionId,
             stripeCustomerId: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
-            stripePriceId: subscription.items.data[0]?.price.id, 
-            courseId: courseId || subscription.items.data[0]?.price.metadata?.platform_course_id || null, 
+            stripePriceId: subscription.items.data[0]?.price?.id || subscription.items.data[0]?.id || null, // Improved price ID fetching
+            courseId: courseId, // Already determined above
             status: subscription.status,
-            currentPeriodStart: currentPeriodStartISO,
-            currentPeriodEnd: currentPeriodEndISO,
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
             createdAt: createdAtISO,
             updatedAt: new Date().toISOString(), 
         };
 
-        await userSubscriptionRef.set(subscriptionDataToStore, { merge: true });
-        console.log(`[Stripe Webhook] ${eventType}: Subscription record for ${stripeSubscriptionId} for user ${userId} (course: ${courseId || 'N/A'}) ${eventType === 'customer.subscription.deleted' ? 'status updated/marked as deleted' : 'created/updated'}.`);
-        await writeWebhookLog(eventId, `${eventType}_record_saved`, { userId, stripeSubscriptionId, courseId, status: subscription.status });
+        if (currentPeriodStartISO) subscriptionDataToStore.currentPeriodStart = currentPeriodStartISO;
+        if (currentPeriodEndISO) subscriptionDataToStore.currentPeriodEnd = currentPeriodEndISO;
+        
+        // Remove any undefined properties before saving to Firestore
+        Object.keys(subscriptionDataToStore).forEach(key => {
+            if (subscriptionDataToStore[key] === undefined) {
+                delete subscriptionDataToStore[key];
+            }
+        });
 
-        if (eventType === 'customer.subscription.created' && (subscription.status === 'active' || subscription.status === 'trialing') && courseId) {
+        await userSubscriptionRef.set(subscriptionDataToStore, { merge: true });
+        console.log(`[Stripe Webhook] ${eventType}: Subscription record for ${stripeSubscriptionId} for user ${userId} (course: ${courseId || 'N/A'}) ${eventType === 'customer.subscription.deleted' ? 'status updated/marked as deleted' : 'created/updated'}. Data:`, JSON.stringify(subscriptionDataToStore));
+        await writeWebhookLog(eventId, `${eventType}_record_saved`, { userId, stripeSubscriptionId, courseId, status: subscription.status, dataStored: subscriptionDataToStore });
+
+        if ((eventType === 'customer.subscription.created' || eventType === 'customer.subscription.updated') && (subscription.status === 'active' || subscription.status === 'trialing') && courseId) {
             const userRepository = new FirebaseUserRepository();
             const courseRepository = new FirebaseCourseRepository();
             const enrollmentService = new EnrollmentService(userRepository, courseRepository);
@@ -242,7 +285,7 @@ async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription
         
     } catch (error: any) {
         console.error(`[Stripe Webhook] ${eventType}: Error processing subscription ${stripeSubscriptionId} for user ${userId}:`, error.message, error.stack);
-        await writeWebhookLog(eventId, `${eventType}_processing_error`, { userId, stripeSubscriptionId, error: error.message });
+        await writeWebhookLog(eventId, `${eventType}_processing_error`, { userId, stripeSubscriptionId, error: error.message, stack: error.stack });
     }
 }
 
@@ -306,7 +349,7 @@ export async function POST(request: NextRequest) {
       }
       case 'customer.subscription.created': {
         const subscription = event.data.object as Stripe.Subscription;
-        await writeWebhookLog(eventId, 'customer.subscription.created_received', { subscriptionId: subscription.id });
+        await writeWebhookLog(eventId, 'customer.subscription.created_received', { subscriptionId: subscription.id, status: subscription.status });
         await handleCustomerSubscriptionEvent(subscription, eventId, 'customer.subscription.created');
         break;
       }
@@ -318,16 +361,16 @@ export async function POST(request: NextRequest) {
       }
       case 'customer.subscription.deleted': { 
         const subscription = event.data.object as Stripe.Subscription;
-        await writeWebhookLog(eventId, 'customer.subscription.deleted_received', { subscriptionId: subscription.id });
+        await writeWebhookLog(eventId, 'customer.subscription.deleted_received', { subscriptionId: subscription.id, status: subscription.status });
         await handleCustomerSubscriptionEvent(subscription, eventId, 'customer.subscription.deleted');
         break;
       }
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        await writeWebhookLog(eventId, 'invoice.payment_succeeded_received', { invoiceId: invoice.id, subscriptionId: invoice.subscription, customer: invoice.customer });
-        if (invoice.billing_reason === 'subscription_cycle' && invoice.subscription && typeof invoice.subscription === 'string') {
+        await writeWebhookLog(eventId, 'invoice.payment_succeeded_received', { invoiceId: invoice.id, subscriptionId: invoice.subscription, customer: invoice.customer, billing_reason: invoice.billing_reason });
+        if (invoice.subscription && typeof invoice.subscription === 'string') { // No need to check billing_reason here, let handleCustomerSubscriptionEvent update based on status
              const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
-             console.log(`[Stripe Webhook] Invoice paid for subscription cycle: ${invoice.subscription}. Ensuring subscription status is updated.`);
+             console.log(`[Stripe Webhook] Invoice paid (ID: ${invoice.id}) for subscription: ${invoice.subscription}. Ensuring subscription status is updated.`);
              await handleCustomerSubscriptionEvent(subscription, eventId, 'invoice.payment_succeeded_subscription_update');
         }
         break;
@@ -357,5 +400,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook processing failed.', details: error.message }, { status: 500 });
   }
 }
+    
 
     

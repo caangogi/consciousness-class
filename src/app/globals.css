@@ -109,26 +109,24 @@
 
 /* Custom CSS Loader */
 .spinning-loader {
-  height: 80px;
-  width: 80px;
+  /* height and aspect-ratio are now controlled by Tailwind classes on the element */
   box-sizing: border-box;
   position: relative;
   mask: 
     radial-gradient(transparent 47%, black 48% 71%, transparent 72%) exclude,
     conic-gradient(black 0 0) no-clip;
-  animation: l11-spin 1.5s linear infinite;
+  animation: spinning-loader-spin 1.5s linear infinite;
+  background: conic-gradient(hsl(var(--primary)) 0deg, hsl(var(--accent)) 180deg, hsl(var(--primary)) 360deg);
 }
 .spinning-loader::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 35%;
-  right: 35%;
-  bottom: 70%;
+  /* Adjusted inset for larger loader. This makes the ::before roughly 40% of the loader's size. */
+  inset: 30% 30% 30%; 
   border-radius: 50%;
-  background: hsl(var(--primary)); /* Using primary theme color */
-  filter: blur(10px); /* Adjusted blur */
+  background: hsl(var(--primary)); 
+  filter: blur(30px); /* Increased blur for larger size */
 }
-@keyframes l11-spin {
+@keyframes spinning-loader-spin {
   to { transform: rotate(1turn); }
 }

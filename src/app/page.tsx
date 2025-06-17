@@ -192,7 +192,7 @@ export default function HomePage() {
           initial="initial"
           animate="animate"
         >
-          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Filustracion-vectorial-flecha-derecha-3d-realista.png?alt=media&token=a7f8a45b-8b64-44da-a282-cc93caa7ff85" alt="Flecha abstracta 3D" width={80} height={80} data-ai-hint="abstract 3D arrow" className="opacity-70 md:w-[100px] md:h-[100px]" />
+          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebaseapp.com/o/WEB%2Filustracion-vectorial-flecha-derecha-3d-realista.png?alt=media&token=a7f8a45b-8b64-44da-a282-cc93caa7ff85" alt="Flecha abstracta 3D" width={80} height={80} data-ai-hint="abstract 3D arrow" className="opacity-70 md:w-[100px] md:h-[100px]" />
         </motion.div>
 
         <motion.div
@@ -201,7 +201,7 @@ export default function HomePage() {
           initial="initial"
           animate="animate"
         >
-          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Fgente-grupo-3d-icono-vector-empleados-equipo-personal-grafico-clip-art-imagen-multitud-personas-silueta.png?alt=media&token=1067369c-ecd6-4853-9772-91d88289f72e" alt="Icono de comunidad 3D" width={100} height={100} data-ai-hint="3D community icon" className="opacity-70 md:w-[130px] md:h-[130px]" />
+          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebaseapp.com/o/WEB%2Fgente-grupo-3d-icono-vector-empleados-equipo-personal-grafico-clip-art-imagen-multitud-personas-silueta.png?alt=media&token=1067369c-ecd6-4853-9772-91d88289f72e" alt="Icono de comunidad 3D" width={100} height={100} data-ai-hint="3D community icon" className="opacity-70 md:w-[130px] md:h-[130px]" />
            <motion.div
             className="absolute -bottom-5 -right-5 md:-bottom-2 md:-right-8 bg-foreground text-background text-xs px-3 py-1.5 rounded-full shadow-soft-xl flex items-center gap-1"
             variants={floatingItemVariants(0.7)}
@@ -218,7 +218,7 @@ export default function HomePage() {
            initial="initial"
            animate="animate"
         >
-          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficono-chat-grupo-3d-diseno-ilustracion-vectorial.png?alt=media&token=103115fa-0d9e-4dc4-b0eb-38d9a70e5bd5" alt="Icono de chat 3D" width={250} height={250} data-ai-hint="3D chat bubbles" className="opacity-60" />
+          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebaseapp.com/o/WEB%2Ficono-chat-grupo-3d-diseno-ilustracion-vectorial.png?alt=media&token=103115fa-0d9e-4dc4-b0eb-38d9a70e5bd5" alt="Icono de chat 3D" width={250} height={250} data-ai-hint="3D chat bubbles" className="opacity-60" />
         </motion.div>
 
         <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
@@ -618,12 +618,13 @@ export default function HomePage() {
       >
         <div className="container mx-auto px-4 md:px-6 text-center relative">
            <div
-            className="absolute -top-8 left-1/2 -translate-x-1/2 w-20 h-20 opacity-100"
+            className="absolute inset-0 flex items-center justify-center -z-10 opacity-10 overflow-hidden pointer-events-none"
+            aria-hidden="true"
           >
-            <div className="spinning-loader"></div>
+            <div className="spinning-loader w-[300px] h-[300px] md:w-[450px] md:h-[450px]" data-ai-hint="growth spiral modern"></div>
           </div>
           <motion.h2
-            className="font-headline text-3xl md:text-5xl font-bold mb-6 pt-12" // Added pt-12 to make space for loader
+            className="font-headline text-5xl md:text-5xl font-bold mb-6 pt-12" 
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
             ¿Listo para Iniciar tu Viaje de Aprendizaje?

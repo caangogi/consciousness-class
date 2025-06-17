@@ -218,7 +218,7 @@ export default function HomePage() {
            initial="initial"
            animate="animate"
         >
-          <Image src="https://placehold.co/250x250.png" alt="Abstract Thumbs Up" width={250} height={250} data-ai-hint="3D thumbs up" className="opacity-60" />
+          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficono-chat-grupo-3d-diseno-ilustracion-vectorial.png?alt=media&token=103115fa-0d9e-4dc4-b0eb-38d9a70e5bd5" alt="Abstract Thumbs Up" width={250} height={250} data-ai-hint="3D thumbs up" className="opacity-60" />
         </motion.div>
 
         <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
@@ -672,5 +672,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

@@ -49,7 +49,7 @@ export function Header() {
   };
 
   const getInitials = (name?: string | null) => {
-    if (!name) return 'CC'; // Updated fallback initials
+    if (!name) return 'CC';
     const names = name.split(' ');
     if (names.length > 1) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
@@ -153,8 +153,6 @@ export function Header() {
 
   const isLinkActive = (href: string, isHash: boolean) => {
     if (isHash) {
-      // For hash links, consider active if it's the homepage and potentially check hash later if needed
-      // For simplicity, let's assume if on homepage, hash links are contextually "active"
       return pathname === '/'; 
     }
     return pathname === href;
@@ -162,7 +160,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-[72px] items-center justify-between">
+      <div className="container flex h-20 items-center justify-between"> {/* Changed h-[72px] to h-20 */}
         <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" />
 
         <nav className="hidden md:flex items-center gap-1 bg-secondary/50 px-2 py-1.5 rounded-full shadow-sm">
@@ -192,19 +190,19 @@ export function Header() {
                 <span className="sr-only">Abrir menú</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] flex flex-col p-0"> {/* Removed p-6 from here */}
-              <SheetHeader className="border-b p-4"> {/* Added padding to header */}
+            <SheetContent side="left" className="w-[280px] flex flex-col p-0">
+              <SheetHeader className="border-b p-4"> 
                 <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
                 <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
                  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)}/>
               </SheetHeader>
-              <nav className="grid gap-1 p-4 flex-grow"> {/* Reduced gap, added padding to nav */}
+              <nav className="grid gap-1 p-4 flex-grow"> 
                 {navLinks.map((link) => (
                   <Button
                     key={link.label}
                     variant={isLinkActive(link.href, link.isHashLink) ? "secondary" : "ghost"}
                     asChild
-                    className="justify-start text-base h-auto py-2.5 px-3 rounded-md" // Adjusted padding & height
+                    className="justify-start text-base h-auto py-2.5 px-3 rounded-md"
                     onClick={() => setIsSheetOpen(false)}
                   >
                     <Link href={link.href} className="flex items-center gap-3">
@@ -214,7 +212,7 @@ export function Header() {
                   </Button>
                 ))}
               </nav>
-              <div className="border-t p-4 space-y-2"> {/* Reduced spacing */}
+              <div className="border-t p-4 space-y-2">
                  {renderMobileAuthSection(() => setIsSheetOpen(false))}
               </div>
             </SheetContent>
@@ -224,5 +222,3 @@ export function Header() {
     </header>
   );
 }
-
-    

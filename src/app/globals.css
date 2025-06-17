@@ -106,3 +106,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom CSS Loader */
+.spinning-loader {
+  height: 80px;
+  width: 80px;
+  box-sizing: border-box;
+  position: relative;
+  mask: 
+    radial-gradient(transparent 47%, black 48% 71%, transparent 72%) exclude,
+    conic-gradient(black 0 0) no-clip;
+  animation: l11-spin 1.5s linear infinite;
+}
+.spinning-loader::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 35%;
+  right: 35%;
+  bottom: 70%;
+  border-radius: 50%;
+  background: hsl(var(--primary)); /* Using primary theme color */
+  filter: blur(10px); /* Adjusted blur */
+}
+@keyframes l11-spin {
+  to { transform: rotate(1turn); }
+}

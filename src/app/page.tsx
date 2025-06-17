@@ -9,7 +9,7 @@ import { CourseCard, type CourseCardData } from '@/components/CourseCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'; // Added CardFooter
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"; // Added CardFooter
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
@@ -617,14 +617,13 @@ export default function HomePage() {
         transition={{ duration: 0.7 }}
       >
         <div className="container mx-auto px-4 md:px-6 text-center relative">
-           <motion.div
-            className="absolute -top-16 left-1/2 -translate-x-1/2  w-32 h-32 md:w-40 md:h-40 opacity-20"
-            animate={{ rotate: 360, transition: { duration: 20, repeat: Infinity, ease: "linear" } }}
+           <div
+            className="absolute -top-8 left-1/2 -translate-x-1/2 w-20 h-20 opacity-100"
           >
-            <Image src="https://placehold.co/200x200.png" alt="Decorative element" width={160} height={160} data-ai-hint="growth spiral modern" />
-          </motion.div>
+            <div className="spinning-loader"></div>
+          </div>
           <motion.h2
-            className="font-headline text-3xl md:text-5xl font-bold mb-6"
+            className="font-headline text-3xl md:text-5xl font-bold mb-6 pt-12" // Added pt-12 to make space for loader
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
             ¿Listo para Iniciar tu Viaje de Aprendizaje?

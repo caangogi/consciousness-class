@@ -9,7 +9,7 @@ import { Menu as MenuIcon, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation'; // Correct import
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -81,28 +81,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="sm:max-w-xs flex flex-col p-0">
-             <SheetHeader className="sr-only"> 
-                <SheetTitle>Navegación del Dashboard</SheetTitle>
-                <SheetDescription>Enlaces y opciones del panel de control.</SheetDescription>
+             <SheetHeader className="border-b p-4"> 
+                <SheetTitle className="sr-only">Navegación del Dashboard</SheetTitle>
+                <SheetDescription className="sr-only">Enlaces y opciones del panel de control.</SheetDescription>
+                 <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" width={120} height={32}/>
              </SheetHeader>
-              <div className="flex items-center gap-2 border-b p-4">
-                <Avatar className="h-9 w-9">
-                    <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} />
-                    <AvatarFallback>{getInitials(currentUser.displayName)}</AvatarFallback>
-                </Avatar>
-                 <div className="overflow-hidden"> 
-                    <p className="font-medium text-sm truncate">{currentUser.displayName || currentUser.email}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
-                </div>
-              </div>
-              <nav className="grid gap-1 px-2 py-2 flex-grow overflow-y-auto">
+              <nav className="flex flex-col gap-1 px-2 py-2 flex-grow overflow-y-auto">
                 {filteredNavItems.map((item) => (
                   <Link
                     key={item.href + item.label} 
                     href={item.href}
                     className={cn(
                         "flex items-center h-10 gap-3 rounded-lg px-3 text-muted-foreground hover:text-foreground transition-colors text-sm",
-                        (router.pathname === item.href || (item.href !== '/dashboard' && router.pathname.startsWith(item.href)) ) && 'bg-primary/10 text-primary font-semibold'
+                        (router.pathname === item.href || (typeof item.href === 'string' && item.href !== '/dashboard' && router.pathname.startsWith(item.href)) ) && 'bg-primary/10 text-primary font-semibold'
                     )}
                   >
                     <item.icon className="h-4 w-4" />

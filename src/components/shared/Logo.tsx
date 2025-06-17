@@ -31,8 +31,9 @@ export function Logo({
         alt={altText}
         width={width}
         height={height}
-        priority // Logos are usually important
+        priority // Important for LCP
         className="object-contain"
+        // Removed key={imageUrl} as it's not a standard prop and might cause hydration issues
       />
     );
   } else {

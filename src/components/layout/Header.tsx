@@ -36,6 +36,8 @@ export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+  const [isSheetOpen, setIsSheetOpen] = React.useState(false);
+
 
   const handleLogout = async () => {
     try {
@@ -149,7 +151,6 @@ export function Header() {
     );
   }
 
-  const [isSheetOpen, setIsSheetOpen] = React.useState(false);
 
   const isLinkActive = (href: string, isHash: boolean) => {
     if (isHash) {
@@ -196,7 +197,7 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] flex flex-col p-0">
-              <SheetHeader className="border-b p-4">
+               <SheetHeader className="border-b p-4"> {/* SheetHeader with padding */}
                 <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
                 <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
                  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)} width={120} height={32}/>

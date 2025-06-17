@@ -3,13 +3,13 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap, Award, Users as UsersIcon, Clock, Edit3, Loader2, Percent, DollarSign, Wand2, BookOpen } from 'lucide-react';
+import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap, Award, Users as UsersIcon, Clock, Edit3, Loader2, Percent, DollarSign, Wand2, BookOpen, HelpCircleIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CourseCard, type CourseCardData } from '@/components/CourseCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'; // Added CardFooter
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
@@ -102,7 +102,7 @@ const creatorBenefitsDetailed = [
     dataAiHint: "easy tools icon"
   },
   {
-    icon: UsersIcon, 
+    icon: UsersIcon,
     title: "Comunidad y Soporte",
     description: "Únete a una red de instructores, comparte experiencias, recibe apoyo continuo y accede a recursos exclusivos.",
     dataAiHint: "creator community icon"
@@ -187,21 +187,21 @@ export default function HomePage() {
         animate="visible"
       >
         <motion.div
-          className="absolute top-1/4 left-[10%] md:left-[15%]"
+          className="absolute top-1/4 left-[15%] sm:left-[12%] md:top-1/4 md:left-[15%]"
           variants={floatingItemVariants(0.1)}
           initial="initial"
           animate="animate"
         >
-          <Image src="https://placehold.co/120x120.png" alt="Abstract Plus" width={100} height={100} data-ai-hint="abstract 3D plus" className="opacity-70" />
+          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Filustracion-vectorial-flecha-derecha-3d-realista.png?alt=media&token=a7f8a45b-8b64-44da-a282-cc93caa7ff85" alt="Flecha abstracta 3D" width={80} height={80} data-ai-hint="abstract 3D arrow" className="opacity-70 md:w-[100px] md:h-[100px]" />
         </motion.div>
 
         <motion.div
-          className="absolute bottom-[15%] left-[5%] md:left-[10%]"
+          className="absolute bottom-[25%] left-[5%] md:bottom-[20%] md:left-[10%]"
           variants={floatingItemVariants(0.3)}
           initial="initial"
           animate="animate"
         >
-          <Image src="https://placehold.co/150x150.png" alt="Abstract Location Pin" width={130} height={130} data-ai-hint="3D location pin" className="opacity-70" />
+          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Fgente-grupo-3d-icono-vector-empleados-equipo-personal-grafico-clip-art-imagen-multitud-personas-silueta.png?alt=media&token=1067369c-ecd6-4853-9772-91d88289f72e" alt="Icono de comunidad 3D" width={100} height={100} data-ai-hint="3D community icon" className="opacity-70 md:w-[130px] md:h-[130px]" />
            <motion.div
             className="absolute -bottom-5 -right-5 md:-bottom-2 md:-right-8 bg-foreground text-background text-xs px-3 py-1.5 rounded-full shadow-soft-xl flex items-center gap-1"
             variants={floatingItemVariants(0.7)}
@@ -213,12 +213,12 @@ export default function HomePage() {
         </motion.div>
 
         <motion.div
-          className="absolute top-[15%] right-[5%] md:right-[10%] w-32 h-32 md:w-48 md:h-48 lg:w-64 lg:h-64"
+          className="absolute top-[10%] right-[2%] w-24 h-24 sm:top-[12%] sm:right-[3%] sm:w-28 sm:h-28 md:top-[15%] md:right-[5%] md:w-32 md:h-32 lg:w-40 lg:h-40"
            variants={floatingItemVariants(0.2)}
            initial="initial"
            animate="animate"
         >
-          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficono-chat-grupo-3d-diseno-ilustracion-vectorial.png?alt=media&token=103115fa-0d9e-4dc4-b0eb-38d9a70e5bd5" alt="Abstract Thumbs Up" width={250} height={250} data-ai-hint="3D thumbs up" className="opacity-60" />
+          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficono-chat-grupo-3d-diseno-ilustracion-vectorial.png?alt=media&token=103115fa-0d9e-4dc4-b0eb-38d9a70e5bd5" alt="Icono de chat 3D" width={250} height={250} data-ai-hint="3D chat bubbles" className="opacity-60" />
         </motion.div>
 
         <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
@@ -321,19 +321,21 @@ export default function HomePage() {
           {isLoadingCourses ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex flex-col overflow-hidden shadow-lg rounded-lg bg-card">
-                  <Skeleton className="aspect-[16/9] w-full" />
-                  <div className="p-5 space-y-3">
-                    <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-6 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
-                  <div className="p-5 border-t bg-secondary/30 flex justify-between items-center">
-                    <Skeleton className="h-8 w-1/4" />
-                    <Skeleton className="h-9 w-1/3" />
-                  </div>
-                </div>
+                <motion.div key={i} variants={itemVariants} className="flex">
+                  <Card className="flex flex-col overflow-hidden shadow-lg rounded-lg bg-card w-full">
+                    <Skeleton className="aspect-[16/9] w-full" />
+                    <CardContent className="flex-grow p-5 space-y-3">
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-6 w-full" />
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </CardContent>
+                    <CardFooter className="p-5 border-t bg-secondary/30 flex justify-between items-center">
+                      <Skeleton className="h-8 w-1/4" />
+                      <Skeleton className="h-9 w-1/3" />
+                    </CardFooter>
+                  </Card>
+                </motion.div>
               ))}
             </div>
           ) : featuredCourses.length > 0 ? (
@@ -351,15 +353,15 @@ export default function HomePage() {
               ))}
             </motion.div>
           ) : (
-            <motion.div
+             <motion.div
               className="text-center py-10 bg-card rounded-xl shadow-md"
               variants={itemVariants} initial="hidden" whileInView="visible" viewport={{once: true, amount: 0.5}}
             >
-              <BookOpen size={48} className="mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">¡Próximamente Nuevos Cursos!</h3>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">Estamos trabajando en contenido increíble. Mientras tanto, ¿por qué no te conviertes en uno de nuestros primeros Creators?</p>
+              <Zap size={48} className="mx-auto text-primary mb-4" />
+              <h3 className="text-xl font-semibold mb-2">¡Sé el Primero en Compartir Tu Conocimiento!</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">Aún no tenemos cursos destacados. ¿Tienes una habilidad o pasión que enseñar? <br/>Conviértete en uno de nuestros Creators fundadores.</p>
               <Button size="lg" asChild className="rounded-full">
-                <Link href="/signup?role=creator">Conviértete en Creator <Zap className="ml-2 h-5 w-5" /></Link>
+                <Link href="/signup?role=creator">Conviértete en Creator <ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>
             </motion.div>
           )}
@@ -672,3 +674,4 @@ export default function HomePage() {
     </div>
   );
 }
+

@@ -3,12 +3,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap, Award, Users as UsersIcon, Clock, Edit3, Loader2 } from 'lucide-react'; // Added Award, UsersIcon, Clock, Edit3, Loader2
+import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap, Award, Users as UsersIcon, Clock, Edit3, Loader2, Percent, DollarSign, Wand2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CourseCard, type CourseCardData } from '@/components/CourseCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import React, { useState, useEffect } from 'react'; // Import useState and useEffect
-import { Skeleton } from '@/components/ui/skeleton'; // For loading state
+import React, { useState, useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -36,11 +36,11 @@ const itemVariants = {
 
 const floatingItemVariants = (delay = 0) => ({
   initial: { opacity: 0, y: 20, scale: 0.9 },
-  animate: { 
-    opacity: 1, 
-    y: 0, 
+  animate: {
+    opacity: 1,
+    y: 0,
     scale: 1,
-    transition: { type: 'spring', stiffness: 100, damping: 15, delay: 0.5 + delay } 
+    transition: { type: 'spring', stiffness: 100, damping: 15, delay: 0.5 + delay }
   },
 });
 
@@ -79,6 +79,34 @@ const keyBenefits = [
   }
 ];
 
+const creatorBenefits = [
+  {
+    icon: Percent,
+    title: "Controla tus Ingresos",
+    description: "Define comisiones por referido para tus cursos y recibe pagos de forma transparente.",
+    dataAiHint: "commission percent icon"
+  },
+  {
+    icon: DollarSign,
+    title: "Pagos Simplificados",
+    description: "Integramos Stripe para que recibas tus ganancias de manera segura y eficiente.",
+    dataAiHint: "automatic payment icon"
+  },
+  {
+    icon: Wand2,
+    title: "Herramientas Intuitivas",
+    description: "Nuestra plataforma te facilita crear y gestionar tus cursos sin complicaciones técnicas.",
+    dataAiHint: "easy tools icon"
+  },
+  {
+    icon: UsersIcon, // Reusing icon
+    title: "Comunidad de Creators",
+    description: "Únete a una red de instructores, comparte experiencias y recibe apoyo continuo.",
+    dataAiHint: "creator community icon"
+  }
+];
+
+
 const testimonials = [
   {
     id: 't1',
@@ -112,11 +140,10 @@ export default function HomePage() {
           throw new Error('Failed to fetch courses');
         }
         const data = await response.json();
-        // Take only the first 3 courses for the homepage, or fewer if not enough available
         setFeaturedCourses(data.courses ? data.courses.slice(0, 3) : []);
       } catch (error) {
         console.error("Error fetching courses for homepage:", error);
-        setFeaturedCourses([]); // Set to empty array on error
+        setFeaturedCourses([]);
       } finally {
         setIsLoadingCourses(false);
       }
@@ -127,13 +154,13 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
-      <motion.section 
+      <motion.section
         className="relative flex-grow flex items-center justify-center py-20 md:py-32 overflow-hidden"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        <motion.div 
+        <motion.div
           className="absolute top-1/4 left-[10%] md:left-[15%]"
           variants={floatingItemVariants(0.1)}
           initial="initial"
@@ -142,14 +169,14 @@ export default function HomePage() {
           <Image src="https://placehold.co/120x120.png" alt="Abstract Plus" width={100} height={100} data-ai-hint="abstract 3D plus" className="opacity-70" />
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="absolute bottom-[15%] left-[5%] md:left-[10%]"
           variants={floatingItemVariants(0.3)}
           initial="initial"
           animate="animate"
         >
           <Image src="https://placehold.co/150x150.png" alt="Abstract Location Pin" width={130} height={130} data-ai-hint="3D location pin" className="opacity-70" />
-           <motion.div 
+           <motion.div
             className="absolute -bottom-5 -right-5 md:-bottom-2 md:-right-8 bg-foreground text-background text-xs px-3 py-1.5 rounded-full shadow-soft-xl flex items-center gap-1"
             variants={floatingItemVariants(0.7)}
             initial="initial"
@@ -159,7 +186,7 @@ export default function HomePage() {
           </motion.div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="absolute top-[15%] right-[5%] md:right-[10%] w-32 h-32 md:w-48 md:h-48 lg:w-64 lg:h-64"
            variants={floatingItemVariants(0.2)}
            initial="initial"
@@ -169,31 +196,31 @@ export default function HomePage() {
         </motion.div>
 
         <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
-          <motion.div 
+          <motion.div
             className="inline-flex items-center gap-2 bg-secondary/70 text-secondary-foreground px-4 py-2 rounded-full text-sm mb-6 shadow-sm"
             variants={itemVariants}
           >
             <User size={16} className="text-primary"/> MentorBloom Platform
           </motion.div>
-          <motion.h1 
+          <motion.h1
             className="font-headline text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-8 text-foreground leading-tight"
             variants={itemVariants}
           >
             Eleva tu aprendizaje,
-            <br className="hidden md:block" /> transforma tu <span 
+            <br className="hidden md:block" /> transforma tu <span
               className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent relative inline-block
                          animate-backgroundShine bg-[200%_auto]"
             >
               potencial.
             </span>
           </motion.h1>
-          <motion.p 
+          <motion.p
             className="text-lg md:text-xl text-foreground/70 max-w-2xl mx-auto mb-10"
             variants={itemVariants}
           >
             Descubre cursos online de alta calidad y únete a una comunidad vibrante enfocada en el crecimiento y la conciencia.
           </motion.p>
-          <motion.div 
+          <motion.div
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             variants={itemVariants}
           >
@@ -204,8 +231,8 @@ export default function HomePage() {
               <Link href="/signup?role=creator">Ser Creator <Zap className="ml-2 h-5 w-5 text-accent" /></Link>
             </Button>
           </motion.div>
-          
-          <motion.div 
+
+          <motion.div
             className="absolute bottom-10 right-10 hidden lg:flex items-center gap-2 text-xs text-muted-foreground animate-bounce"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1, transition: { delay: 1.5} }}
@@ -217,7 +244,7 @@ export default function HomePage() {
             </svg>
           </motion.div>
 
-           <motion.div 
+           <motion.div
             className="absolute top-24 right-16 hidden xl:flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs shadow-soft-xl"
             variants={floatingItemVariants(0.5)}
             initial="initial"
@@ -225,7 +252,7 @@ export default function HomePage() {
           >
              <MessageSquare size={14} className="text-accent"/> Drop us a line
           </motion.div>
-          <motion.div 
+          <motion.div
             className="absolute bottom-36 left-24 hidden xl:flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs shadow-soft-xl"
             variants={floatingItemVariants(0.6)}
             initial="initial"
@@ -237,7 +264,7 @@ export default function HomePage() {
       </motion.section>
 
       {/* Featured Courses Section */}
-      <motion.section 
+      <motion.section
         className="py-16 md:py-24 bg-secondary/30"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -245,7 +272,7 @@ export default function HomePage() {
         transition={{ duration: 0.5 }}
       >
         <div className="container mx-auto px-4 md:px-6">
-          <motion.h2 
+          <motion.h2
             className="font-headline text-3xl md:text-4xl font-bold text-center mb-4"
             variants={itemVariants}
             initial="hidden"
@@ -254,7 +281,7 @@ export default function HomePage() {
           >
             Cursos Destacados para <span className="text-primary">Impulsar Tu Crecimiento</span>
           </motion.h2>
-          <motion.p 
+          <motion.p
             className="text-center text-lg text-muted-foreground max-w-xl mx-auto mb-12"
             variants={itemVariants}
             initial="hidden"
@@ -263,7 +290,7 @@ export default function HomePage() {
           >
             Seleccionados por nuestros expertos para ofrecerte el mejor contenido y transformar tus habilidades.
           </motion.p>
-          
+
           {isLoadingCourses ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[...Array(3)].map((_, i) => (
@@ -283,7 +310,7 @@ export default function HomePage() {
               ))}
             </div>
           ) : featuredCourses.length > 0 ? (
-            <motion.div 
+            <motion.div
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
               variants={containerVariants}
               initial="hidden"
@@ -297,13 +324,13 @@ export default function HomePage() {
               ))}
             </motion.div>
           ) : (
-            <motion.div 
+            <motion.div
               className="text-center py-10 bg-card rounded-xl shadow-md"
               variants={itemVariants} initial="hidden" whileInView="visible" viewport={{once: true, amount: 0.5}}
             >
               <Edit3 size={48} className="mx-auto text-muted-foreground mb-4" />
               <h3 className="text-xl font-semibold mb-2">¡Sé el Primero en Crear un Curso!</h3>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">Actualmente no hay cursos destacados. ¿Tienes conocimiento para compartir? Únete como creator.</p>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">Nuestra plataforma está lista para tu contenido. Inspira a otros y comparte tu pasión.</p>
               <Button size="lg" asChild className="rounded-full">
                 <Link href="/signup?role=creator">Conviértete en Creator <Zap className="ml-2 h-5 w-5" /></Link>
               </Button>
@@ -311,7 +338,7 @@ export default function HomePage() {
           )}
 
           {featuredCourses.length > 0 && (
-            <motion.div 
+            <motion.div
               className="text-center mt-12"
               initial={{ opacity:0, y: 20 }}
               whileInView={{ opacity:1, y: 0 }}
@@ -326,27 +353,58 @@ export default function HomePage() {
         </div>
       </motion.section>
 
-      {/* Become a Creator CTA Section */}
-      { (isLoadingCourses || featuredCourses.length === 0) && ( // Show CTA if no courses or still loading
+      {/* Detailed Become a Creator CTA Section - Shown if no courses or loading */}
+      {(isLoadingCourses || (!isLoadingCourses && featuredCourses.length === 0)) && (
         <motion.section
           className="py-16 md:py-24 bg-primary/5"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
-          viewport={{ once: true, amount: 0.3 }}
+          viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.6 }}
         >
-          <div className="container mx-auto px-4 md:px-6 text-center">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="max-w-3xl mx-auto text-center">
+              <motion.div
+                variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
+              >
+                <Zap size={48} className="mx-auto text-primary mb-6" />
+                <h2 className="font-headline text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground">
+                  Transforma Tu Pasión en Ingresos como Creator en MentorBloom
+                </h2>
+                <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
+                  ¿Eres experto en un tema? ¿Te apasiona enseñar? MentorBloom te da las herramientas y la plataforma
+                  para crear cursos online impactantes, conectar con estudiantes y monetizar tu conocimiento.
+                </p>
+              </motion.div>
+            </div>
+
             <motion.div
+              className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mt-12 mb-12"
+              variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }}
+            >
+              {creatorBenefits.map((benefit) => (
+                <motion.div
+                  key={benefit.title}
+                  variants={itemVariants}
+                  className="flex items-start gap-4 p-6 bg-card rounded-xl shadow-soft-xl hover:shadow-soft-2xl transition-shadow duration-300"
+                >
+                  <div className="p-3 bg-primary/10 rounded-full">
+                    <benefit.icon className="h-6 w-6 text-primary" data-ai-hint={benefit.dataAiHint}/>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-headline font-semibold mb-1">{benefit.title}</h3>
+                    <p className="text-sm text-muted-foreground">{benefit.description}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+            <motion.div
+              className="text-center"
               variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
             >
-              <Zap size={48} className="mx-auto text-primary mb-6" />
-              <h2 className="font-headline text-3xl md:text-4xl font-bold mb-5">¿Tienes Conocimiento para Compartir?</h2>
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10">
-                Únete a MentorBloom como Creator y transforma tu experiencia en cursos online impactantes. Ayuda a otros a crecer mientras generas ingresos.
-              </p>
-              <Button size="lg" asChild className="rounded-full px-10 py-7 text-lg shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105">
+              <Button size="lg" asChild className="rounded-full px-10 py-7 text-lg shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105 bg-gradient-to-r from-primary to-blue-400 hover:from-primary/90 hover:to-blue-500 text-primary-foreground">
                 <Link href="/signup?role=creator">
-                  Conviértete en Creator Hoy
+                  Comienza a Crear Hoy
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -357,7 +415,7 @@ export default function HomePage() {
 
 
       {/* Key Benefits Section */}
-      <motion.section 
+      <motion.section
         className="py-16 md:py-24"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -365,25 +423,25 @@ export default function HomePage() {
         transition={{ duration: 0.5 }}
       >
         <div className="container mx-auto px-4 md:px-6">
-          <motion.h2 
+          <motion.h2
             className="font-headline text-3xl md:text-4xl font-bold text-center mb-4"
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
             Descubre lo que <span className="text-primary">MentorBloom</span> Te Ofrece
           </motion.h2>
-          <motion.p 
+          <motion.p
             className="text-center text-lg text-muted-foreground max-w-xl mx-auto mb-16"
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
             Hemos diseñado nuestra plataforma pensando en tus necesidades de aprendizaje y crecimiento.
           </motion.p>
-          <motion.div 
+          <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
             variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }}
           >
             {keyBenefits.map((benefit, index) => (
-              <motion.div 
-                key={benefit.title} 
+              <motion.div
+                key={benefit.title}
                 variants={itemVariants}
                 className="flex flex-col items-center text-center p-6 bg-card rounded-xl shadow-soft-xl hover:shadow-soft-2xl transition-shadow duration-300"
               >
@@ -399,7 +457,7 @@ export default function HomePage() {
       </motion.section>
 
       {/* Testimonials Section */}
-      <motion.section 
+      <motion.section
         className="py-16 md:py-24 bg-secondary/30"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -407,24 +465,24 @@ export default function HomePage() {
         transition={{ duration: 0.5 }}
       >
         <div className="container mx-auto px-4 md:px-6">
-          <motion.h2 
+          <motion.h2
             className="font-headline text-3xl md:text-4xl font-bold text-center mb-4"
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
             Lo que Dicen <span className="text-primary">Nuestros Estudiantes</span>
           </motion.h2>
-          <motion.p 
+          <motion.p
             className="text-center text-lg text-muted-foreground max-w-xl mx-auto mb-16"
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
             Experiencias reales de personas que están transformando sus vidas con MentorBloom.
           </motion.p>
-          <motion.div 
+          <motion.div
             className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto"
             variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }}
           >
             {testimonials.map((testimonial) => (
-              <motion.div 
+              <motion.div
                 key={testimonial.id}
                 variants={itemVariants}
                 className="bg-card p-8 rounded-xl shadow-soft-xl"
@@ -457,7 +515,7 @@ export default function HomePage() {
           <h3 className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-8">
             Con la confianza de educadores y aprendices
           </h3>
-          <motion.div 
+          <motion.div
             className="flex flex-wrap justify-center items-center gap-x-8 gap-y-6 md:gap-x-12 lg:gap-x-16"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1, transition: { delay: 0.5 } }}
@@ -472,7 +530,7 @@ export default function HomePage() {
       </section>
 
        {/* Final CTA Section */}
-      <motion.section 
+      <motion.section
         className="py-20 md:py-32 bg-gradient-to-br from-primary/80 to-blue-500/80 text-primary-foreground"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -480,25 +538,25 @@ export default function HomePage() {
         transition={{ duration: 0.7 }}
       >
         <div className="container mx-auto px-4 md:px-6 text-center relative">
-           <motion.div 
+           <motion.div
             className="absolute -top-16 left-1/2 -translate-x-1/2  w-32 h-32 md:w-40 md:h-40 opacity-20"
             animate={{ rotate: 360, transition: { duration: 20, repeat: Infinity, ease: "linear" } }}
           >
             <Image src="https://placehold.co/200x200.png" alt="Decorative element" width={160} height={160} data-ai-hint="white swirl" />
           </motion.div>
-          <motion.h2 
+          <motion.h2
             className="font-headline text-3xl md:text-5xl font-bold mb-6"
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
             ¿Listo para Iniciar tu Viaje de Aprendizaje?
           </motion.h2>
-          <motion.p 
+          <motion.p
             className="text-lg md:text-xl max-w-xl mx-auto mb-10 opacity-90"
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
             Únete a miles de estudiantes y creators que están alcanzando sus metas con MentorBloom.
           </motion.p>
-          <motion.div 
+          <motion.div
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}
           >

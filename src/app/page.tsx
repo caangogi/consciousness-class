@@ -607,25 +607,6 @@ export default function HomePage() {
       </motion.section>
 
 
-      {/* Partner Logos Section - Kept from previous version if desired */}
-      <section className="py-12 md:py-16">
-        <div className="container mx-auto px-4 md:px-6">
-          <h3 className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-8">
-            Con la confianza de educadores y aprendices
-          </h3>
-          <motion.div
-            className="flex flex-wrap justify-center items-center gap-x-8 gap-y-6 md:gap-x-12 lg:gap-x-16"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { delay: 0.5 } }}
-          >
-            {partnerLogos.map((logo) => (
-              <motion.div key={logo.name} variants={itemVariants} className="grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all duration-300">
-                <Image src={logo.src} alt={logo.name} width={100} height={30} data-ai-hint={logo.dataAiHint} />
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
 
        {/* Final CTA Section */}
       <motion.section
@@ -640,7 +621,7 @@ export default function HomePage() {
             className="absolute -top-16 left-1/2 -translate-x-1/2  w-32 h-32 md:w-40 md:h-40 opacity-20"
             animate={{ rotate: 360, transition: { duration: 20, repeat: Infinity, ease: "linear" } }}
           >
-            <Image src="https://placehold.co/200x200.png" alt="Decorative element" width={160} height={160} data-ai-hint="white swirl" />
+            <Image src="https://placehold.co/200x200.png" alt="Decorative element" width={160} height={160} data-ai-hint="learning spiral" />
           </motion.div>
           <motion.h2
             className="font-headline text-3xl md:text-5xl font-bold mb-6"
@@ -664,7 +645,7 @@ export default function HomePage() {
               </Button>
             </motion.div>
             <motion.div variants={itemVariants}>
-              <Button size="lg" variant="outline" asChild className="rounded-full px-8 py-6 text-base border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105">
+              <Button size="lg" variant="outline" asChild className="rounded-full px-8 py-6 text-base border-2 border-primary-foreground text-primary-foreground bg-transparent hover:bg-primary-foreground hover:text-primary shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105">
                 <Link href="/courses">Explorar Cursos</Link>
               </Button>
             </motion.div>

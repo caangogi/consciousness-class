@@ -460,13 +460,15 @@ export default function StudentDashboardPage() {
     }
 
     try {
-      const constraints = {
+      // Simplified constraints for diagnosis
+      const constraints = { 
         video: {
-          facingMode: "user",
-          width: { ideal: 720 },
-          height: { ideal: 1280 }
-        },
-        audio: true
+            facingMode: "user",
+            // Ensure width and height are reasonable for mobile vertical aspect ratios
+            width: { ideal: 360 }, // Typical mobile portrait width
+            height: { ideal: 640 }, // Typical mobile portrait height
+        }, 
+        audio: true 
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setHasCameraPermission(true);
@@ -586,6 +588,7 @@ export default function StudentDashboardPage() {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Panel de Estudiante</h1>
 
+      {/* Mis Cursos */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center gap-2"><BookOpen className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mis Cursos</CardTitle></div>
@@ -612,6 +615,7 @@ export default function StudentDashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Mis Referidos y Comisiones */}
       <Card className="shadow-lg">
         <CardHeader>
             <div className="flex items-center justify-between">
@@ -639,6 +643,7 @@ export default function StudentDashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Promociona Cursos y Gana */}
       <Card className="shadow-lg">
         <CardHeader><div className="flex items-center gap-2"><Share2 className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Promociona Cursos y Gana</CardTitle></div><CardDescription>Copia enlaces de promoción para cursos específicos que ofrecen comisión.</CardDescription></CardHeader>
         <CardContent>
@@ -654,6 +659,7 @@ export default function StudentDashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Mi Perfil */}
       <Card className="shadow-lg">
         <CardHeader><div className="flex items-center gap-2"><UserCircle className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mi Perfil</CardTitle></div><CardDescription>Gestiona tu información personal y configuración de cuenta.</CardDescription></CardHeader>
         <CardContent className="space-y-3">
@@ -664,7 +670,7 @@ export default function StudentDashboardPage() {
               <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogTrigger asChild><Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Editar Perfil</Button></DialogTrigger>
               <DialogContent className="sm:max-w-[580px] max-h-[90vh] flex flex-col">
                   <DialogHeader><DialogTitle>Editar Perfil</DialogTitle></DialogHeader>
-                  <ScrollArea className="flex-grow pr-3 -mr-3">
+                  <ScrollArea className="flex-grow pr-3 -mr-3 max-h-[calc(80vh-220px)]"> {/* Adjusted max-height */}
                   <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmitProfile)} id="profileEditForm" className="space-y-6 py-4">
                       <div className="space-y-4 text-center"><Avatar className="h-32 w-32 mx-auto ring-2 ring-primary ring-offset-2 ring-offset-background"><AvatarImage src={imagePreviewUrl || `https://placehold.co/128x128.png?text=${getInitials(form.getValues('nombre'), form.getValues('apellido'))}`} alt="Vista previa de perfil" data-ai-hint="profile preview"/><AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback></Avatar><div className="relative w-full max-w-xs mx-auto"><Input id="picture" type="file" accept="image/png, image/jpeg, image/webp, image/gif" onChange={handleImageChange} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10" disabled={isUploadingImage || isSubmitting}/><Button type="button" variant="outline" className="w-full pointer-events-none relative">{isUploadingImage && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}{!isUploadingImage && <Camera className="mr-2 h-4 w-4" />}{isUploadingImage ? 'Subiendo...' : (imageFile ? (imageFile.name.length > 25 ? imageFile.name.substring(0,22) + '...' : imageFile.name) : 'Cambiar foto')}</Button>{isUploadingImage && <Progress value={undefined} className="absolute bottom-0 left-0 right-0 h-1 w-full rounded-b-md" />}</div></div>
@@ -713,11 +719,13 @@ export default function StudentDashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Mis Certificados */}
       <Card className="shadow-lg">
         <CardHeader><div className="flex items-center gap-2"><Award className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mis Certificados</CardTitle></div><CardDescription>Visualiza y descarga los certificados de los cursos completados.</CardDescription></CardHeader>
         <CardContent><div className="text-center py-6 text-muted-foreground"><Award className="mx-auto h-10 w-10 mb-3 opacity-50" /><p className="font-medium">Funcionalidad de Certificados Próximamente</p><p className="text-sm">Cuando completes tus cursos, tus certificados aparecerán aquí.</p></div></CardContent>
       </Card>
 
+      {/* Record Video Modal */}
       <Dialog open={showRecordVideoModal} onOpenChange={(isOpen) => { if (!isOpen) cancelRecording(); else setShowRecordVideoModal(true); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Grabar Video de Presentación</DialogTitle><DialogDescription>Graba un video corto (máx. {MAX_VIDEO_DURATION_SECONDS} segundos). Asegúrate de que tu cámara esté bien iluminada y graba en vertical.</DialogDescription></DialogHeader>

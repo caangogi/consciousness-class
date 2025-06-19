@@ -28,7 +28,7 @@ const navLinks = [
   { href: '/#faq', label: 'FAQ', icon: HelpCircleIcon, isHashLink: true },
 ];
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=5753a168-614a-4060-baa4-4296d4062f14";
 
 export function Header() {
   const { currentUser, userRole, loading, logout } = useAuth();
@@ -225,7 +225,7 @@ export function Header() {
                <SheetHeader className="border-b p-4">
                 <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
                 <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
-                 <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)} width={120} height={32}/>
+                 <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)} width={250} height={152}/>
               </SheetHeader>
               <nav className="flex flex-col gap-1 px-2 py-2 flex-grow">
                 {navLinks.map((link) => (

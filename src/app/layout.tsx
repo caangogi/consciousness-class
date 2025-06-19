@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
 import React, { useEffect, Suspense } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
+import Image from 'next/image'; // Import Image for the GIF loader
 
 // Fallback component for Suspense
 function RootLayoutFallback() {
@@ -18,21 +19,15 @@ function RootLayoutFallback() {
         <p style={{ fontSize: '0.95em', color: 'hsl(var(--muted-foreground))', marginBottom: '25px' }}>
           Estamos preparando la página. Un momento por favor.
         </p>
-        <div style={{
-          border: '4px solid hsla(var(--primary), 0.2)',
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          borderTopColor: 'hsl(var(--primary))',
-          animation: 'spin 1s ease-in-out infinite',
-          margin: '0 auto'
-        }}></div>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+        {/* Replace CSS loader with Image component for GIF */}
+        <Image 
+            src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo%20consiusness%20class_1.gif?alt=media&token=bbf14d90-4c36-4e2c-9695-39169c145a6b" 
+            alt="Cargando..." 
+            width={80}  // Ajusta el tamaño según sea necesario
+            height={80} // Ajusta el tamaño según sea necesario
+            unoptimized // Necesario para GIFs si no quieres optimización de Next/image
+            style={{ margin: '0 auto' }}
+        />
       </div>
     </div>
   );
@@ -77,6 +72,7 @@ export default function RootLayout({
         
         <title>Consciousness Class</title>
         <meta name="description" content="Plataforma de Membresías y Cursos Online" />
+        <link rel="icon" href="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ffavicon.png?alt=media&token=a6df2795-0feb-4bc6-87bd-41a7cdee2c9f" type="image/png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />

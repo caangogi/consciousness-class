@@ -66,7 +66,6 @@ const profileFormSchema = z.object({
   nombre: z.string().min(1, { message: "El nombre es requerido." }),
   apellido: z.string().min(1, { message: "El apellido es requerido." }),
   bio: z.string().max(500, "La biografía no debe exceder los 500 caracteres.").optional(),
-  // creatorVideoUrl se maneja por fuera del form schema para la subida/grabación
 });
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
@@ -345,13 +344,7 @@ export default function StudentDashboardPage() {
     setIsSubmitting(true);
     try {
         const idToken = await auth.currentUser.getIdToken(true);
-        // Intenta eliminar de Firebase Storage
         try {
-            const videoStoragePath = `users/${auth.currentUser.uid}/creator_video/presentation`; // Asume que no sabemos la extensión, o necesitamos guardarla.
-            // Para ser más preciso, necesitaríamos la ruta exacta guardada o derivarla.
-            // Por simplicidad, si el path no es exacto, deleteObject puede fallar silenciosamente si el objeto no existe.
-            // Una mejor aproximación sería tener el path completo en `creatorVideoUrl` o una referencia.
-            // Aquí vamos a asumir que la URL es de Firebase Storage y tratamos de extraer el path.
             const url = new URL(currentUser.creatorVideoUrl);
             if (url.hostname === 'firebasestorage.googleapis.com') {
                 const pathName = decodeURIComponent(url.pathname);
@@ -364,7 +357,6 @@ export default function StudentDashboardPage() {
             }
         } catch (storageError: any) {
             console.warn("Error eliminando video de Firebase Storage, puede que ya no exista:", storageError.message);
-            // No bloqueamos si falla la eliminación de Storage, pero actualizamos Firestore.
         }
 
         const updateDto = { creatorVideoUrl: null };
@@ -451,7 +443,7 @@ export default function StudentDashboardPage() {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", aspectRatio: 9/16 }, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", aspectRatio: 9 / 16 }, audio: true });
       setHasCameraPermission(true);
       if (videoRef.current) videoRef.current.srcObject = stream;
       mediaRecorderRef.current = new MediaRecorder(stream);
@@ -460,7 +452,7 @@ export default function StudentDashboardPage() {
         if (event.data.size > 0) setRecordedChunks(prev => [...prev, event.data]);
       };
       mediaRecorderRef.current.onstop = () => {
-        const videoBlob = new Blob(recordedChunks, { type: 'video/webm' }); // o mp4 si el browser lo soporta
+        const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
         const uniqueFileName = `recorded_presentation_${Date.now()}.webm`;
         const videoFile = new File([videoBlob], uniqueFileName, { type: 'video/webm' });
 
@@ -472,8 +464,10 @@ export default function StudentDashboardPage() {
             setVideoFile(videoFile);
             setVideoPreviewUrl(URL.createObjectURL(videoFile));
         }
-        stream.getTracks().forEach(track => track.stop()); // Detener stream de cámara
-        setHasCameraPermission(null); // Resetear para que vuelva a pedir si es necesario
+        if (videoRef.current && videoRef.current.srcObject) {
+            (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+        }
+        setHasCameraPermission(null); 
       };
       mediaRecorderRef.current.start();
       setIsRecording(true);
@@ -513,7 +507,7 @@ export default function StudentDashboardPage() {
     if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
     setIsRecording(false);
     setRecordedChunks([]);
-    setVideoPreviewUrl(currentUser?.creatorVideoUrl || null); // Revertir a video existente o null
+    setVideoPreviewUrl(currentUser?.creatorVideoUrl || null); 
     setVideoFile(null);
     setShowRecordVideoModal(false);
     if(videoRef.current && videoRef.current.srcObject){
@@ -521,7 +515,7 @@ export default function StudentDashboardPage() {
         videoRef.current.srcObject = null;
     }
     setHasCameraPermission(null);
-};
+  };
 
 
   if (authLoading) {
@@ -624,7 +618,7 @@ export default function StudentDashboardPage() {
               <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogTrigger asChild><Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Editar Perfil</Button></DialogTrigger>
               <DialogContent className="sm:max-w-[580px] max-h-[90vh] flex flex-col">
                   <DialogHeader><DialogTitle>Editar Perfil</DialogTitle></DialogHeader>
-                  <ScrollArea className="flex-grow pr-3 -mr-3"> {/* Added ScrollArea */}
+                  <ScrollArea className="flex-grow pr-3 -mr-3 overflow-y-auto"> 
                   <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmitProfile)} className="space-y-6 py-4">
                       <div className="space-y-4 text-center"><Avatar className="h-32 w-32 mx-auto ring-2 ring-primary ring-offset-2 ring-offset-background"><AvatarImage src={imagePreviewUrl || `https://placehold.co/128x128.png?text=${getInitials(form.getValues('nombre'), form.getValues('apellido'))}`} alt="Vista previa de perfil" data-ai-hint="profile preview"/><AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback></Avatar><div className="relative w-full max-w-xs mx-auto"><Input id="picture" type="file" accept="image/png, image/jpeg, image/webp, image/gif" onChange={handleImageChange} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10" disabled={isUploadingImage || isSubmitting}/><Button type="button" variant="outline" className="w-full pointer-events-none relative">{isUploadingImage && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}{!isUploadingImage && <Camera className="mr-2 h-4 w-4" />}{isUploadingImage ? 'Subiendo...' : (imageFile ? (imageFile.name.length > 25 ? imageFile.name.substring(0,22) + '...' : imageFile.name) : 'Cambiar foto')}</Button>{isUploadingImage && <Progress value={undefined} className="absolute bottom-0 left-0 right-0 h-1 w-full rounded-b-md" />}</div></div>
@@ -637,9 +631,11 @@ export default function StudentDashboardPage() {
                           {videoPreviewUrl && !isRecording && (
                             <div className="my-2">
                                 <video src={videoPreviewUrl} controls className="w-full rounded-md max-h-60 aspect-video bg-black"><track kind="captions"/></video>
-                                <Button type="button" variant="outline" size="sm" className="mt-2 w-full" onClick={() => setShowDeleteVideoConfirm(true)} disabled={isSubmitting || isUploadingVideo}>
-                                    <Trash2 className="mr-2 h-4 w-4"/>Eliminar Video Actual
-                                </Button>
+                                {currentUser?.creatorVideoUrl && videoPreviewUrl === currentUser.creatorVideoUrl && (
+                                    <Button type="button" variant="outline" size="sm" className="mt-2 w-full" onClick={() => setShowDeleteVideoConfirm(true)} disabled={isSubmitting || isUploadingVideo}>
+                                        <Trash2 className="mr-2 h-4 w-4"/>Eliminar Video Actual
+                                    </Button>
+                                )}
                             </div>
                           )}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
@@ -656,8 +652,8 @@ export default function StudentDashboardPage() {
                            {isUploadingVideo && <Progress value={undefined} className="mt-2 h-1 w-full" />}
                       </FormItem>
                   </form>
-                  </ScrollArea> {/* End ScrollArea */}
-                  <DialogFooter className="pt-4 border-t"> {/* Added border for separation */}
+                  </ScrollArea> 
+                  <DialogFooter className="pt-4 border-t"> 
                       <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting || isUploadingImage || isUploadingVideo}>Cancelar</Button></DialogClose>
                       <Button type="submit" form="profileEditForm" disabled={isSubmitting || isUploadingImage || isUploadingVideo || isRecording } onClick={form.handleSubmit(onSubmitProfile)}>
                           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -677,7 +673,6 @@ export default function StudentDashboardPage() {
         <CardContent><div className="text-center py-6 text-muted-foreground"><Award className="mx-auto h-10 w-10 mb-3 opacity-50" /><p className="font-medium">Funcionalidad de Certificados Próximamente</p><p className="text-sm">Cuando completes tus cursos, tus certificados aparecerán aquí.</p></div></CardContent>
       </Card>
 
-      {/* Record Video Modal */}
       <Dialog open={showRecordVideoModal} onOpenChange={(isOpen) => { if (!isOpen) cancelRecording(); else setShowRecordVideoModal(true); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Grabar Video de Presentación</DialogTitle><DialogDescription>Graba un video corto (máx. {MAX_VIDEO_DURATION_SECONDS} segundos). Asegúrate de que tu cámara esté bien iluminada y graba en vertical.</DialogDescription></DialogHeader>
@@ -712,9 +707,8 @@ export default function StudentDashboardPage() {
                 )}
                 <Button 
                     onClick={() => {
-                        if (recordedChunks.length > 0 && videoFile) { // Asegurar que haya algo que guardar
-                             setShowRecordVideoModal(false); // Cierra modal de grabación
-                             // El videoFile ya está seteado por onstop, solo cerramos.
+                        if (recordedChunks.length > 0 && videoFile) { 
+                             setShowRecordVideoModal(false); 
                         } else if (!videoFile && recordedChunks.length === 0 && !isRecording) {
                            toast({title: "Nada que guardar", description:"Graba un video primero.", variant:"default"});
                         } else if (isRecording) {
@@ -729,7 +723,6 @@ export default function StudentDashboardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Confirm Delete Video Dialog */}
         <AlertDialog open={showDeleteVideoConfirm} onOpenChange={setShowDeleteVideoConfirm}>
             <AlertDialogContent>
                 <AlertDialogHeader>

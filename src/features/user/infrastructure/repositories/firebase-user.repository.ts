@@ -91,7 +91,7 @@ export class FirebaseUserRepository implements IUserRepository {
     }
   }
 
-  async update(uid: string, data: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'referredBy' | 'displayName' | 'cursosInscritos' | 'photoURL' | 'balanceComisionesPendientes' | 'balanceIngresosPendientes'>>): Promise<UserEntity | null> {
+  async update(uid: string, data: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'referredBy' | 'displayName' | 'cursosInscritos' | 'balanceComisionesPendientes' | 'balanceIngresosPendientes' >>): Promise<UserEntity | null> {
     try {
       const userRef = this.usersCollection.doc(uid);
       const userSnap = await userRef.get();
@@ -102,7 +102,6 @@ export class FirebaseUserRepository implements IUserRepository {
 
       const updateData: any = { ...data, updatedAt: new Date().toISOString() };
 
-      // Specific handling for displayName and photoURL if they are part of 'data'
       const currentData = userSnap.data() as UserProperties;
       const newNombre = data.nombre !== undefined ? data.nombre : currentData.nombre;
       const newApellido = data.apellido !== undefined ? data.apellido : currentData.apellido;
@@ -111,12 +110,17 @@ export class FirebaseUserRepository implements IUserRepository {
           updateData.displayName = `${newNombre} ${newApellido}`.trim();
       }
 
-      // Handle photoURL: allow setting to null or a new string URL
-      if (data.hasOwnProperty('photoURL')) { // Check if photoURL key exists in data
-        updateData.photoURL = data.photoURL; // This will correctly pass string or null
+      if (data.hasOwnProperty('photoURL')) { 
+        updateData.photoURL = data.photoURL; 
       }
+      if (data.hasOwnProperty('bio')) {
+        updateData.bio = data.bio;
+      }
+      if (data.hasOwnProperty('creatorVideoUrl')) {
+        updateData.creatorVideoUrl = data.creatorVideoUrl;
+      }
+      
 
-      // Ensure cursosInscritos is an array if provided, or default to empty array if not
       if (data.cursosInscritos !== undefined && !Array.isArray(data.cursosInscritos)) {
         updateData.cursosInscritos = [];
       }

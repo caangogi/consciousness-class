@@ -11,8 +11,6 @@ if (!admin.apps.length) {
     const clientEmailFromEnv = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
     let privateKeyFromEnv = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
 
-    console.log('[Firebase Admin] Attempting to initialize Admin SDK...');
-
     if (!projectIdFromEnv || !clientEmailFromEnv || !privateKeyFromEnv) {
       console.error(
         'CRITICAL: Firebase Admin SDK init failed: Missing required env vars (FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY).'
@@ -22,13 +20,6 @@ if (!admin.apps.length) {
       adminDb = null;
       adminStorage = null;
     } else {
-      // Log initial state of the private key from environment
-      const initialPkPreviewStart = privateKeyFromEnv.substring(0, Math.min(30, privateKeyFromEnv.length));
-      const initialPkPreviewEnd = privateKeyFromEnv.substring(Math.max(0, privateKeyFromEnv.length - 30));
-      console.log(`[Firebase Admin] Initial privateKeyFromEnv (preview): "${initialPkPreviewStart}..."..."${initialPkPreviewEnd}"`);
-      console.log(`[Firebase Admin] Initial privateKeyFromEnv length: ${privateKeyFromEnv.length}`);
-
-      // Step 1: Trim whitespace from the entire string
       let processedKey = privateKeyFromEnv.trim();
       if (processedKey.length !== privateKeyFromEnv.length) {
         console.log('[Firebase Admin] Whitespace trimmed from private key. New length:', processedKey.length);

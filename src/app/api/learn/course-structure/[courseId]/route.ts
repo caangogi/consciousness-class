@@ -9,18 +9,19 @@ import { FirebaseModuleRepository } from '@/features/course/infrastructure/repos
 import { FirebaseLessonRepository } from '@/features/course/infrastructure/repositories/firebase-lesson.repository';
 import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
 import type { LessonProperties } from '@/features/course/domain/entities/lesson.entity';
-import { adminDb } from '@/lib/firebase/admin'; // Import adminDb to fetch creator profile
+import { adminDb } from '@/lib/firebase/admin'; 
 import type { UserProperties } from '@/features/user/domain/entities/user.entity';
+import type { CourseProperties as DomainCourseProperties } from '@/features/course/domain/entities/course.entity';
 
-// Define a type for the module with its lessons
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
 }
 
-// Define an augmented CourseProperties type for the API response
-interface CourseWithCreatorDetails extends CourseProperties {
+interface CourseWithCreatorDetails extends DomainCourseProperties {
   creadorNombre?: string;
   creadorAvatarUrl?: string | null;
+  creadorBio?: string | null;
+  creadorVideoUrl?: string | null;
 }
 
 interface RouteContext {
@@ -37,17 +38,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Bad Request: Missing course ID in path.' }, { status: 400 });
     }
 
-    // Initialize repositories
     const courseRepository = new FirebaseCourseRepository();
     const moduleRepository = new FirebaseModuleRepository();
     const lessonRepository = new FirebaseLessonRepository();
 
-    // Initialize services
     const courseService = new CourseService(courseRepository);
     const moduleService = new ModuleService(moduleRepository, courseRepository);
     const lessonService = new LessonService(lessonRepository, moduleRepository, courseRepository);
 
-    // 1. Fetch course details
     console.log(`[API /learn/course-structure] Fetching course details for ID: ${courseId}`);
     const course = await courseService.getCourseById(courseId);
     if (!course) {
@@ -58,7 +56,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     let courseWithCreatorDetails: CourseWithCreatorDetails = course.toPlainObject();
 
-    // Fetch creator details
     if (course.creadorUid) {
       try {
         const creatorDoc = await adminDb.collection('usuarios').doc(course.creadorUid).get();
@@ -66,6 +63,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
           const creatorData = creatorDoc.data() as UserProperties;
           courseWithCreatorDetails.creadorNombre = creatorData.displayName || `${creatorData.nombre} ${creatorData.apellido}`.trim();
           courseWithCreatorDetails.creadorAvatarUrl = creatorData.photoURL || null;
+          courseWithCreatorDetails.creadorBio = creatorData.bio || null;
+          courseWithCreatorDetails.creadorVideoUrl = creatorData.creatorVideoUrl || null;
           console.log(`[API /learn/course-structure] Creator details found for UID ${course.creadorUid}: Name - ${courseWithCreatorDetails.creadorNombre}`);
         } else {
           console.warn(`[API /learn/course-structure] Creator profile not found for UID: ${course.creadorUid}`);
@@ -75,13 +74,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
       }
     }
 
-
-    // 2. Fetch modules for the course (already ordered by ModuleService)
     console.log(`[API /learn/course-structure] Fetching modules for course ID: ${courseId}`);
     const modules = await moduleService.getModulesByCourseId(courseId);
     console.log(`[API /learn/course-structure] Found ${modules.length} modules for course ID: ${courseId}`);
 
-    // 3. Fetch lessons for each module (already ordered by LessonService)
     const modulesWithLessons: ModuleWithLessons[] = [];
     for (const moduleItem of modules) {
       console.log(`[API /learn/course-structure] Fetching lessons for module ID: ${moduleItem.id} (Course: ${courseId})`);

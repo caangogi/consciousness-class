@@ -103,7 +103,6 @@ export default function StudentDashboardPage() {
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [showDeleteVideoConfirm, setShowDeleteVideoConfirm] = useState(false);
 
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRequestingCreatorRole, setIsRequestingCreatorRole] = useState(false);
   const [showBecomeCreatorDialog, setShowBecomeCreatorDialog] = useState(false);
@@ -358,9 +357,10 @@ export default function StudentDashboardPage() {
     setIsSubmitting(true);
     try {
         const idToken = await auth.currentUser.getIdToken(true);
+        const videoUrlString = currentUser.creatorVideoUrl; // No non-null assertion needed due to guard
 
         try {
-            const url = new URL(currentUser.creatorVideoUrl);
+            const url = new URL(videoUrlString);
             if (url.hostname === 'firebasestorage.googleapis.com') {
                 const pathName = decodeURIComponent(url.pathname);
                 const objectPath = pathName.substring(pathName.indexOf('/o/') + 3).split('?')[0];
@@ -429,7 +429,7 @@ export default function StudentDashboardPage() {
     } finally {
       setIsRequestingCreatorRole(false);
     }
-  };
+  }
 
   async function handleRefreshStats() {
     setIsRefreshingStats(true);
@@ -443,7 +443,7 @@ export default function StudentDashboardPage() {
     } finally {
       setIsRefreshingStats(false);
     }
-  };
+  }
 
   const getInitials = (name?: string | null, surname?: string | null) => {
     if (name && surname) return `${name[0]}${surname[0]}`.toUpperCase();
@@ -460,20 +460,14 @@ export default function StudentDashboardPage() {
     }
 
     try {
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: "user",
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
-        },
-        audio: true,
-      };
+      // Simplified constraints
+      const constraints: MediaStreamConstraints = { video: true, audio: true };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setHasCameraPermission(true);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      mediaRecorderRef.current = new MediaRecorder(stream); // Simplified options
       setRecordedChunks([]);
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -521,7 +515,7 @@ export default function StudentDashboardPage() {
           return newTime;
         });
       }, 1000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing camera:', error);
       setHasCameraPermission(false);
       toast({ variant: 'destructive', title: 'Cámara Denegada', description: 'Habilita permisos de cámara.'});
@@ -586,6 +580,7 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Panel de Estudiante</h1>
+      {/* Mis Cursos */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center gap-2"><BookOpen className="h-6 w-6 text-primary" />
@@ -614,6 +609,7 @@ export default function StudentDashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Mis Referidos y Comisiones */}
       <Card className="shadow-lg">
         <CardHeader>
             <div className="flex items-center justify-between">
@@ -647,6 +643,7 @@ export default function StudentDashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Promociona Cursos y Gana */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center gap-2"><Share2 className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Promociona Cursos y Gana</CardTitle>
@@ -665,6 +662,7 @@ export default function StudentDashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Mi Perfil */}
       <Card className="shadow-lg">
         <CardHeader><div className="flex items-center gap-2"><UserCircle className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mi Perfil</CardTitle></div><CardDescription>Gestiona tu información personal y configuración de cuenta.</CardDescription></CardHeader>
         <CardContent className="space-y-3">
@@ -724,12 +722,14 @@ export default function StudentDashboardPage() {
           </div>
         </CardContent>
       </Card>
+      {/* Mis Certificados */}
       <Card className="shadow-lg">
         <CardHeader><div className="flex items-center gap-2"><Award className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mis Certificados</CardTitle></div><CardDescription>Visualiza y descarga los certificados de los cursos completados.</CardDescription></CardHeader>
         <CardContent><div className="text-center py-6 text-muted-foreground"><Award className="mx-auto h-10 w-10 mb-3 opacity-50" /><p className="font-medium">Funcionalidad de Certificados Próximamente</p><p className="text-sm">Cuando completes tus cursos, tus certificados aparecerán aquí.</p></div></CardContent>
       </Card>
 
 
+      {/* Video Recording Dialog */}
       <Dialog open={showRecordVideoModal} onOpenChange={(isOpen) => { if (!isOpen) cancelRecording(); else setShowRecordVideoModal(true); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Grabar Video de Presentación</DialogTitle><DialogDescription>Graba un video corto (máx. {MAX_VIDEO_DURATION_SECONDS} segundos). Asegúrate de que tu cámara esté bien iluminada y graba en vertical.</DialogDescription></DialogHeader>
@@ -781,6 +781,7 @@ export default function StudentDashboardPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Video AlertDialog */}
       <AlertDialog open={showDeleteVideoConfirm} onOpenChange={setShowDeleteVideoConfirm}>
           <AlertDialogContent>
               <AlertDialogHeader>

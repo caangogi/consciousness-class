@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from 'next/image';
-import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon, Share2, ExternalLink, DollarSign, RefreshCw, ListChecks, CalendarDays } from "lucide-react";
+import { BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, Link as LinkIcon, Share2, ExternalLink, DollarSign, RefreshCw, ListChecks, CalendarDays, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -90,11 +90,6 @@ export default function StudentDashboardPage() {
       setBaseUrl(window.location.origin);
     }
   }, []);
-
-  useEffect(() => {
-    // Log to see what the dashboard page sees when currentUser changes
-    console.log('[StudentDashboardPage] currentUser.balanceComisionesPendientes on render:', currentUser?.balanceComisionesPendientes);
-  }, [currentUser]);
 
 
   const form = useForm<ProfileFormValues>({
@@ -300,48 +295,21 @@ export default function StudentDashboardPage() {
     }
   }
 
-  const handleCopyReferralCode = () => {
-    if (currentUser?.referralCodeGenerated) {
-        navigator.clipboard.writeText(currentUser.referralCodeGenerated)
-        .then(() => {
-            toast({ title: "Código Copiado", description: "Tu código de referido ha sido copiado al portapapeles."});
-        })
-        .catch(err => {
-            toast({ title: "Error al Copiar", description: "No se pudo copiar el código.", variant: "destructive"});
-        });
-    } else {
-        toast({ title: "Error", description: "No hay código de referido para copiar.", variant: "destructive"});
-    }
-  };
-
-  const handleCopyReferralLink = (type: 'signup' | 'home' | 'course', courseId?: string) => {
+  const handleCopyReferralLink = (courseId?: string) => {
     if (currentUser?.referralCodeGenerated && baseUrl) {
-        let path = '';
-        let messageType = '';
-        if (type === 'signup') {
-            path = '/signup';
-            messageType = 'registro';
-        } else if (type === 'home') {
-            path = '/';
-            messageType = 'la página principal';
-        } else if (type === 'course' && courseId) {
-            path = `/courses/${courseId}`;
-            messageType = `el curso específico`;
-        } else {
-             toast({ title: "Error", description: "Información incompleta para generar enlace de referido.", variant: "destructive"});
-            return;
-        }
-
+        let path = `/courses/${courseId}`;
+        let messageType = `el curso específico`;
+        
         const link = `${baseUrl}${path}?ref=${currentUser.referralCodeGenerated}`;
         navigator.clipboard.writeText(link)
         .then(() => {
-            toast({ title: "Enlace Copiado", description: `Tu enlace de referido a ${messageType} ha sido copiado.`});
+            toast({ title: "Enlace de Promoción Copiado", description: `El enlace para ${messageType} ha sido copiado.`});
         })
         .catch(err => {
             toast({ title: "Error al Copiar Enlace", description: "No se pudo copiar el enlace.", variant: "destructive"});
         });
     } else {
-        toast({ title: "Error", description: "No se pudo generar el enlace de referido (código o URL base faltante).", variant: "destructive"});
+        toast({ title: "Error", description: "No se pudo generar el enlace de promoción (código o URL base faltante).", variant: "destructive"});
     }
   };
 
@@ -381,9 +349,7 @@ export default function StudentDashboardPage() {
     toast({ title: "Actualizando Datos...", description: "Estamos refrescando tus estadísticas y comisiones." });
     try {
       await refreshUserProfile();
-      await fetchDetailedCommissions(); // Asegurarse de recargar las comisiones también
-      console.log('[StudentDashboardPage] currentUser after refresh:', currentUser);
-      console.log('[StudentDashboardPage] currentUser.balanceComisionesPendientes after refresh:', currentUser?.balanceComisionesPendientes);
+      await fetchDetailedCommissions();
       toast({ title: "Datos Actualizados", description: "Tus estadísticas y comisiones han sido actualizadas." });
     } catch (error) {
       console.error("[StudentDashboardPage] Error refreshing user profile:", error);
@@ -433,9 +399,6 @@ export default function StudentDashboardPage() {
   if (!currentUser) {
     return <p className="text-center text-lg">Por favor, <Link href="/login" className="text-primary hover:underline">inicia sesión</Link> para ver tu panel.</p>;
   }
-
-  const referralCode = currentUser.referralCodeGenerated || 'GENERANDO...';
-
 
   return (
     <div className="space-y-8">
@@ -639,129 +602,105 @@ export default function StudentDashboardPage() {
         </Card>
 
         <Card className="shadow-lg">
-          <CardHeader>
-             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Gift className="h-6 w-6 text-primary" />
-                    <CardTitle className="text-2xl font-headline">Mi Programa de Referidos</CardTitle>
-                </div>
-                <Button variant="outline" size="sm" onClick={handleRefreshStats} disabled={isRefreshingStats}>
-                    {isRefreshingStats ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-2 h-3 w-3" />}
-                    Refrescar
-                </Button>
-             </div>
-            <CardDescription>Comparte tu código o enlaces y obtén recompensas.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-                <p className="text-sm font-medium mb-1">Tu Código Personal:</p>
-                <div className="flex items-center gap-2 p-3 bg-secondary rounded-md">
-                <p className="text-lg font-mono text-primary flex-grow truncate">{referralCode}</p>
-                <Button variant="ghost" size="icon" onClick={handleCopyReferralCode} disabled={!currentUser.referralCodeGenerated || currentUser.referralCodeGenerated === 'GENERANDO...' || !navigator.clipboard}>
-                    <Copy className="h-5 w-5" />
-                    <span className="sr-only">Copiar código</span>
-                </Button>
-                </div>
-            </div>
-             <div>
-                <p className="text-sm font-medium mb-1">Enlaces Rápidos para Compartir:</p>
-                <div className="space-y-2">
-                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => handleCopyReferralLink('signup')} disabled={!currentUser.referralCodeGenerated || !baseUrl || !navigator.clipboard}>
-                        <LinkIcon className="mr-2 h-4 w-4"/> Copiar Enlace de Registro
-                    </Button>
-                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => handleCopyReferralLink('home')} disabled={!currentUser.referralCodeGenerated || !baseUrl || !navigator.clipboard}>
-                        <LinkIcon className="mr-2 h-4 w-4"/> Copiar Enlace a Página Principal
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Gift className="h-6 w-6 text-primary" />
+                        <CardTitle className="text-2xl font-headline">Mis Referidos y Comisiones</CardTitle>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleRefreshStats} disabled={isRefreshingStats}>
+                        {isRefreshingStats ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-2 h-3 w-3" />}
+                        Refrescar
                     </Button>
                 </div>
-                 <p className="text-xs text-muted-foreground mt-2">
-                    También puedes añadir <code className="text-xs bg-muted px-1 py-0.5 rounded">?ref={currentUser.referralCodeGenerated || 'TU_CODIGO'}</code> al final de cualquier URL de curso para compartirlo.
-                 </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t mt-4">
-                <div>
-                    <p className="text-sm font-medium text-muted-foreground">Referidos Exitosos:</p>
-                    <p className="text-2xl font-semibold">{currentUser?.referidosExitosos || 0}</p>
+                <CardDescription>Consulta tus estadísticas de referidos y el detalle de comisiones generadas.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Referidos Exitosos:</p>
+                        <p className="text-2xl font-semibold flex items-center">
+                            {currentUser?.referidosExitosos || 0} <Users className="h-5 w-5 ml-2 text-muted-foreground"/>
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Comisiones Pendientes:</p>
+                        <p className="text-2xl font-semibold flex items-center">
+                            {(currentUser?.balanceComisionesPendientes || 0).toFixed(2)} € <DollarSign className="h-5 w-5 ml-1 text-muted-foreground"/>
+                        </p>
+                    </div>
                 </div>
-                 <div>
-                    <p className="text-sm font-medium text-muted-foreground">Comisiones Pendientes:</p>
-                    <p className="text-2xl font-semibold flex items-center">{(currentUser?.balanceComisionesPendientes || 0).toFixed(2)} € <DollarSign className="h-5 w-5 ml-1 text-muted-foreground"/></p>
-                 </div>
-            </div>
-             <div className="mt-3 p-3 bg-secondary/50 rounded-md text-xs text-secondary-foreground flex items-start gap-2">
-                <Info className="h-4 w-4 shrink-0 mt-0.5"/>
-                <p>El seguimiento detallado de comisiones y su pago se habilitará próximamente. Por ahora, puedes ver tus referidos exitosos y el balance de comisiones pendientes (actualiza con el botón superior para ver los últimos cambios).</p>
-             </div>
-          </CardContent>
+                
+                <div className="border-t pt-4">
+                    <h4 className="text-lg font-semibold mb-2">Detalle de Comisiones Generadas</h4>
+                    {isLoadingCommissions ? (
+                        <div className="flex items-center justify-center py-6">
+                        <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Cargando comisiones...
+                        </div>
+                    ) : commissionsError ? (
+                        <div className="text-center py-6">
+                        <AlertTriangle className="mx-auto h-10 w-10 text-destructive mb-2" />
+                        <p className="text-muted-foreground text-sm">{commissionsError}</p>
+                        </div>
+                    ) : detailedCommissions.length > 0 ? (
+                        <div className="overflow-x-auto max-h-80">
+                        <Table>
+                            <TableHeader>
+                            <TableRow>
+                                <TableHead>Fecha</TableHead>
+                                <TableHead>Curso</TableHead>
+                                <TableHead className="text-right">Monto</TableHead>
+                                <TableHead className="text-center">Estado</TableHead>
+                            </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {detailedCommissions.map((commission) => (
+                                <TableRow key={commission.id}>
+                                <TableCell>
+                                    <div className="flex items-center gap-2 text-xs sm:text-sm">
+                                    <CalendarDays className="h-4 w-4 text-muted-foreground"/>
+                                    {format(new Date(commission.fechaCreacion), 'dd MMM yyyy, HH:mm', { locale: es })}
+                                    </div>
+                                </TableCell>
+                                <TableCell className="font-medium truncate max-w-[100px] sm:max-w-xs" title={commission.nombreCursoComprado || commission.courseIdComprado}>
+                                    {commission.nombreCursoComprado || commission.courseIdComprado}
+                                </TableCell>
+                                <TableCell className="text-right">{commission.montoComisionCalculado.toFixed(2)} €</TableCell>
+                                <TableCell className="text-center">
+                                    <Badge 
+                                        variant={commission.estadoPagoComision === 'pagada' ? 'default' : (commission.estadoPagoComision === 'pendiente' ? 'secondary' : 'destructive')} 
+                                        className={
+                                            commission.estadoPagoComision === 'pagada' ? 'bg-green-100 text-green-700' 
+                                            : (commission.estadoPagoComision === 'pendiente' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700')
+                                        }
+                                    >
+                                    {commission.estadoPagoComision.charAt(0).toUpperCase() + commission.estadoPagoComision.slice(1)}
+                                    </Badge>
+                                </TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                        </div>
+                    ) : (
+                        <p className="text-muted-foreground py-4 text-center text-sm">Aún no has generado ninguna comisión.</p>
+                    )}
+                </div>
+                <div className="mt-3 p-3 bg-secondary/50 rounded-md text-xs text-secondary-foreground flex items-start gap-2">
+                    <Info className="h-4 w-4 shrink-0 mt-0.5"/>
+                    <p>El seguimiento detallado de comisiones y su pago se habilitará próximamente. Por ahora, puedes ver tus referidos exitosos y el balance de comisiones pendientes.</p>
+                </div>
+            </CardContent>
         </Card>
       </div>
 
        <Card className="shadow-lg">
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <ListChecks className="h-6 w-6 text-primary" />
-            <CardTitle className="text-2xl font-headline">Mis Comisiones por Referidos</CardTitle>
-          </div>
-          <CardDescription>Aquí puedes ver el detalle de las comisiones que has generado.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingCommissions ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Cargando comisiones...
-            </div>
-          ) : commissionsError ? (
-            <div className="text-center py-6">
-              <AlertTriangle className="mx-auto h-10 w-10 text-destructive mb-2" />
-              <p className="text-muted-foreground text-sm">{commissionsError}</p>
-            </div>
-          ) : detailedCommissions.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Curso</TableHead>
-                    <TableHead className="text-right">Monto Comisión</TableHead>
-                    <TableHead className="text-center">Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {detailedCommissions.map((commission) => (
-                    <TableRow key={commission.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                           <CalendarDays className="h-4 w-4 text-muted-foreground"/>
-                           {format(new Date(commission.fechaCreacion), 'dd MMM yyyy, HH:mm', { locale: es })}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium truncate max-w-xs" title={commission.nombreCursoComprado || commission.courseIdComprado}>
-                        {commission.nombreCursoComprado || commission.courseIdComprado}
-                      </TableCell>
-                      <TableCell className="text-right">{commission.montoComisionCalculado.toFixed(2)} €</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={commission.estadoPagoComision === 'pagada' ? 'default' : 'secondary'} 
-                               className={commission.estadoPagoComision === 'pagada' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
-                          {commission.estadoPagoComision === 'pendiente' ? 'Pendiente' : commission.estadoPagoComision}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-muted-foreground py-4 text-center">Aún no has generado ninguna comisión.</p>
-          )}
-        </CardContent>
-      </Card>
-
-
-      <Card className="shadow-lg">
-        <CardHeader>
             <div className="flex items-center gap-2">
                 <Share2 className="h-6 w-6 text-primary" />
                 <CardTitle className="text-2xl font-headline">Promociona Cursos y Gana</CardTitle>
             </div>
-            <CardDescription>Obtén enlaces de referido para cursos específicos que ofrecen comisión.</CardDescription>
+            <CardDescription>Copia enlaces de promoción para cursos específicos que ofrecen comisión.</CardDescription>
         </CardHeader>
         <CardContent>
             {isLoadingPromotableCourses ? (
@@ -808,10 +747,10 @@ export default function StudentDashboardPage() {
                                 variant="outline"
                                 size="sm"
                                 className="w-full"
-                                onClick={() => handleCopyReferralLink('course', course.id)}
+                                onClick={() => handleCopyReferralLink(course.id)}
                                 disabled={!currentUser.referralCodeGenerated || !baseUrl || !navigator.clipboard}
                             >
-                                <ExternalLink className="mr-2 h-4 w-4" /> Copiar Enlace de Promoción
+                                <LinkIcon className="mr-2 h-4 w-4" /> Copiar Enlace de Promoción
                             </Button>
                         </Card>
                     ))}
@@ -842,4 +781,3 @@ export default function StudentDashboardPage() {
   );
 }
 
-    

@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=32e66a51-6809-4b4c-83bd-98e16bc84339";
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=5753a168-614a-4060-baa4-4296d4062f14";
 
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -120,7 +120,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </SheetContent>
           </Sheet>
            <div className="md:hidden">
-             <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" />
+            {/*  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" /> */}
            </div>
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8 bg-background overflow-auto">

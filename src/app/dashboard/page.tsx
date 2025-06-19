@@ -5,27 +5,26 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Activity, ArrowRight, BookOpen, BarChartBig, Users, Settings, Gift, DollarSign, Award, Loader2, AlertTriangle } from "lucide-react"; 
+import { Activity, ArrowRight, BookOpen, BarChartBig, Users, Settings, Gift, DollarSign, Award, Loader2, AlertTriangle, RefreshCw } from "lucide-react"; 
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
-import type { UserProperties } from '@/features/user/domain/entities/user.entity';
-import { auth } from '@/lib/firebase/config';
+import { auth } from '@/lib/firebase/config'; // Import auth for token
 
 interface CreatorCourseSummary extends Pick<CourseProperties, 'id' | 'nombre' | 'estado' | 'totalEstudiantes'> {}
 
 interface DashboardStats {
-  card1Value: number | string;
+  card1Value: number | string | React.ReactNode;
   card1Title: string;
   card1Icon: React.ElementType;
   card1Description: string;
 
-  card2Value: number | string;
+  card2Value: number | string | React.ReactNode;
   card2Title: string;
   card2Icon: React.ElementType;
   card2Description: string;
 
-  card3Value: number | string;
+  card3Value: number | string | React.ReactNode;
   card3Title: string;
   card3Icon: React.ElementType;
   card3Description: string;
@@ -34,60 +33,85 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const { currentUser, userRole, loading: authLoading } = useAuth();
+  const { currentUser, userRole, loading: authLoading, refreshUserProfile } = useAuth();
   
   const [creatorCourses, setCreatorCourses] = useState<CreatorCourseSummary[]>([]);
-  const [totalUsers, setTotalUsers] = useState(0);
+  const [recentUsersCount, setRecentUsersCount] = useState(0);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchCreatorCourses = useCallback(async () => {
     if (userRole !== 'creator' || !auth.currentUser) return;
+    console.log("[DashboardPage] Fetching creator courses...");
     setIsLoadingStats(true);
+    setStatsError(null);
     try {
       const idToken = await auth.currentUser.getIdToken(true);
       const response = await fetch('/api/creator/courses', {
         headers: { 'Authorization': `Bearer ${idToken}` },
       });
-      if (!response.ok) throw new Error('Error al cargar cursos del creador');
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.details || errData.error || 'Error al cargar cursos del creador');
+      }
       const data = await response.json();
       setCreatorCourses(data.courses || []);
+      console.log("[DashboardPage] Creator courses fetched:", data.courses?.length || 0);
     } catch (error: any) {
       setStatsError(error.message);
+      console.error("[DashboardPage] Error fetching creator courses:", error.message);
     } finally {
       setIsLoadingStats(false);
     }
   }, [userRole]);
 
-  const fetchTotalUsers = useCallback(async () => {
+  const fetchRecentUsersCount = useCallback(async () => {
     if (userRole !== 'superadmin' || !auth.currentUser) return;
+    console.log("[DashboardPage] Fetching recent users count...");
     setIsLoadingStats(true);
+    setStatsError(null);
     try {
       const idToken = await auth.currentUser.getIdToken(true);
-      const response = await fetch('/api/superadmin/users', { // This API might need adjustment for just a count
+      const response = await fetch('/api/superadmin/users', { // API might need adjustment for just a count
         headers: { 'Authorization': `Bearer ${idToken}` },
       });
-      if (!response.ok) throw new Error('Error al cargar total de usuarios');
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.details || errData.error ||'Error al cargar total de usuarios');
+      }
       const data = await response.json();
-      setTotalUsers(data.users?.length || 0); // Or a dedicated count if API provides it
+      setRecentUsersCount(data.users?.length || 0); // Using length of fetched users
+      console.log("[DashboardPage] Recent users count fetched:", data.users?.length || 0);
     } catch (error: any) {
       setStatsError(error.message);
+      console.error("[DashboardPage] Error fetching recent users count:", error.message);
     } finally {
       setIsLoadingStats(false);
     }
   }, [userRole]);
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshUserProfile(); // This updates currentUser
+    // Data fetching useEffect will re-run due to currentUser dependency change
+    setIsRefreshing(false);
+  };
+  
   useEffect(() => {
     if (!authLoading && currentUser) {
       if (userRole === 'creator') {
         fetchCreatorCourses();
       } else if (userRole === 'superadmin') {
-        fetchTotalUsers();
-      } else {
-        setIsLoadingStats(false); // For student, no extra data needed for stats
+        fetchRecentUsersCount();
+      } else { // student or other roles that don't need extra data for these stats
+        setIsLoadingStats(false);
       }
+    } else if (!authLoading && !currentUser) {
+        setIsLoadingStats(false); // No user, so no stats to load
     }
-  }, [currentUser, userRole, authLoading, fetchCreatorCourses, fetchTotalUsers]);
+  }, [currentUser, userRole, authLoading, fetchCreatorCourses, fetchRecentUsersCount]);
+
 
   const roleSpecificLinks = {
     student: [
@@ -96,21 +120,20 @@ export default function DashboardPage() {
     ],
     creator: [
       { title: "Gestionar Cursos", description: "Crea, edita y publica tus cursos.", href: "/dashboard/creator/courses", icon: BookOpen },
-      { title: "Estadísticas de Creator", description: "Analiza el rendimiento de tus cursos e ingresos.", href: "/dashboard/creator", icon: BarChartBig }, // Link to main creator dashboard
+      { title: "Estadísticas de Creator", description: "Analiza el rendimiento de tus cursos e ingresos.", href: "/dashboard/creator", icon: BarChartBig },
     ],
     superadmin: [
-      { title: "Gestión de Usuarios", description: "Administra todos los usuarios de la plataforma.", href: "/dashboard/superadmin", icon: Users }, // Link to main superadmin dashboard
-      { title: "Configuración Global", description: "Ajusta los parámetros generales de Consciousness Class.", href: "/dashboard/superadmin", icon: Settings },
+      { title: "Gestión de Usuarios", description: "Administra todos los usuarios de la plataforma.", href: "/dashboard/superadmin", icon: Users },
+      { title: "Configuración Global", description: "Ajusta los parámetros generales de Consciousness Class.", href: "/dashboard/superadmin/settings", icon: Settings },
     ],
   };
 
   const getDashboardStats = (): DashboardStats => {
     if (!currentUser || !userRole) {
-      // Default/Loading stats
       return {
-        card1Value: '...', card1Title: 'Cargando...', card1Icon: Loader2, card1Description: '',
-        card2Value: '...', card2Title: 'Cargando...', card2Icon: Loader2, card2Description: '',
-        card3Value: '...', card3Title: 'Cargando...', card3Icon: Loader2, card3Description: '',
+        card1Value: <Loader2 className="h-5 w-5 animate-spin" />, card1Title: 'Cargando...', card1Icon: Activity, card1Description: 'Obteniendo datos...',
+        card2Value: <Loader2 className="h-5 w-5 animate-spin" />, card2Title: 'Cargando...', card2Icon: Activity, card2Description: 'Obteniendo datos...',
+        card3Value: <Loader2 className="h-5 w-5 animate-spin" />, card3Title: 'Cargando...', card3Icon: Activity, card3Description: 'Obteniendo datos...',
       };
     }
 
@@ -149,20 +172,20 @@ export default function DashboardPage() {
         };
       case 'superadmin':
         return {
-          card1Value: isLoadingStats ? <Loader2 className="h-5 w-5 animate-spin" /> : totalUsers,
-          card1Title: "Usuarios Totales",
+          card1Value: isLoadingStats ? <Loader2 className="h-5 w-5 animate-spin" /> : recentUsersCount,
+          card1Title: "Usuarios Recientes",
           card1Icon: Users,
-          card1Description: "Usuarios registrados en la plataforma.",
-          card2Value: 150, // Placeholder
-          card2Title: "Cursos en Plataforma",
+          card1Description: `Mostrando ${recentUsersCount} usuarios. Total podría ser mayor.`,
+          card2Value: 150, // Placeholder - This would need a separate API call
+          card2Title: "Cursos en Plataforma (Ej.)",
           card2Icon: BookOpen,
           card2Description: "Total de cursos (Ejemplo).",
-          card3Title: "Gestionar Plataforma",
+          card3Title: "Configuración",
           card3Value: "Ir",
           card3Icon: Settings,
           card3Description: "Accede a la configuración global.",
           card3IsLink: true,
-          card3Href: "/dashboard/superadmin" // General link to superadmin dashboard
+          card3Href: "/dashboard/superadmin/settings" 
         };
       default:
         return {
@@ -173,22 +196,46 @@ export default function DashboardPage() {
     }
   };
   
-  if (authLoading || (!currentUser && !authLoading) ) {
+  if (authLoading && !currentUser) { // Show skeletons only if auth is loading AND there's no user yet
     return (
       <div className="space-y-8">
-        <Card className="shadow-lg"><CardHeader><Skeleton className="h-8 w-1/2 mb-2" /><Skeleton className="h-4 w-3/4" /></CardHeader><CardContent><Skeleton className="h-6 w-full" /></CardContent></Card>
+        <Card className="shadow-lg">
+          <CardHeader><Skeleton className="h-8 w-1/2 mb-2" /><Skeleton className="h-4 w-3/4" /></CardHeader>
+          <CardContent><Skeleton className="h-6 w-full" /></CardContent>
+        </Card>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(3)].map((_, i) => (
-            <Card key={i} className="shadow-md"><CardHeader className="pb-2"><Skeleton className="h-5 w-3/5" /><Skeleton className="h-4 w-4 ml-auto" /></CardHeader><CardContent><Skeleton className="h-8 w-1/2" /><Skeleton className="h-3 w-4/5 mt-1" /></CardContent></Card>
+            <Card key={i} className="shadow-md">
+              <CardHeader className="pb-2"><Skeleton className="h-5 w-3/5" /><Skeleton className="h-4 w-4 ml-auto" /></CardHeader>
+              <CardContent><Skeleton className="h-8 w-1/2" /><Skeleton className="h-3 w-4/5 mt-1" /></CardContent>
+            </Card>
           ))}
         </div>
-        <div className="mt-8"><Skeleton className="h-7 w-1/4 mb-4" /><div className="grid gap-4 md:grid-cols-2"><Skeleton className="h-32 w-full" /><Skeleton className="h-32 w-full" /></div></div>
+        <div className="mt-8">
+          <Skeleton className="h-7 w-1/4 mb-4" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (!userRole) {
-     return <p>Error: Rol de usuario no determinado.</p>;
+  if (!currentUser || !userRole) {
+     return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+            <Activity className="h-12 w-12 text-muted-foreground mb-4"/>
+            <p className="text-lg text-muted-foreground">
+                {authLoading ? "Cargando datos de usuario..." : "No se pudo determinar el rol del usuario o no has iniciado sesión."}
+            </p>
+            {!authLoading && !currentUser && (
+                <Button asChild className="mt-4">
+                    <Link href="/login">Iniciar Sesión</Link>
+                </Button>
+            )}
+        </div>
+     );
   }
   
   const stats = getDashboardStats();
@@ -198,7 +245,13 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-3xl font-headline">Bienvenido a tu Dashboard, {currentUser?.displayName || currentUser?.email}</CardTitle>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <CardTitle className="text-3xl font-headline">Bienvenido, {currentUser?.displayName || currentUser?.email}</CardTitle>
+            <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isRefreshing || isLoadingStats}>
+              {isRefreshing ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-2 h-3 w-3" />}
+              Actualizar Datos
+            </Button>
+          </div>
           <CardDescription>Aquí puedes gestionar tu actividad en Consciousness Class.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -225,10 +278,10 @@ export default function DashboardPage() {
         <Card className="shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{stats.card1Title}</CardTitle>
-            <stats.card1Icon className="h-5 w-5 text-muted-foreground" />
+            <stats.card1Icon className={`h-5 w-5 text-muted-foreground ${stats.card1Value === '...' && isLoadingStats ? 'animate-spin' : ''}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.card1Value}</div> 
+            <div className="text-2xl font-bold">{isLoadingStats && typeof stats.card1Value !== 'number' && stats.card1Value !== 'Ir' ? <Skeleton className="h-7 w-16"/> : stats.card1Value}</div> 
             <p className="text-xs text-muted-foreground">{stats.card1Description}</p>
           </CardContent>
         </Card>
@@ -236,10 +289,10 @@ export default function DashboardPage() {
         <Card className="shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{stats.card2Title}</CardTitle>
-            <stats.card2Icon className="h-5 w-5 text-muted-foreground" />
+            <stats.card2Icon className={`h-5 w-5 text-muted-foreground ${stats.card2Value === '...' && isLoadingStats ? 'animate-spin' : ''}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.card2Value}</div> 
+            <div className="text-2xl font-bold">{isLoadingStats && typeof stats.card2Value !== 'number' ? <Skeleton className="h-7 w-12"/> : stats.card2Value}</div> 
             <p className="text-xs text-muted-foreground">{stats.card2Description}</p>
           </CardContent>
         </Card>
@@ -247,7 +300,7 @@ export default function DashboardPage() {
         <Card className="shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{stats.card3Title}</CardTitle>
-            <stats.card3Icon className="h-5 w-5 text-muted-foreground" />
+            <stats.card3Icon className={`h-5 w-5 text-muted-foreground ${stats.card3Value === '...' && isLoadingStats ? 'animate-spin' : ''}`} />
           </CardHeader>
           <CardContent>
             {stats.card3IsLink && stats.card3Href ? (
@@ -255,7 +308,7 @@ export default function DashboardPage() {
                     <Link href={stats.card3Href}>{stats.card3Value} <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
             ) : (
-                <div className="text-2xl font-bold">{stats.card3Value}</div>
+                <div className="text-2xl font-bold">{isLoadingStats && typeof stats.card3Value !== 'string' ? <Skeleton className="h-7 w-20"/> : stats.card3Value}</div>
             )}
             <p className="text-xs text-muted-foreground">{stats.card3Description}</p>
           </CardContent>
@@ -285,3 +338,4 @@ export default function DashboardPage() {
   );
 }
 
+    

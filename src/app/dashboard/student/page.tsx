@@ -223,7 +223,7 @@ export default function StudentDashboardPage() {
       });
       setImagePreviewUrl(currentUser.photoURL || null);
       setImageFile(null);
-      setVideoPreviewUrl(currentUser?.creatorVideoUrl || null);
+      setVideoPreviewUrl(currentUser.creatorVideoUrl || null);
       setVideoFile(null);
     }
   }, [currentUser, isEditDialogOpen, form]);
@@ -350,7 +350,7 @@ export default function StudentDashboardPage() {
     }
   }
 
- const handleDeleteVideo = async () => {
+ async function handleDeleteVideo() {
     if (!currentUser || !auth.currentUser || !currentUser.creatorVideoUrl) {
       toast({ title: "Error", description: "No hay video para eliminar o usuario no autenticado.", variant: "destructive" });
       return;
@@ -411,7 +411,7 @@ export default function StudentDashboardPage() {
     }
   };
 
-  const handleRequestCreatorRole = async () => {
+  async function handleRequestCreatorRole() {
     if (!auth.currentUser) return;
     setIsRequestingCreatorRole(true);
     setShowBecomeCreatorDialog(false);
@@ -431,7 +431,7 @@ export default function StudentDashboardPage() {
     }
   };
 
-  const handleRefreshStats = async () => {
+  async function handleRefreshStats() {
     setIsRefreshingStats(true);
     toast({ title: "Actualizando Datos..."});
     try {
@@ -460,13 +460,8 @@ export default function StudentDashboardPage() {
     }
 
     try {
-      const constraints = {
-        video: {
-            facingMode: "user",
-            width: { ideal: 360 },
-            height: { ideal: 640 },
-            aspectRatio: (9/16)
-        },
+      const constraints = { // Simplified constraints
+        video: true,
         audio: true
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -497,7 +492,7 @@ export default function StudentDashboardPage() {
         if (stream && typeof stream.getTracks === 'function') {
              stream.getTracks().forEach(track => track.stop());
         }
-        if (videoRef.current) {
+        if (videoRef.current && videoRef.current.srcObject) {
             videoRef.current.srcObject = null;
         }
         setHasCameraPermission(null);
@@ -528,6 +523,7 @@ export default function StudentDashboardPage() {
       toast({ variant: 'destructive', title: 'Cámara Denegada', description: 'Habilita permisos de cámara.'});
     }
   };
+
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
@@ -675,7 +671,7 @@ export default function StudentDashboardPage() {
               <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogTrigger asChild><Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Editar Perfil</Button></DialogTrigger>
               <DialogContent className="sm:max-w-[580px] max-h-[90vh] flex flex-col">
                   <DialogHeader><DialogTitle>Editar Perfil</DialogTitle></DialogHeader>
-                  <ScrollArea className="flex-grow pr-3 -mr-3 max-h-[calc(80vh-200px)]"> {/* Adjusted max-h */}
+                  <ScrollArea className="flex-grow pr-3 -mr-3 max-h-[calc(80vh - 160px)]"> {/* Adjusted max-h */}
                   <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmitProfile)} id="profileEditForm" className="space-y-6 py-4">
                       <div className="space-y-4 text-center"><Avatar className="h-32 w-32 mx-auto ring-2 ring-primary ring-offset-2 ring-offset-background"><AvatarImage src={imagePreviewUrl || `https://placehold.co/128x128.png?text=${getInitials(form.getValues('nombre'), form.getValues('apellido'))}`} alt="Vista previa de perfil" data-ai-hint="profile preview"/><AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback></Avatar><div className="relative w-full max-w-xs mx-auto"><Input id="picture" type="file" accept="image/png, image/jpeg, image/webp, image/gif" onChange={handleImageChange} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10" disabled={isUploadingImage || isSubmitting}/><Button type="button" variant="outline" className="w-full pointer-events-none relative">{isUploadingImage && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}{!isUploadingImage && <Camera className="mr-2 h-4 w-4" />}{isUploadingImage ? 'Subiendo...' : (imageFile ? (imageFile.name.length > 25 ? imageFile.name.substring(0,22) + '...' : imageFile.name) : 'Cambiar foto')}</Button>{isUploadingImage && <Progress value={undefined} className="absolute bottom-0 left-0 right-0 h-1 w-full rounded-b-md" />}</div></div>
@@ -796,8 +792,7 @@ export default function StudentDashboardPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-
     </div>
   );
 }
-
+    

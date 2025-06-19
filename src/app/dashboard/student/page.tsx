@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from 'next/image';
-import { 
-    BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info, 
-    Link as LinkIcon, Share2, ExternalLink, DollarSign, RefreshCw, ListChecks, CalendarDays, Users, Film, BookText, 
+import {
+    BookOpen, UserCircle, Gift, Copy, Edit, Award, Camera, UploadCloud, Rocket, Loader2, AlertTriangle, Info,
+    Link as LinkIcon, Share2, ExternalLink, DollarSign, RefreshCw, ListChecks, CalendarDays, Users, Film, BookText,
     Video, VideoOff, Play, Pause, Square, AlertCircle, Trash2
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -59,8 +59,8 @@ interface CommissionData {
   estadoPagoComision: 'pendiente' | 'pagada' | 'cancelada';
 }
 
-const MAX_VIDEO_SIZE_MB = 50; 
-const MAX_VIDEO_DURATION_SECONDS = 60; 
+const MAX_VIDEO_SIZE_MB = 50;
+const MAX_VIDEO_DURATION_SECONDS = 60;
 
 const profileFormSchema = z.object({
   nombre: z.string().min(1, { message: "El nombre es requerido." }),
@@ -232,7 +232,7 @@ export default function StudentDashboardPage() {
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { 
+      if (file.size > 5 * 1024 * 1024) {
         toast({ title: "Archivo Demasiado Grande", description: "La imagen de perfil no debe exceder los 5MB.", variant: "destructive"});
         event.target.value = '';
         return;
@@ -279,7 +279,7 @@ export default function StudentDashboardPage() {
       return;
     }
     setIsSubmitting(true);
-    let uploadedPhotoURL: string | null = currentUser?.photoURL || null; 
+    let uploadedPhotoURL: string | null = currentUser?.photoURL || null;
     let uploadedVideoURL: string | null = currentUser?.creatorVideoUrl || null;
 
     try {
@@ -297,7 +297,7 @@ export default function StudentDashboardPage() {
 
       if (videoFile) {
         setIsUploadingVideo(true);
-        const videoExt = videoFile.name.split('.').pop()?.toLowerCase() || 'webm'; 
+        const videoExt = videoFile.name.split('.').pop()?.toLowerCase() || 'webm';
         const videoPath = `users/${auth.currentUser.uid}/creator_video/presentation.${videoExt}`;
         const videoStorageRef = ref(storage, videoPath);
         await uploadBytes(videoStorageRef, videoFile);
@@ -305,21 +305,21 @@ export default function StudentDashboardPage() {
         setIsUploadingVideo(false);
         toast({title: "Video de Presentación Actualizado"});
       }
-      
-      const updateDto = { 
+
+      const updateDto = {
         nombre: values.nombre,
         apellido: values.apellido,
         photoURL: uploadedPhotoURL,
         bio: values.bio || null,
         creatorVideoUrl: uploadedVideoURL,
       };
-      
+
       const textualChanges = values.nombre !== currentUser?.nombre ||
                              values.apellido !== currentUser?.apellido ||
                              (values.bio || null) !== (currentUser?.bio || null);
-      
+
       const fileChanges = imageFile || videoFile;
-      
+
       if (textualChanges || fileChanges || (uploadedVideoURL !== currentUser?.creatorVideoUrl && !videoFile) || (uploadedPhotoURL !== currentUser?.photoURL && !imageFile)) {
         const response = await fetch('/api/users/update-profile', {
           method: 'POST',
@@ -335,11 +335,11 @@ export default function StudentDashboardPage() {
       } else {
         toast({title: "Sin cambios", description: "No se detectaron cambios para guardar."});
       }
-      
+
       await refreshUserProfile();
       setIsEditDialogOpen(false);
-      setVideoFile(null); 
-      setImageFile(null); 
+      setVideoFile(null);
+      setImageFile(null);
 
     } catch (error: any) {
       toast({ title: "Error de Actualización", description: error.message, variant: "destructive" });
@@ -358,7 +358,7 @@ export default function StudentDashboardPage() {
     setIsSubmitting(true);
     try {
         const idToken = await auth.currentUser.getIdToken(true);
-        
+
         try {
             const url = new URL(currentUser.creatorVideoUrl);
             if (url.hostname === 'firebasestorage.googleapis.com') {
@@ -378,17 +378,17 @@ export default function StudentDashboardPage() {
         const response = await fetch('/api/users/update-profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-            body: JSON.stringify(updateDto), 
+            body: JSON.stringify(updateDto),
         });
 
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.details || errorData.error || "Error al eliminar el video del perfil.");
         }
-        
-        await refreshUserProfile(); 
-        setVideoPreviewUrl(null);   
-        setVideoFile(null);         
+
+        await refreshUserProfile();
+        setVideoPreviewUrl(null);
+        setVideoFile(null);
         toast({ title: "Video de Presentación Eliminado" });
         setShowDeleteVideoConfirm(false);
     } catch (error: any) {
@@ -453,20 +453,32 @@ export default function StudentDashboardPage() {
 
   const startRecording = async () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        mediaRecorderRef.current.stop(); 
+        mediaRecorderRef.current.stop();
         setIsRecording(false);
         if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-        return; 
+        return;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", aspectRatio: (9/16) }, audio: true });
+      const constraints = {
+        video: {
+          facingMode: "user",
+          width: { ideal: 720 },
+          height: { ideal: 1280 }
+        },
+        audio: true
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setHasCameraPermission(true);
-      if (videoRef.current) videoRef.current.srcObject = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
       mediaRecorderRef.current = new MediaRecorder(stream);
-      setRecordedChunks([]); 
+      setRecordedChunks([]);
       mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) setRecordedChunks(prev => [...prev, event.data]);
+        if (event.data.size > 0) {
+          setRecordedChunks(prev => [...prev, event.data]);
+        }
       };
       mediaRecorderRef.current.onstop = () => {
         const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
@@ -475,31 +487,38 @@ export default function StudentDashboardPage() {
 
         if (videoFileInstance.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
             toast({ title: "Video Demasiado Grande", description: `El video grabado excede los ${MAX_VIDEO_SIZE_MB}MB. Intenta de nuevo con un video más corto.`, variant: "destructive"});
-            setVideoFile(null); 
-            setVideoPreviewUrl(null); 
+            setVideoFile(null);
+            setVideoPreviewUrl(null);
         } else {
-            setVideoFile(videoFileInstance); 
-            setVideoPreviewUrl(URL.createObjectURL(videoFileInstance)); 
+            setVideoFile(videoFileInstance);
+            setVideoPreviewUrl(URL.createObjectURL(videoFileInstance));
         }
-        if (videoRef.current && videoRef.current.srcObject) {
-            (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+        if (stream && typeof stream.getTracks === 'function') {
+             stream.getTracks().forEach(track => track.stop());
         }
-        setHasCameraPermission(null); 
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+        setHasCameraPermission(null);
       };
       mediaRecorderRef.current.start();
       setIsRecording(true);
       setRecordingTime(0);
       recordingIntervalRef.current = setInterval(() => {
         setRecordingTime(prevTime => {
-          if (prevTime >= MAX_VIDEO_DURATION_SECONDS -1) { 
+          const newTime = prevTime + 1;
+          if (newTime >= MAX_VIDEO_DURATION_SECONDS) {
             if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-              mediaRecorderRef.current.stop(); 
+              mediaRecorderRef.current.stop();
             }
-            if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-            setIsRecording(false); 
+            if (recordingIntervalRef.current) {
+              clearInterval(recordingIntervalRef.current);
+              recordingIntervalRef.current = null;
+            }
+            setIsRecording(false);
             return MAX_VIDEO_DURATION_SECONDS;
           }
-          return prevTime + 1;
+          return newTime;
         });
       }, 1000);
     } catch (error) {
@@ -511,27 +530,37 @@ export default function StudentDashboardPage() {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop(); 
+      mediaRecorderRef.current.stop();
     }
-    if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
     setIsRecording(false);
   };
-  
+
   const cancelRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        mediaRecorderRef.current.stop(); 
+        mediaRecorderRef.current.stop();
     }
-    if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+    if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+    }
     setIsRecording(false);
-    setRecordedChunks([]); 
-    setVideoPreviewUrl(currentUser?.creatorVideoUrl || null); 
+    setRecordedChunks([]);
+    setVideoPreviewUrl(currentUser?.creatorVideoUrl || null);
     setVideoFile(null);
     setShowRecordVideoModal(false);
-    if(videoRef.current && videoRef.current.srcObject){
-        (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+
+    if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        if (stream && typeof stream.getTracks === 'function') {
+            stream.getTracks().forEach(track => track.stop());
+        }
         videoRef.current.srcObject = null;
     }
-    setHasCameraPermission(null); 
+    setHasCameraPermission(null);
   };
 
 
@@ -582,7 +611,7 @@ export default function StudentDashboardPage() {
           )}
         </CardContent>
       </Card>
-      
+
       <Card className="shadow-lg">
         <CardHeader>
             <div className="flex items-center justify-between">
@@ -635,19 +664,18 @@ export default function StudentDashboardPage() {
               <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogTrigger asChild><Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Editar Perfil</Button></DialogTrigger>
               <DialogContent className="sm:max-w-[580px] max-h-[90vh] flex flex-col">
                   <DialogHeader><DialogTitle>Editar Perfil</DialogTitle></DialogHeader>
-                  <ScrollArea className="flex-grow pr-3 -mr-3 overflow-y-auto"> 
+                  <ScrollArea className="flex-grow pr-3 -mr-3">
                   <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmitProfile)} className="space-y-6 py-4">
+                  <form onSubmit={form.handleSubmit(onSubmitProfile)} id="profileEditForm" className="space-y-6 py-4">
                       <div className="space-y-4 text-center"><Avatar className="h-32 w-32 mx-auto ring-2 ring-primary ring-offset-2 ring-offset-background"><AvatarImage src={imagePreviewUrl || `https://placehold.co/128x128.png?text=${getInitials(form.getValues('nombre'), form.getValues('apellido'))}`} alt="Vista previa de perfil" data-ai-hint="profile preview"/><AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback></Avatar><div className="relative w-full max-w-xs mx-auto"><Input id="picture" type="file" accept="image/png, image/jpeg, image/webp, image/gif" onChange={handleImageChange} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10" disabled={isUploadingImage || isSubmitting}/><Button type="button" variant="outline" className="w-full pointer-events-none relative">{isUploadingImage && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}{!isUploadingImage && <Camera className="mr-2 h-4 w-4" />}{isUploadingImage ? 'Subiendo...' : (imageFile ? (imageFile.name.length > 25 ? imageFile.name.substring(0,22) + '...' : imageFile.name) : 'Cambiar foto')}</Button>{isUploadingImage && <Progress value={undefined} className="absolute bottom-0 left-0 right-0 h-1 w-full rounded-b-md" />}</div></div>
                       <FormField control={form.control} name="nombre" render={({ field }) => (<FormItem><FormLabel>Nombre</FormLabel><FormControl><Input placeholder="Tu nombre" {...field} disabled={isSubmitting || isUploadingImage} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="apellido" render={({ field }) => (<FormItem><FormLabel>Apellido</FormLabel><FormControl><Input placeholder="Tu apellido" {...field} disabled={isSubmitting || isUploadingImage} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="bio" render={({ field }) => (<FormItem><FormLabel className="flex items-center gap-1.5"><BookText className="h-4 w-4 text-muted-foreground"/> Sobre ti / Biografía (Opcional)</FormLabel><FormControl><Textarea rows={4} placeholder="Cuéntanos un poco sobre ti..." {...field} value={field.value || ''} disabled={isSubmitting || isUploadingImage || isUploadingVideo} /></FormControl><FormDescription className="text-xs">Máximo 500 caracteres.</FormDescription><FormMessage /></FormItem>)} />
-                      
                       <FormItem>
                           <FormLabel className="flex items-center gap-1.5"><Video className="h-4 w-4 text-muted-foreground"/> Video de Presentación (Opcional)</FormLabel>
                           {videoPreviewUrl && !isRecording && (
                             <div className="my-2">
-                                <video src={videoPreviewUrl} controls className="w-full rounded-md max-h-60 aspect-video bg-black"><track kind="captions"/></video>
+                                <video src={videoPreviewUrl} controls className="w-full rounded-md max-h-60 aspect-video bg-black" playsInline><track kind="captions"/></video>
                                 {currentUser?.creatorVideoUrl && videoPreviewUrl === currentUser.creatorVideoUrl && (
                                     <Button type="button" variant="outline" size="sm" className="mt-2 w-full" onClick={() => setShowDeleteVideoConfirm(true)} disabled={isSubmitting || isUploadingVideo}>
                                         <Trash2 className="mr-2 h-4 w-4"/>Eliminar Video Actual
@@ -669,10 +697,10 @@ export default function StudentDashboardPage() {
                            {isUploadingVideo && <Progress value={undefined} className="mt-2 h-1 w-full" />}
                       </FormItem>
                   </form>
-                  </ScrollArea> 
-                  <DialogFooter className="pt-4 border-t"> 
+                  </ScrollArea>
+                  <DialogFooter className="pt-4 border-t">
                       <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting || isUploadingImage || isUploadingVideo}>Cancelar</Button></DialogClose>
-                      <Button type="submit" form="profileEditForm" disabled={isSubmitting || isUploadingImage || isUploadingVideo || isRecording } onClick={form.handleSubmit(onSubmitProfile)}>
+                      <Button type="submit" form="profileEditForm" disabled={isSubmitting || isUploadingImage || isUploadingVideo || isRecording } >
                           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                           {isSubmitting ? (isUploadingImage ? 'Subiendo Imagen...' : (isUploadingVideo ? 'Subiendo Video...' : 'Guardando...')) : 'Guardar Cambios'}
                       </Button>
@@ -722,16 +750,16 @@ export default function StudentDashboardPage() {
                 ) : (
                     <Button onClick={startRecording} disabled={isSubmitting || hasCameraPermission === false}><Play className="mr-2 h-4 w-4"/>Grabar</Button>
                 )}
-                <Button 
+                <Button
                     onClick={() => {
-                        if (recordedChunks.length > 0 && videoFile) { 
-                             setShowRecordVideoModal(false); 
+                        if (recordedChunks.length > 0 && videoFile) {
+                             setShowRecordVideoModal(false);
                         } else if (!videoFile && recordedChunks.length === 0 && !isRecording) {
                            toast({title: "Nada que guardar", description:"Graba un video primero.", variant:"default"});
                         } else if (isRecording) {
                            toast({title: "Grabación en curso", description:"Detén la grabación antes de guardar.", variant:"default"});
                         }
-                    }} 
+                    }}
                     disabled={isSubmitting || isRecording || recordedChunks.length === 0}
                 >
                     Usar Video Grabado

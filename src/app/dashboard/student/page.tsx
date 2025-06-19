@@ -463,7 +463,7 @@ export default function StudentDashboardPage() {
       const constraints: MediaStreamConstraints = {
         video: {
           facingMode: "user",
-          width: { ideal: 720 }, 
+          width: { ideal: 720 },
           height: { ideal: 1280 },
         },
         audio: true,
@@ -588,7 +588,9 @@ export default function StudentDashboardPage() {
       <h1 className="text-3xl font-bold font-headline">Panel de Estudiante</h1>
       <Card className="shadow-lg">
         <CardHeader>
-          <div className="flex items-center gap-2"><BookOpen className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mis Cursos</CardTitle></div>
+          <div className="flex items-center gap-2"><BookOpen className="h-6 w-6 text-primary" />
+            <CardTitle className="text-2xl font-headline">Mis Cursos</CardTitle>
+          </div>
           <CardDescription>Continúa tu aprendizaje.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -646,7 +648,10 @@ export default function StudentDashboardPage() {
       </Card>
 
       <Card className="shadow-lg">
-        <CardHeader><div className="flex items-center gap-2"><Share2 className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Promociona Cursos y Gana</CardTitle></div><CardDescription>Copia enlaces de promoción para cursos específicos que ofrecen comisión.</CardDescription></CardHeader>
+        <CardHeader>
+          <div className="flex items-center gap-2"><Share2 className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Promociona Cursos y Gana</CardTitle>
+          </div><CardDescription>Copia enlaces de promoción para cursos específicos que ofrecen comisión.</CardDescription>
+        </CardHeader>
         <CardContent>
             {isLoadingPromotableCourses ? (<div className="grid gap-4 md:grid-cols-2">{[...Array(2)].map((_, i) => (<Card key={i} className="p-4 space-y-3"><div className="flex gap-3 items-start"><Skeleton className="h-16 w-24 rounded-md" /><div className="flex-1 space-y-1.5"><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-1/4" /></div></div><Skeleton className="h-9 w-full" /></Card>))}</div>)
             : promotableCoursesError ? (<Alert variant="destructive" className="text-sm"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{promotableCoursesError}</AlertDescription></Alert>)
@@ -663,14 +668,15 @@ export default function StudentDashboardPage() {
       <Card className="shadow-lg">
         <CardHeader><div className="flex items-center gap-2"><UserCircle className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mi Perfil</CardTitle></div><CardDescription>Gestiona tu información personal y configuración de cuenta.</CardDescription></CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex items-center gap-4"><Avatar className="h-20 w-20"><AvatarImage src={currentUser.photoURL || `https://placehold.co/80x80.png?text=${getInitials(currentUser.nombre, currentUser.apellido)}`} alt="Foto de perfil" data-ai-hint="user avatar"/><AvatarFallback>{getInitials(currentUser.nombre, currentUser.apellido)}</AvatarFallback></Avatar><div><p className="text-lg font-semibold">{currentUser.nombre && currentUser.apellido ? `${currentUser.nombre} ${currentUser.apellido}` : (currentUser.displayName || 'Nombre no especificado')}</p><p className="text-sm text-muted-foreground">{currentUser.email || 'Email no especificado'}</p></div></div>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-20 w-20"><AvatarImage src={currentUser.photoURL || `https://placehold.co/80x80.png?text=${getInitials(currentUser.nombre, currentUser.apellido)}`} alt="Foto de perfil" data-ai-hint="user avatar"/><AvatarFallback>{getInitials(currentUser.nombre, currentUser.apellido)}</AvatarFallback></Avatar><div><p className="text-lg font-semibold">{currentUser.nombre && currentUser.apellido ? `${currentUser.nombre} ${currentUser.apellido}` : (currentUser.displayName || 'Nombre no especificado')}</p><p className="text-sm text-muted-foreground">{currentUser.email || 'Email no especificado'}</p></div></div>
           {currentUser.bio && (<div className="pt-2"><h4 className="text-sm font-medium text-muted-foreground mb-1">Sobre mí:</h4><p className="text-sm text-foreground/80 whitespace-pre-wrap">{currentUser.bio}</p></div>)}
           {currentUser.creatorVideoUrl && (<div className="pt-2"><h4 className="text-sm font-medium text-muted-foreground mb-1">Video de Presentación:</h4><Link href={currentUser.creatorVideoUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1"><Film className="h-4 w-4"/> Ver Video</Link></div>)}
           <div className="flex flex-wrap gap-2 pt-2">
               <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogTrigger asChild><Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Editar Perfil</Button></DialogTrigger>
               <DialogContent className="sm:max-w-[580px] max-h-[90vh] flex flex-col">
                   <DialogHeader><DialogTitle>Editar Perfil</DialogTitle></DialogHeader>
-                  <ScrollArea className="flex-grow pr-3 -mr-3 max-h-[calc(80vh - 160px)]">
+                  <ScrollArea className="flex-grow pr-3 -mr-3 max-h-[calc(80vh - 160px)] overflow-y-auto">
                   <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmitProfile)} id="profileEditForm" className="space-y-6 py-4">
                       <div className="space-y-4 text-center"><Avatar className="h-32 w-32 mx-auto ring-2 ring-primary ring-offset-2 ring-offset-background"><AvatarImage src={imagePreviewUrl || `https://placehold.co/128x128.png?text=${getInitials(form.getValues('nombre'), form.getValues('apellido'))}`} alt="Vista previa de perfil" data-ai-hint="profile preview"/><AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback></Avatar><div className="relative w-full max-w-xs mx-auto"><Input id="picture" type="file" accept="image/png, image/jpeg, image/webp, image/gif" onChange={handleImageChange} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10" disabled={isUploadingImage || isSubmitting}/><Button type="button" variant="outline" className="w-full pointer-events-none relative">{isUploadingImage && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}{!isUploadingImage && <Camera className="mr-2 h-4 w-4" />}{isUploadingImage ? 'Subiendo...' : (imageFile ? (imageFile.name.length > 25 ? imageFile.name.substring(0,22) + '...' : imageFile.name) : 'Cambiar foto')}</Button>{isUploadingImage && <Progress value={undefined} className="absolute bottom-0 left-0 right-0 h-1 w-full rounded-b-md" />}</div></div>
@@ -774,23 +780,25 @@ export default function StudentDashboardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-        <AlertDialog open={showDeleteVideoConfirm} onOpenChange={setShowDeleteVideoConfirm}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>¿Eliminar Video de Presentación?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Esta acción eliminará tu video de presentación actual. ¿Estás seguro?
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setShowDeleteVideoConfirm(false)} disabled={isSubmitting}>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteVideo} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
-                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
-                        Eliminar Video
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+
+      <AlertDialog open={showDeleteVideoConfirm} onOpenChange={setShowDeleteVideoConfirm}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle>¿Eliminar Video de Presentación?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      Esta acción eliminará tu video de presentación actual. ¿Estás seguro?
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setShowDeleteVideoConfirm(false)} disabled={isSubmitting}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteVideo} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
+                      {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
+                      Eliminar Video
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }

@@ -66,6 +66,7 @@ const profileFormSchema = z.object({
   nombre: z.string().min(1, { message: "El nombre es requerido." }),
   apellido: z.string().min(1, { message: "El apellido es requerido." }),
   bio: z.string().max(500, "La biografía no debe exceder los 500 caracteres.").optional(),
+  // creatorVideoUrl is now handled by file upload/recording, not direct URL input
 });
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
@@ -460,13 +461,12 @@ export default function StudentDashboardPage() {
     }
 
     try {
-      // Simplified constraints for diagnosis
       const constraints = { 
-        video: {
+        video: { 
             facingMode: "user",
-            // Ensure width and height are reasonable for mobile vertical aspect ratios
-            width: { ideal: 360 }, // Typical mobile portrait width
-            height: { ideal: 640 }, // Typical mobile portrait height
+            width: { ideal: 360 }, 
+            height: { ideal: 640 }, 
+            aspectRatio: (9/16) // ensure this is a number
         }, 
         audio: true 
       };
@@ -615,12 +615,18 @@ export default function StudentDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Mis Referidos y Comisiones */}
+      {/* Mis Referidos y Comisiones (Consolidated Card) */}
       <Card className="shadow-lg">
         <CardHeader>
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2"><Gift className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mis Referidos y Comisiones</CardTitle></div>
-                <Button variant="outline" size="sm" onClick={handleRefreshStats} disabled={isRefreshingStats}>{isRefreshingStats ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-2 h-3 w-3" />}Refrescar Datos</Button>
+                <div className="flex items-center gap-2">
+                    <Gift className="h-6 w-6 text-primary" />
+                    <CardTitle className="text-2xl font-headline">Mis Referidos y Comisiones</CardTitle>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleRefreshStats} disabled={isRefreshingStats}>
+                    {isRefreshingStats ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-2 h-3 w-3" />}
+                    Refrescar Datos
+                </Button>
             </div>
             <CardDescription>Consulta tus estadísticas de referidos y el detalle de comisiones generadas.</CardDescription>
         </CardHeader>
@@ -670,7 +676,7 @@ export default function StudentDashboardPage() {
               <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogTrigger asChild><Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Editar Perfil</Button></DialogTrigger>
               <DialogContent className="sm:max-w-[580px] max-h-[90vh] flex flex-col">
                   <DialogHeader><DialogTitle>Editar Perfil</DialogTitle></DialogHeader>
-                  <ScrollArea className="flex-grow pr-3 -mr-3 max-h-[calc(80vh-220px)]"> {/* Adjusted max-height */}
+                  <ScrollArea className="flex-grow pr-3 -mr-3 max-h-[calc(80vh-200px)]">
                   <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmitProfile)} id="profileEditForm" className="space-y-6 py-4">
                       <div className="space-y-4 text-center"><Avatar className="h-32 w-32 mx-auto ring-2 ring-primary ring-offset-2 ring-offset-background"><AvatarImage src={imagePreviewUrl || `https://placehold.co/128x128.png?text=${getInitials(form.getValues('nombre'), form.getValues('apellido'))}`} alt="Vista previa de perfil" data-ai-hint="profile preview"/><AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback></Avatar><div className="relative w-full max-w-xs mx-auto"><Input id="picture" type="file" accept="image/png, image/jpeg, image/webp, image/gif" onChange={handleImageChange} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10" disabled={isUploadingImage || isSubmitting}/><Button type="button" variant="outline" className="w-full pointer-events-none relative">{isUploadingImage && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}{!isUploadingImage && <Camera className="mr-2 h-4 w-4" />}{isUploadingImage ? 'Subiendo...' : (imageFile ? (imageFile.name.length > 25 ? imageFile.name.substring(0,22) + '...' : imageFile.name) : 'Cambiar foto')}</Button>{isUploadingImage && <Progress value={undefined} className="absolute bottom-0 left-0 right-0 h-1 w-full rounded-b-md" />}</div></div>
@@ -797,3 +803,4 @@ export default function StudentDashboardPage() {
     </div>
   );
 }
+

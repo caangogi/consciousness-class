@@ -66,7 +66,6 @@ const profileFormSchema = z.object({
   nombre: z.string().min(1, { message: "El nombre es requerido." }),
   apellido: z.string().min(1, { message: "El apellido es requerido." }),
   bio: z.string().max(500, "La biografía no debe exceder los 500 caracteres.").optional(),
-  // creatorVideoUrl is now handled by file upload/recording, not direct URL input
 });
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
@@ -224,7 +223,7 @@ export default function StudentDashboardPage() {
       });
       setImagePreviewUrl(currentUser.photoURL || null);
       setImageFile(null);
-      setVideoPreviewUrl(currentUser.creatorVideoUrl || null);
+      setVideoPreviewUrl(currentUser?.creatorVideoUrl || null);
       setVideoFile(null);
     }
   }, [currentUser, isEditDialogOpen, form]);
@@ -461,14 +460,14 @@ export default function StudentDashboardPage() {
     }
 
     try {
-      const constraints = { 
-        video: { 
+      const constraints = {
+        video: {
             facingMode: "user",
-            width: { ideal: 360 }, 
-            height: { ideal: 640 }, 
-            aspectRatio: (9/16) // ensure this is a number
-        }, 
-        audio: true 
+            width: { ideal: 360 },
+            height: { ideal: 640 },
+            aspectRatio: (9/16)
+        },
+        audio: true
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setHasCameraPermission(true);
@@ -676,7 +675,7 @@ export default function StudentDashboardPage() {
               <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogTrigger asChild><Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Editar Perfil</Button></DialogTrigger>
               <DialogContent className="sm:max-w-[580px] max-h-[90vh] flex flex-col">
                   <DialogHeader><DialogTitle>Editar Perfil</DialogTitle></DialogHeader>
-                  <ScrollArea className="flex-grow pr-3 -mr-3 max-h-[calc(80vh-200px)]">
+                  <ScrollArea className="flex-grow pr-3 -mr-3 max-h-[calc(80vh-200px)]"> {/* Adjusted max-h */}
                   <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmitProfile)} id="profileEditForm" className="space-y-6 py-4">
                       <div className="space-y-4 text-center"><Avatar className="h-32 w-32 mx-auto ring-2 ring-primary ring-offset-2 ring-offset-background"><AvatarImage src={imagePreviewUrl || `https://placehold.co/128x128.png?text=${getInitials(form.getValues('nombre'), form.getValues('apellido'))}`} alt="Vista previa de perfil" data-ai-hint="profile preview"/><AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback></Avatar><div className="relative w-full max-w-xs mx-auto"><Input id="picture" type="file" accept="image/png, image/jpeg, image/webp, image/gif" onChange={handleImageChange} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10" disabled={isUploadingImage || isSubmitting}/><Button type="button" variant="outline" className="w-full pointer-events-none relative">{isUploadingImage && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}{!isUploadingImage && <Camera className="mr-2 h-4 w-4" />}{isUploadingImage ? 'Subiendo...' : (imageFile ? (imageFile.name.length > 25 ? imageFile.name.substring(0,22) + '...' : imageFile.name) : 'Cambiar foto')}</Button>{isUploadingImage && <Progress value={undefined} className="absolute bottom-0 left-0 right-0 h-1 w-full rounded-b-md" />}</div></div>
@@ -724,14 +723,12 @@ export default function StudentDashboardPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Mis Certificados */}
       <Card className="shadow-lg">
         <CardHeader><div className="flex items-center gap-2"><Award className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mis Certificados</CardTitle></div><CardDescription>Visualiza y descarga los certificados de los cursos completados.</CardDescription></CardHeader>
         <CardContent><div className="text-center py-6 text-muted-foreground"><Award className="mx-auto h-10 w-10 mb-3 opacity-50" /><p className="font-medium">Funcionalidad de Certificados Próximamente</p><p className="text-sm">Cuando completes tus cursos, tus certificados aparecerán aquí.</p></div></CardContent>
       </Card>
 
-      {/* Record Video Modal */}
+
       <Dialog open={showRecordVideoModal} onOpenChange={(isOpen) => { if (!isOpen) cancelRecording(); else setShowRecordVideoModal(true); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Grabar Video de Presentación</DialogTitle><DialogDescription>Graba un video corto (máx. {MAX_VIDEO_DURATION_SECONDS} segundos). Asegúrate de que tu cámara esté bien iluminada y graba en vertical.</DialogDescription></DialogHeader>
@@ -803,4 +800,3 @@ export default function StudentDashboardPage() {
     </div>
   );
 }
-

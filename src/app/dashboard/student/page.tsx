@@ -59,8 +59,8 @@ interface CommissionData {
   estadoPagoComision: 'pendiente' | 'pagada' | 'cancelada';
 }
 
-const MAX_VIDEO_SIZE_MB = 50; // Max 50MB para video de presentación
-const MAX_VIDEO_DURATION_SECONDS = 60; // 1 minuto
+const MAX_VIDEO_SIZE_MB = 50; 
+const MAX_VIDEO_DURATION_SECONDS = 60; 
 
 const profileFormSchema = z.object({
   nombre: z.string().min(1, { message: "El nombre es requerido." }),
@@ -232,7 +232,7 @@ export default function StudentDashboardPage() {
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // Max 5MB
+      if (file.size > 5 * 1024 * 1024) { 
         toast({ title: "Archivo Demasiado Grande", description: "La imagen de perfil no debe exceder los 5MB.", variant: "destructive"});
         event.target.value = '';
         return;
@@ -279,31 +279,33 @@ export default function StudentDashboardPage() {
       return;
     }
     setIsSubmitting(true);
-    let uploadedPhotoURL: string | null = currentUser?.photoURL || null;
+    let uploadedPhotoURL: string | null = currentUser?.photoURL || null; 
     let uploadedVideoURL: string | null = currentUser?.creatorVideoUrl || null;
 
     try {
       const idToken = await auth.currentUser.getIdToken(true);
       if (imageFile) {
         setIsUploadingImage(true);
-        const imageExt = imageFile.name.split('.').pop() || 'png';
+        const imageExt = imageFile.name.split('.').pop()?.toLowerCase() || 'png';
         const imagePath = `users/${auth.currentUser.uid}/profile_image/profile.${imageExt}`;
         const imageStorageRef = ref(storage, imagePath);
         await uploadBytes(imageStorageRef, imageFile);
         uploadedPhotoURL = await getDownloadURL(imageStorageRef);
         setIsUploadingImage(false);
+        toast({title: "Imagen de Perfil Actualizada"});
       }
 
       if (videoFile) {
         setIsUploadingVideo(true);
-        const videoExt = videoFile.name.split('.').pop() || 'mp4';
+        const videoExt = videoFile.name.split('.').pop()?.toLowerCase() || 'webm'; 
         const videoPath = `users/${auth.currentUser.uid}/creator_video/presentation.${videoExt}`;
         const videoStorageRef = ref(storage, videoPath);
         await uploadBytes(videoStorageRef, videoFile);
         uploadedVideoURL = await getDownloadURL(videoStorageRef);
         setIsUploadingVideo(false);
+        toast({title: "Video de Presentación Actualizado"});
       }
-
+      
       const updateDto = { 
         nombre: values.nombre,
         apellido: values.apellido,
@@ -311,22 +313,34 @@ export default function StudentDashboardPage() {
         bio: values.bio || null,
         creatorVideoUrl: uploadedVideoURL,
       };
+      
+      const textualChanges = values.nombre !== currentUser?.nombre ||
+                             values.apellido !== currentUser?.apellido ||
+                             (values.bio || null) !== (currentUser?.bio || null);
+      
+      const fileChanges = imageFile || videoFile;
+      
+      if (textualChanges || fileChanges || (uploadedVideoURL !== currentUser?.creatorVideoUrl && !videoFile) || (uploadedPhotoURL !== currentUser?.photoURL && !imageFile)) {
+        const response = await fetch('/api/users/update-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+          body: JSON.stringify(updateDto),
+        });
 
-      const response = await fetch('/api/users/update-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-        body: JSON.stringify(updateDto),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || errorData.error || "Error al actualizar el perfil.");
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.details || errorData.error || "Error al actualizar el perfil.");
+        }
+        toast({ title: "Perfil Actualizado" });
+      } else {
+        toast({title: "Sin cambios", description: "No se detectaron cambios para guardar."});
       }
-
+      
       await refreshUserProfile();
-      toast({ title: "Perfil Actualizado" });
       setIsEditDialogOpen(false);
-      setVideoFile(null); // Reset video file after successful submit
+      setVideoFile(null); 
+      setImageFile(null); 
+
     } catch (error: any) {
       toast({ title: "Error de Actualización", description: error.message, variant: "destructive" });
       setIsUploadingImage(false);
@@ -336,7 +350,7 @@ export default function StudentDashboardPage() {
     }
   }
 
-  const handleDeleteVideo = async () => {
+ const handleDeleteVideo = async () => {
     if (!currentUser || !auth.currentUser || !currentUser.creatorVideoUrl) {
       toast({ title: "Error", description: "No hay video para eliminar o usuario no autenticado.", variant: "destructive" });
       return;
@@ -344,6 +358,7 @@ export default function StudentDashboardPage() {
     setIsSubmitting(true);
     try {
         const idToken = await auth.currentUser.getIdToken(true);
+        
         try {
             const url = new URL(currentUser.creatorVideoUrl);
             if (url.hostname === 'firebasestorage.googleapis.com') {
@@ -356,22 +371,24 @@ export default function StudentDashboardPage() {
                 }
             }
         } catch (storageError: any) {
-            console.warn("Error eliminando video de Firebase Storage, puede que ya no exista:", storageError.message);
+            console.warn("Advertencia al eliminar video de Firebase Storage (puede ser normal):", storageError.message);
         }
 
         const updateDto = { creatorVideoUrl: null };
         const response = await fetch('/api/users/update-profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-            body: JSON.stringify(updateDto),
+            body: JSON.stringify(updateDto), 
         });
+
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.details || errorData.error || "Error al eliminar el video del perfil.");
         }
-        await refreshUserProfile();
-        setVideoPreviewUrl(null);
-        setVideoFile(null);
+        
+        await refreshUserProfile(); 
+        setVideoPreviewUrl(null);   
+        setVideoFile(null);         
         toast({ title: "Video de Presentación Eliminado" });
         setShowDeleteVideoConfirm(false);
     } catch (error: any) {
@@ -436,33 +453,33 @@ export default function StudentDashboardPage() {
 
   const startRecording = async () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stop(); 
         setIsRecording(false);
         if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-        return;
+        return; 
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", aspectRatio: 9 / 16 }, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", aspectRatio: (9/16) }, audio: true });
       setHasCameraPermission(true);
       if (videoRef.current) videoRef.current.srcObject = stream;
       mediaRecorderRef.current = new MediaRecorder(stream);
-      setRecordedChunks([]);
+      setRecordedChunks([]); 
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) setRecordedChunks(prev => [...prev, event.data]);
       };
       mediaRecorderRef.current.onstop = () => {
         const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
         const uniqueFileName = `recorded_presentation_${Date.now()}.webm`;
-        const videoFile = new File([videoBlob], uniqueFileName, { type: 'video/webm' });
+        const videoFileInstance = new File([videoBlob], uniqueFileName, { type: 'video/webm' });
 
-        if (videoFile.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+        if (videoFileInstance.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
             toast({ title: "Video Demasiado Grande", description: `El video grabado excede los ${MAX_VIDEO_SIZE_MB}MB. Intenta de nuevo con un video más corto.`, variant: "destructive"});
-            setVideoFile(null);
-            setVideoPreviewUrl(null);
+            setVideoFile(null); 
+            setVideoPreviewUrl(null); 
         } else {
-            setVideoFile(videoFile);
-            setVideoPreviewUrl(URL.createObjectURL(videoFile));
+            setVideoFile(videoFileInstance); 
+            setVideoPreviewUrl(URL.createObjectURL(videoFileInstance)); 
         }
         if (videoRef.current && videoRef.current.srcObject) {
             (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
@@ -474,12 +491,12 @@ export default function StudentDashboardPage() {
       setRecordingTime(0);
       recordingIntervalRef.current = setInterval(() => {
         setRecordingTime(prevTime => {
-          if (prevTime >= MAX_VIDEO_DURATION_SECONDS -1) {
+          if (prevTime >= MAX_VIDEO_DURATION_SECONDS -1) { 
             if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-              mediaRecorderRef.current.stop();
+              mediaRecorderRef.current.stop(); 
             }
             if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-            setIsRecording(false);
+            setIsRecording(false); 
             return MAX_VIDEO_DURATION_SECONDS;
           }
           return prevTime + 1;
@@ -494,7 +511,7 @@ export default function StudentDashboardPage() {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stop(); 
     }
     if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
     setIsRecording(false);
@@ -502,11 +519,11 @@ export default function StudentDashboardPage() {
   
   const cancelRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stop(); 
     }
     if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
     setIsRecording(false);
-    setRecordedChunks([]);
+    setRecordedChunks([]); 
     setVideoPreviewUrl(currentUser?.creatorVideoUrl || null); 
     setVideoFile(null);
     setShowRecordVideoModal(false);
@@ -514,7 +531,7 @@ export default function StudentDashboardPage() {
         (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
         videoRef.current.srcObject = null;
     }
-    setHasCameraPermission(null);
+    setHasCameraPermission(null); 
   };
 
 
@@ -565,7 +582,7 @@ export default function StudentDashboardPage() {
           )}
         </CardContent>
       </Card>
-
+      
       <Card className="shadow-lg">
         <CardHeader>
             <div className="flex items-center justify-between">

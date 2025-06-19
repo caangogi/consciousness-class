@@ -350,7 +350,7 @@ export default function StudentDashboardPage() {
     }
   }
 
- async function handleDeleteVideo() {
+  const handleDeleteVideo = useCallback(async () => {
     if (!currentUser || !auth.currentUser || !currentUser.creatorVideoUrl) {
       toast({ title: "Error", description: "No hay video para eliminar o usuario no autenticado.", variant: "destructive" });
       return;
@@ -396,7 +396,7 @@ export default function StudentDashboardPage() {
     } finally {
         setIsSubmitting(false);
     }
-};
+  }, [currentUser, toast, refreshUserProfile]);
 
 
   const handleCopyReferralLink = (courseId?: string) => {
@@ -460,16 +460,20 @@ export default function StudentDashboardPage() {
     }
 
     try {
-      const constraints = { // Simplified constraints
-        video: true,
-        audio: true
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: "user",
+          width: { ideal: 720 }, 
+          height: { ideal: 1280 },
+        },
+        audio: true,
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setHasCameraPermission(true);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'video/webm' });
       setRecordedChunks([]);
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -582,8 +586,6 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Panel de Estudiante</h1>
-
-      {/* Mis Cursos */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center gap-2"><BookOpen className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mis Cursos</CardTitle></div>
@@ -610,7 +612,6 @@ export default function StudentDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Mis Referidos y Comisiones (Consolidated Card) */}
       <Card className="shadow-lg">
         <CardHeader>
             <div className="flex items-center justify-between">
@@ -644,7 +645,6 @@ export default function StudentDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Promociona Cursos y Gana */}
       <Card className="shadow-lg">
         <CardHeader><div className="flex items-center gap-2"><Share2 className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Promociona Cursos y Gana</CardTitle></div><CardDescription>Copia enlaces de promoción para cursos específicos que ofrecen comisión.</CardDescription></CardHeader>
         <CardContent>
@@ -660,7 +660,6 @@ export default function StudentDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Mi Perfil */}
       <Card className="shadow-lg">
         <CardHeader><div className="flex items-center gap-2"><UserCircle className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mi Perfil</CardTitle></div><CardDescription>Gestiona tu información personal y configuración de cuenta.</CardDescription></CardHeader>
         <CardContent className="space-y-3">
@@ -671,7 +670,7 @@ export default function StudentDashboardPage() {
               <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogTrigger asChild><Button variant="outline" size="sm"><Edit className="mr-2 h-4 w-4" /> Editar Perfil</Button></DialogTrigger>
               <DialogContent className="sm:max-w-[580px] max-h-[90vh] flex flex-col">
                   <DialogHeader><DialogTitle>Editar Perfil</DialogTitle></DialogHeader>
-                  <ScrollArea className="flex-grow pr-3 -mr-3 max-h-[calc(80vh - 160px)]"> {/* Adjusted max-h */}
+                  <ScrollArea className="flex-grow pr-3 -mr-3 max-h-[calc(80vh - 160px)]">
                   <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmitProfile)} id="profileEditForm" className="space-y-6 py-4">
                       <div className="space-y-4 text-center"><Avatar className="h-32 w-32 mx-auto ring-2 ring-primary ring-offset-2 ring-offset-background"><AvatarImage src={imagePreviewUrl || `https://placehold.co/128x128.png?text=${getInitials(form.getValues('nombre'), form.getValues('apellido'))}`} alt="Vista previa de perfil" data-ai-hint="profile preview"/><AvatarFallback>{getInitials(form.getValues('nombre'), form.getValues('apellido'))}</AvatarFallback></Avatar><div className="relative w-full max-w-xs mx-auto"><Input id="picture" type="file" accept="image/png, image/jpeg, image/webp, image/gif" onChange={handleImageChange} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10" disabled={isUploadingImage || isSubmitting}/><Button type="button" variant="outline" className="w-full pointer-events-none relative">{isUploadingImage && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}{!isUploadingImage && <Camera className="mr-2 h-4 w-4" />}{isUploadingImage ? 'Subiendo...' : (imageFile ? (imageFile.name.length > 25 ? imageFile.name.substring(0,22) + '...' : imageFile.name) : 'Cambiar foto')}</Button>{isUploadingImage && <Progress value={undefined} className="absolute bottom-0 left-0 right-0 h-1 w-full rounded-b-md" />}</div></div>

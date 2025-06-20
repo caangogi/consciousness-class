@@ -247,13 +247,12 @@ export default function StudentDashboardPage() {
   }
 
   return (
-    <div> {/* Removed space-y-8 from here, will be handled by grid gap */}
+    <div>
       <h1 className="text-3xl font-bold font-headline mb-8">Panel de Estudiante</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
         
-        {/* Mis Cursos */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3 md:col-span-2"> {/* Mis Cursos */}
           <Card className="shadow-lg h-full">
             <CardHeader>
               <div className="flex items-center gap-2"><BookOpen className="h-6 w-6 text-primary" />
@@ -267,7 +266,7 @@ export default function StudentDashboardPage() {
               ) : coursesError ? (
                  <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><UiAlertDescription>{coursesError}</UiAlertDescription></Alert>
               ) : enrolledCoursesApiData.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2"> {/* Internal grid for course cards */}
+                <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
                   {enrolledCoursesApiData.map(course => (
                     <Card key={course.id} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col">
                       <Link href={`/courses/${course.id}`} className="block relative aspect-[16/10] w-full"><Image src={course.imagenPortadaUrl || 'https://placehold.co/300x180.png'} alt={course.nombre} fill className="object-cover" data-ai-hint={course.dataAiHintImagenPortada || 'course student dashboard'} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/></Link>
@@ -283,8 +282,7 @@ export default function StudentDashboardPage() {
           </Card>
         </div>
 
-        {/* Mi Perfil */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 md:col-span-1"> {/* Mi Perfil */}
           <Card className="shadow-lg h-full">
             <CardHeader><div className="flex items-center gap-2"><UserCircle className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mi Perfil</CardTitle></div><CardDescription>Gestiona tu información personal y configuración de cuenta.</CardDescription></CardHeader>
             <CardContent className="space-y-3">
@@ -300,8 +298,7 @@ export default function StudentDashboardPage() {
           </Card>
         </div>
         
-        {/* Mis Referidos y Comisiones */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-2 md:col-span-1"> {/* Mis Referidos y Comisiones */}
           <Card className="shadow-lg h-full">
             <CardHeader>
                 <div className="flex items-center justify-between">
@@ -336,8 +333,7 @@ export default function StudentDashboardPage() {
           </Card>
         </div>
 
-        {/* Promociona Cursos y Gana */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-2 md:col-span-2"> {/* Promociona Cursos y Gana */}
           <Card className="shadow-lg h-full">
             <CardHeader>
               <div className="flex items-center gap-2"><Share2 className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Promociona Cursos y Gana</CardTitle>
@@ -357,8 +353,7 @@ export default function StudentDashboardPage() {
           </Card>
         </div>
         
-        {/* Mis Certificados */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-1 md:col-span-2"> {/* Mis Certificados */}
           <Card className="shadow-lg h-full">
             <CardHeader><div className="flex items-center gap-2"><Award className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mis Certificados</CardTitle></div><CardDescription>Visualiza y descarga los certificados de los cursos completados.</CardDescription></CardHeader>
             <CardContent><div className="text-center py-6 text-muted-foreground"><Award className="mx-auto h-10 w-10 mb-3 opacity-50" /><p className="font-medium">Funcionalidad de Certificados Próximamente</p><p className="text-sm">Cuando completes tus cursos, tus certificados aparecerán aquí.</p></div></CardContent>
@@ -377,3 +372,4 @@ export default function StudentDashboardPage() {
     </div>
   );
 }
+

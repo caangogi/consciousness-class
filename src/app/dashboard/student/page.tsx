@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as ShadCNAlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { auth } from '@/lib/firebase/config';
 import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Alert, AlertTitle, AlertDescription as ShadCNAlertDescription } from '@/components/ui/alert'; // Added AlertDescription import
+import { Alert, AlertTitle } from '@/components/ui/alert'; 
 import { EditProfileDialog } from '@/components/dashboard/student/EditProfileDialog';
 
 interface EnrolledCourseApiData extends CourseProperties {
@@ -250,14 +250,14 @@ export default function StudentDashboardPage() {
           {isLoadingCourses ? (
              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{[...Array(3)].map((_, i) => (<Skeleton key={i} className="h-64 w-full" />))}</div>
           ) : coursesError ? (
-             <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><ShadCNAlertDescription>{coursesError}</ShadCNAlertDescription></Alert>
+             <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><ShadCNAlertDialogDescription>{coursesError}</ShadCNAlertDialogDescription></Alert>
           ) : enrolledCoursesApiData.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {enrolledCoursesApiData.map(course => (
                 <Card key={course.id} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col">
                   <Link href={`/courses/${course.id}`} className="block relative aspect-[16/10] w-full"><Image src={course.imagenPortadaUrl || 'https://placehold.co/300x180.png'} alt={course.nombre} fill className="object-cover" data-ai-hint={course.dataAiHintImagenPortada || 'course student dashboard'} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/></Link>
                   <CardContent className="p-4 flex-grow"><h3 className="font-semibold mb-1 truncate text-md leading-tight">{course.nombre}</h3>{course.progress !== undefined && (<><Progress value={course.progress.porcentajeCompletado} className="mb-1 h-1.5" /><p className="text-xs text-muted-foreground mb-3">{course.progress.porcentajeCompletado}% completado</p></>)}{course.progress === undefined && (<p className="text-xs text-muted-foreground mb-3">Progreso no disponible</p>)}</CardContent>
-                  <CardFooter className="p-4 border-t"><Button variant="default" size="sm" asChild className="w-full"><Link href={`/learn/${course.id}/${course.modules && course.modules.length > 0 && course.modules[0].lessons && course.modules[0].lessons.length > 0 ? course.modules[0].lessons[0].id : 'start'}`}>Ir al Curso</Link></Button></CardFooter>
+                  <CardFooter className="p-4 border-t"><Button variant="default" size="sm" asChild className="w-full"><Link href={`/learn/${course.id}/start`}>Ir al Curso</Link></Button></CardFooter>
                 </Card>
               ))}
             </div>
@@ -290,14 +290,14 @@ export default function StudentDashboardPage() {
             <div className="border-t pt-4">
                 <h4 className="text-lg font-semibold mb-2">Detalle de Comisiones Generadas</h4>
                 {isLoadingCommissions ? (<div className="flex items-center justify-center py-6"><Loader2 className="mr-2 h-6 w-6 animate-spin" /> Cargando comisiones...</div>)
-                : commissionsError ? (<Alert variant="destructive" className="text-sm"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><ShadCNAlertDescription>{commissionsError}</ShadCNAlertDescription></Alert>)
+                : commissionsError ? (<Alert variant="destructive" className="text-sm"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><ShadCNAlertDialogDescription>{commissionsError}</ShadCNAlertDialogDescription></Alert>)
                 : detailedCommissions.length > 0 ? (
                     <ScrollArea className="max-h-80"><Table><TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Curso</TableHead><TableHead className="text-right">Monto</TableHead><TableHead className="text-center">Estado</TableHead></TableRow></TableHeader>
                         <TableBody>{detailedCommissions.map((commission) => (<TableRow key={commission.id}><TableCell><div className="flex items-center gap-2 text-xs sm:text-sm"><CalendarDays className="h-4 w-4 text-muted-foreground"/>{format(new Date(commission.fechaCreacion), 'dd MMM yyyy, HH:mm', { locale: es })}</div></TableCell><TableCell className="font-medium truncate max-w-[100px] sm:max-w-xs" title={commission.nombreCursoComprado || commission.courseIdComprado}>{commission.nombreCursoComprado || commission.courseIdComprado}</TableCell><TableCell className="text-right">{commission.montoComisionCalculado.toFixed(2)} €</TableCell><TableCell className="text-center"><Badge variant={commission.estadoPagoComision === 'pagada' ? 'default' : (commission.estadoPagoComision === 'pendiente' ? 'secondary' : 'destructive')} className={commission.estadoPagoComision === 'pagada' ? 'bg-green-100 text-green-700' : (commission.estadoPagoComision === 'pendiente' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700')}>{commission.estadoPagoComision.charAt(0).toUpperCase() + commission.estadoPagoComision.slice(1)}</Badge></TableCell></TableRow>))}</TableBody>
                     </Table></ScrollArea>
                 ) : (<p className="text-muted-foreground py-4 text-center text-sm">Aún no has generado ninguna comisión.</p>)}
             </div>
-            <Alert className="text-xs"><Info className="h-4 w-4"/><AlertTitle className="font-medium">Información Importante</AlertTitle><ShadCNAlertDescription>El seguimiento detallado de comisiones y su pago se habilitará próximamente. Por ahora, puedes ver tus referidos exitosos y el balance de comisiones pendientes.</ShadCNAlertDescription></Alert>
+            <Alert className="text-xs"><Info className="h-4 w-4"/><AlertTitle className="font-medium">Información Importante</AlertTitle><ShadCNAlertDialogDescription>El seguimiento detallado de comisiones y su pago se habilitará próximamente. Por ahora, puedes ver tus referidos exitosos y el balance de comisiones pendientes.</ShadCNAlertDialogDescription></Alert>
         </CardContent>
       </Card>
 
@@ -309,7 +309,7 @@ export default function StudentDashboardPage() {
         </CardHeader>
         <CardContent>
             {isLoadingPromotableCourses ? (<div className="grid gap-4 md:grid-cols-2">{[...Array(2)].map((_, i) => (<Card key={i} className="p-4 space-y-3"><div className="flex gap-3 items-start"><Skeleton className="h-16 w-24 rounded-md" /><div className="flex-1 space-y-1.5"><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-1/4" /></div></div><Skeleton className="h-9 w-full" /></Card>))}</div>)
-            : promotableCoursesError ? (<Alert variant="destructive" className="text-sm"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><ShadCNAlertDescription>{promotableCoursesError}</ShadCNAlertDescription></Alert>)
+            : promotableCoursesError ? (<Alert variant="destructive" className="text-sm"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><ShadCNAlertDialogDescription>{promotableCoursesError}</ShadCNAlertDialogDescription></Alert>)
             : promotableCourses.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2">
                     {promotableCourses.map(course => (
@@ -330,7 +330,7 @@ export default function StudentDashboardPage() {
           {currentUser.creatorVideoUrl && (<div className="pt-2"><h4 className="text-sm font-medium text-muted-foreground mb-1">Video de Presentación:</h4><Link href={currentUser.creatorVideoUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1"><Film className="h-4 w-4"/> Ver Video</Link></div>)}
           <div className="flex flex-wrap gap-2 pt-2">
               <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Editar Perfil</Button>
-              {userRole === 'student' && (<AlertDialog open={showBecomeCreatorDialog} onOpenChange={setShowBecomeCreatorDialog}><AlertDialogTrigger asChild><Button variant="default" size="sm" disabled={isRequestingCreatorRole}><Rocket className="mr-2 h-4 w-4" /> Convertirme en Creator</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Quieres convertirte en Creator?</AlertDialogTitle><ShadCNAlertDescription>Como Creator, podrás crear y vender tus propios cursos. Esta acción cambiará tu rol de Student a Creator.</ShadCNAlertDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={isRequestingCreatorRole}>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleRequestCreatorRole} disabled={isRequestingCreatorRole}>{isRequestingCreatorRole ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}{isRequestingCreatorRole ? 'Procesando...' : 'Sí, Convertirme en Creator'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>)}
+              {userRole === 'student' && (<AlertDialog open={showBecomeCreatorDialog} onOpenChange={setShowBecomeCreatorDialog}><AlertDialogTrigger asChild><Button variant="default" size="sm" disabled={isRequestingCreatorRole}><Rocket className="mr-2 h-4 w-4" /> Convertirme en Creator</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Quieres convertirte en Creator?</AlertDialogTitle><ShadCNAlertDialogDescription>Como Creator, podrás crear y vender tus propios cursos. Esta acción cambiará tu rol de Student a Creator.</ShadCNAlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={isRequestingCreatorRole}>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleRequestCreatorRole} disabled={isRequestingCreatorRole}>{isRequestingCreatorRole ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}{isRequestingCreatorRole ? 'Procesando...' : 'Sí, Convertirme en Creator'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>)}
           </div>
         </CardContent>
       </Card>

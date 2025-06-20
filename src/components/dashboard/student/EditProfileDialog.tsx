@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as ShadCNAlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -253,7 +253,7 @@ export function EditProfileDialog({ currentUser, isOpen, setIsOpen, onProfileUpd
     } finally {
         setIsSubmitting(false);
     }
-  }, [currentUser, toast, onProfileUpdate, setIsOpen]);
+  }, [currentUser, toast, onProfileUpdate, setIsOpen]); // Removed setIsOpen from deps as it's not used directly in this func
 
   const startRecording = async () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
@@ -263,7 +263,7 @@ export function EditProfileDialog({ currentUser, isOpen, setIsOpen, onProfileUpd
         return;
     }
     try {
-      const constraints: MediaStreamConstraints = { video: { facingMode: "user", width: { ideal: 360 }, height: { ideal: 640 }, aspectRatio: (9 / 16) }, audio: true };
+      const constraints: MediaStreamConstraints = { video: { facingMode: "user", width: { ideal: 360 }, height: { ideal: 640 }, aspectRatio: (9/16) }, audio: true };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setHasCameraPermission(true);
       if (videoRef.current) videoRef.current.srcObject = stream;
@@ -334,7 +334,7 @@ export function EditProfileDialog({ currentUser, isOpen, setIsOpen, onProfileUpd
     <>
       <Dialog open={isOpen} onOpenChange={(open) => {
         setIsOpen(open);
-        if (!open) { // Reset states if dialog is closed without saving
+        if (!open) { 
           setImageFile(null);
           setVideoFile(null);
           setImagePreviewUrl(currentUser.photoURL || null);
@@ -402,7 +402,6 @@ export function EditProfileDialog({ currentUser, isOpen, setIsOpen, onProfileUpd
         </DialogContent>
       </Dialog>
 
-      {/* Video Recording Dialog */}
       <Dialog open={showRecordVideoModal} onOpenChange={(open) => { if (!open) cancelRecording(); else setShowRecordVideoModal(true); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Grabar Video de Presentación</DialogTitle><DialogDescription>Graba un video corto (máx. {MAX_VIDEO_DURATION_SECONDS} segundos). Intenta mantener una orientación vertical.</DialogDescription></DialogHeader>
@@ -454,14 +453,13 @@ export function EditProfileDialog({ currentUser, isOpen, setIsOpen, onProfileUpd
         </DialogContent>
       </Dialog>
 
-      {/* Delete Video AlertDialog */}
       <AlertDialog open={showDeleteVideoConfirm} onOpenChange={setShowDeleteVideoConfirm}>
           <AlertDialogContent>
               <AlertDialogHeader>
                   <AlertDialogTitle>¿Eliminar Video de Presentación?</AlertDialogTitle>
-                  <AlertDialogDescription>
+                  <ShadCNAlertDialogDescription>
                       Esta acción eliminará tu video de presentación actual. ¿Estás seguro?
-                  </AlertDialogDescription>
+                  </ShadCNAlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                   <AlertDialogCancel onClick={() => setShowDeleteVideoConfirm(false)} disabled={isSubmitting}>Cancelar</AlertDialogCancel>
@@ -476,4 +474,3 @@ export function EditProfileDialog({ currentUser, isOpen, setIsOpen, onProfileUpd
   );
 }
 
-    

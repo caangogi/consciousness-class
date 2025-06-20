@@ -19,7 +19,7 @@ import {
     AlertDialogAction, 
     AlertDialogCancel, 
     AlertDialogContent, 
-    AlertDialogDescription, // Removed alias
+    AlertDialogDescription,
     AlertDialogFooter, 
     AlertDialogHeader, 
     AlertDialogTitle, 
@@ -34,7 +34,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from '@/components/ui/alert'; // Import AlertDescription, aliased to avoid conflict if needed
+import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from '@/components/ui/alert';
 import { EditProfileDialog } from '@/components/dashboard/student/EditProfileDialog';
 
 interface EnrolledCourseApiData extends CourseProperties {
@@ -231,12 +231,13 @@ export default function StudentDashboardPage() {
     return (
       <div className="space-y-8">
         <Skeleton className="h-10 w-1/3" />
-        <Card className="shadow-lg">
-          <CardHeader><Skeleton className="h-8 w-1/3 mb-2" /><Skeleton className="h-4 w-1/2" /></CardHeader>
-          <CardContent><Skeleton className="h-40 w-full" /></CardContent>
-        </Card>
-        <Card className="shadow-lg"><CardHeader><Skeleton className="h-8 w-1/3 mb-2" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-60 w-full" /></CardContent></Card>
-        <Card className="shadow-lg"><CardHeader><Skeleton className="h-8 w-1/3 mb-2" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-20 w-full" /></CardContent></Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            <Skeleton className="h-80 w-full lg:col-span-2" />
+            <Skeleton className="h-80 w-full lg:col-span-1" />
+            <Skeleton className="h-60 w-full lg:col-span-3" />
+            <Skeleton className="h-60 w-full lg:col-span-3" />
+            <Skeleton className="h-40 w-full lg:col-span-3" />
+        </div>
       </div>
     );
   }
@@ -246,109 +247,124 @@ export default function StudentDashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold font-headline">Panel de Estudiante</h1>
+    <div> {/* Removed space-y-8 from here, will be handled by grid gap */}
+      <h1 className="text-3xl font-bold font-headline mb-8">Panel de Estudiante</h1>
       
-      <Card className="shadow-lg">
-        <CardHeader>
-          <div className="flex items-center gap-2"><BookOpen className="h-6 w-6 text-primary" />
-            <CardTitle className="text-2xl font-headline">Mis Cursos</CardTitle>
-          </div>
-          <CardDescription>Continúa tu aprendizaje.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingCourses ? (
-             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{[...Array(3)].map((_, i) => (<Skeleton key={i} className="h-64 w-full" />))}</div>
-          ) : coursesError ? (
-             <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><UiAlertDescription>{coursesError}</UiAlertDescription></Alert>
-          ) : enrolledCoursesApiData.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {enrolledCoursesApiData.map(course => (
-                <Card key={course.id} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col">
-                  <Link href={`/courses/${course.id}`} className="block relative aspect-[16/10] w-full"><Image src={course.imagenPortadaUrl || 'https://placehold.co/300x180.png'} alt={course.nombre} fill className="object-cover" data-ai-hint={course.dataAiHintImagenPortada || 'course student dashboard'} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/></Link>
-                  <CardContent className="p-4 flex-grow"><h3 className="font-semibold mb-1 truncate text-md leading-tight">{course.nombre}</h3>{course.progress !== undefined && (<><Progress value={course.progress.porcentajeCompletado} className="mb-1 h-1.5" /><p className="text-xs text-muted-foreground mb-3">{course.progress.porcentajeCompletado}% completado</p></>)}{course.progress === undefined && (<p className="text-xs text-muted-foreground mb-3">Progreso no disponible</p>)}</CardContent>
-                  <CardFooter className="p-4 border-t"><Button variant="default" size="sm" asChild className="w-full"><Link href={`/learn/${course.id}/start`}>Ir al Curso</Link></Button></CardFooter>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground py-4 text-center">Aún no te has inscrito a ningún curso. <Link href="/courses" className="text-primary hover:underline">Explora cursos</Link>.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      
-      <Card className="shadow-lg">
-        <CardHeader>
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Gift className="h-6 w-6 text-primary" />
-                    <CardTitle className="text-2xl font-headline">Mis Referidos y Comisiones</CardTitle>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+        
+        {/* Mis Cursos */}
+        <div className="lg:col-span-2">
+          <Card className="shadow-lg h-full">
+            <CardHeader>
+              <div className="flex items-center gap-2"><BookOpen className="h-6 w-6 text-primary" />
+                <CardTitle className="text-2xl font-headline">Mis Cursos</CardTitle>
+              </div>
+              <CardDescription>Continúa tu aprendizaje.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingCourses ? (
+                 <div className="grid gap-6 md:grid-cols-2">{[...Array(2)].map((_, i) => (<Skeleton key={i} className="h-64 w-full" />))}</div>
+              ) : coursesError ? (
+                 <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><UiAlertDescription>{coursesError}</UiAlertDescription></Alert>
+              ) : enrolledCoursesApiData.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2"> {/* Internal grid for course cards */}
+                  {enrolledCoursesApiData.map(course => (
+                    <Card key={course.id} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                      <Link href={`/courses/${course.id}`} className="block relative aspect-[16/10] w-full"><Image src={course.imagenPortadaUrl || 'https://placehold.co/300x180.png'} alt={course.nombre} fill className="object-cover" data-ai-hint={course.dataAiHintImagenPortada || 'course student dashboard'} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/></Link>
+                      <CardContent className="p-4 flex-grow"><h3 className="font-semibold mb-1 truncate text-md leading-tight">{course.nombre}</h3>{course.progress !== undefined && (<><Progress value={course.progress.porcentajeCompletado} className="mb-1 h-1.5" /><p className="text-xs text-muted-foreground mb-3">{course.progress.porcentajeCompletado}% completado</p></>)}{course.progress === undefined && (<p className="text-xs text-muted-foreground mb-3">Progreso no disponible</p>)}</CardContent>
+                      <CardFooter className="p-4 border-t"><Button variant="default" size="sm" asChild className="w-full"><Link href={`/learn/${course.id}/start`}>Ir al Curso</Link></Button></CardFooter>
+                    </Card>
+                  ))}
                 </div>
-                <Button variant="outline" size="sm" onClick={handleRefreshStats} disabled={isRefreshingStats}>
-                    {isRefreshingStats ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-2 h-3 w-3" />}
-                    Refrescar Datos
-                </Button>
-            </div>
-            <CardDescription>Consulta tus estadísticas de referidos y el detalle de comisiones generadas.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div><p className="text-sm font-medium text-muted-foreground">Referidos Exitosos:</p><p className="text-2xl font-semibold flex items-center">{currentUser?.referidosExitosos || 0} <Users className="h-5 w-5 ml-2 text-muted-foreground"/></p></div>
-                <div><p className="text-sm font-medium text-muted-foreground">Comisiones Pendientes:</p><p className="text-2xl font-semibold flex items-center">{(currentUser?.balanceComisionesPendientes || 0).toFixed(2)} € <DollarSign className="h-5 w-5 ml-1 text-muted-foreground"/></p></div>
-            </div>
-            <div className="border-t pt-4">
-                <h4 className="text-lg font-semibold mb-2">Detalle de Comisiones Generadas</h4>
-                {isLoadingCommissions ? (<div className="flex items-center justify-center py-6"><Loader2 className="mr-2 h-6 w-6 animate-spin" /> Cargando comisiones...</div>)
-                : commissionsError ? (<Alert variant="destructive" className="text-sm"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><UiAlertDescription>{commissionsError}</UiAlertDescription></Alert>)
-                : detailedCommissions.length > 0 ? (
-                    <ScrollArea className="max-h-80"><Table><TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Curso</TableHead><TableHead className="text-right">Monto</TableHead><TableHead className="text-center">Estado</TableHead></TableRow></TableHeader>
-                        <TableBody>{detailedCommissions.map((commission) => (<TableRow key={commission.id}><TableCell><div className="flex items-center gap-2 text-xs sm:text-sm"><CalendarDays className="h-4 w-4 text-muted-foreground"/>{format(new Date(commission.fechaCreacion), 'dd MMM yyyy, HH:mm', { locale: es })}</div></TableCell><TableCell className="font-medium truncate max-w-[100px] sm:max-w-xs" title={commission.nombreCursoComprado || commission.courseIdComprado}>{commission.nombreCursoComprado || commission.courseIdComprado}</TableCell><TableCell className="text-right">{commission.montoComisionCalculado.toFixed(2)} €</TableCell><TableCell className="text-center"><Badge variant={commission.estadoPagoComision === 'pagada' ? 'default' : (commission.estadoPagoComision === 'pendiente' ? 'secondary' : 'destructive')} className={commission.estadoPagoComision === 'pagada' ? 'bg-green-100 text-green-700' : (commission.estadoPagoComision === 'pendiente' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700')}>{commission.estadoPagoComision.charAt(0).toUpperCase() + commission.estadoPagoComision.slice(1)}</Badge></TableCell></TableRow>))}</TableBody>
-                    </Table></ScrollArea>
-                ) : (<p className="text-muted-foreground py-4 text-center text-sm">Aún no has generado ninguna comisión.</p>)}
-            </div>
-            <Alert className="text-xs"><Info className="h-4 w-4"/><AlertTitle className="font-medium">Información Importante</AlertTitle><UiAlertDescription>El seguimiento detallado de comisiones y su pago se habilitará próximamente. Por ahora, puedes ver tus referidos exitosos y el balance de comisiones pendientes.</UiAlertDescription></Alert>
-        </CardContent>
-      </Card>
+              ) : (
+                <p className="text-muted-foreground py-4 text-center">Aún no te has inscrito a ningún curso. <Link href="/courses" className="text-primary hover:underline">Explora cursos</Link>.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-      
-      <Card className="shadow-lg">
-        <CardHeader>
-          <div className="flex items-center gap-2"><Share2 className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Promociona Cursos y Gana</CardTitle>
-          </div><CardDescription>Copia enlaces de promoción para cursos específicos que ofrecen comisión.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {isLoadingPromotableCourses ? (<div className="grid gap-4 md:grid-cols-2">{[...Array(2)].map((_, i) => (<Card key={i} className="p-4 space-y-3"><div className="flex gap-3 items-start"><Skeleton className="h-16 w-24 rounded-md" /><div className="flex-1 space-y-1.5"><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-1/4" /></div></div><Skeleton className="h-9 w-full" /></Card>))}</div>)
-            : promotableCoursesError ? (<Alert variant="destructive" className="text-sm"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><UiAlertDescription>{promotableCoursesError}</UiAlertDescription></Alert>)
-            : promotableCourses.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                    {promotableCourses.map(course => (
-                        <Card key={course.id} className="p-4"><div className="flex gap-4 items-start mb-3"><Image src={course.imagenPortadaUrl || 'https://placehold.co/100x60.png'} alt={course.nombre} width={100} height={60} className="rounded-md object-cover aspect-[16/10]" data-ai-hint={course.dataAiHintImagenPortada || 'course promo image'} /><div className="flex-1"><h4 className="font-semibold text-sm leading-tight mb-0.5">{course.nombre}</h4><p className="text-xs text-muted-foreground">{course.categoria}</p><p className="text-xs font-medium text-primary mt-1">Comisión: {course.comisionReferidoPorcentaje}%</p></div></div><Button variant="outline" size="sm" className="w-full" onClick={() => handleCopyReferralLink(course.id)} disabled={!currentUser.referralCodeGenerated || !baseUrl || !navigator.clipboard}><LinkIcon className="mr-2 h-4 w-4" /> Copiar Enlace de Promoción</Button></Card>
-                    ))}
+        {/* Mi Perfil */}
+        <div className="lg:col-span-1">
+          <Card className="shadow-lg h-full">
+            <CardHeader><div className="flex items-center gap-2"><UserCircle className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mi Perfil</CardTitle></div><CardDescription>Gestiona tu información personal y configuración de cuenta.</CardDescription></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20"><AvatarImage src={currentUser.photoURL || `https://placehold.co/80x80.png?text=${getInitials(currentUser.nombre, currentUser.apellido)}`} alt="Foto de perfil" data-ai-hint="user avatar"/><AvatarFallback>{getInitials(currentUser.nombre, currentUser.apellido)}</AvatarFallback></Avatar><div><p className="text-lg font-semibold">{currentUser.nombre && currentUser.apellido ? `${currentUser.nombre} ${currentUser.apellido}` : (currentUser.displayName || 'Nombre no especificado')}</p><p className="text-sm text-muted-foreground">{currentUser.email || 'Email no especificado'}</p></div></div>
+              {currentUser.bio && (<div className="pt-2"><h4 className="text-sm font-medium text-muted-foreground mb-1">Sobre mí:</h4><p className="text-sm text-foreground/80 whitespace-pre-wrap">{currentUser.bio}</p></div>)}
+              {currentUser.creatorVideoUrl && (<div className="pt-2"><h4 className="text-sm font-medium text-muted-foreground mb-1">Video de Presentación:</h4><Link href={currentUser.creatorVideoUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1"><Film className="h-4 w-4"/> Ver Video</Link></div>)}
+              <div className="flex flex-wrap gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Editar Perfil</Button>
+                  {userRole === 'student' && (<AlertDialog open={showBecomeCreatorDialog} onOpenChange={setShowBecomeCreatorDialog}><AlertDialogTrigger asChild><Button variant="default" size="sm" disabled={isRequestingCreatorRole}><Rocket className="mr-2 h-4 w-4" /> Convertirme en Creator</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Quieres convertirte en Creator?</AlertDialogTitle><AlertDialogDescription>Como Creator, podrás crear y vender tus propios cursos. Esta acción cambiará tu rol de Student a Creator.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={isRequestingCreatorRole}>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleRequestCreatorRole} disabled={isRequestingCreatorRole}>{isRequestingCreatorRole ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}{isRequestingCreatorRole ? 'Procesando...' : 'Sí, Convertirme en Creator'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Mis Referidos y Comisiones */}
+        <div className="lg:col-span-3">
+          <Card className="shadow-lg h-full">
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Gift className="h-6 w-6 text-primary" />
+                        <CardTitle className="text-2xl font-headline">Mis Referidos y Comisiones</CardTitle>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleRefreshStats} disabled={isRefreshingStats}>
+                        {isRefreshingStats ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-2 h-3 w-3" />}
+                        Refrescar Datos
+                    </Button>
                 </div>
-            ) : (<p className="text-muted-foreground py-4 text-center text-sm">Actualmente no hay cursos con comisión de referido para promocionar.</p>)}
-        </CardContent>
-      </Card>
+                <CardDescription>Consulta tus estadísticas de referidos y el detalle de comisiones generadas.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div><p className="text-sm font-medium text-muted-foreground">Referidos Exitosos:</p><p className="text-2xl font-semibold flex items-center">{currentUser?.referidosExitosos || 0} <Users className="h-5 w-5 ml-2 text-muted-foreground"/></p></div>
+                    <div><p className="text-sm font-medium text-muted-foreground">Comisiones Pendientes:</p><p className="text-2xl font-semibold flex items-center">{(currentUser?.balanceComisionesPendientes || 0).toFixed(2)} € <DollarSign className="h-5 w-5 ml-1 text-muted-foreground"/></p></div>
+                </div>
+                <div className="border-t pt-4">
+                    <h4 className="text-lg font-semibold mb-2">Detalle de Comisiones Generadas</h4>
+                    {isLoadingCommissions ? (<div className="flex items-center justify-center py-6"><Loader2 className="mr-2 h-6 w-6 animate-spin" /> Cargando comisiones...</div>)
+                    : commissionsError ? (<Alert variant="destructive" className="text-sm"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><UiAlertDescription>{commissionsError}</UiAlertDescription></Alert>)
+                    : detailedCommissions.length > 0 ? (
+                        <ScrollArea className="max-h-80"><Table><TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Curso</TableHead><TableHead className="text-right">Monto</TableHead><TableHead className="text-center">Estado</TableHead></TableRow></TableHeader>
+                            <TableBody>{detailedCommissions.map((commission) => (<TableRow key={commission.id}><TableCell><div className="flex items-center gap-2 text-xs sm:text-sm"><CalendarDays className="h-4 w-4 text-muted-foreground"/>{format(new Date(commission.fechaCreacion), 'dd MMM yyyy, HH:mm', { locale: es })}</div></TableCell><TableCell className="font-medium truncate max-w-[100px] sm:max-w-xs" title={commission.nombreCursoComprado || commission.courseIdComprado}>{commission.nombreCursoComprado || commission.courseIdComprado}</TableCell><TableCell className="text-right">{commission.montoComisionCalculado.toFixed(2)} €</TableCell><TableCell className="text-center"><Badge variant={commission.estadoPagoComision === 'pagada' ? 'default' : (commission.estadoPagoComision === 'pendiente' ? 'secondary' : 'destructive')} className={commission.estadoPagoComision === 'pagada' ? 'bg-green-100 text-green-700' : (commission.estadoPagoComision === 'pendiente' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700')}>{commission.estadoPagoComision.charAt(0).toUpperCase() + commission.estadoPagoComision.slice(1)}</Badge></TableCell></TableRow>))}</TableBody>
+                        </Table></ScrollArea>
+                    ) : (<p className="text-muted-foreground py-4 text-center text-sm">Aún no has generado ninguna comisión.</p>)}
+                </div>
+                <Alert className="text-xs"><Info className="h-4 w-4"/><AlertTitle className="font-medium">Información Importante</AlertTitle><UiAlertDescription>El seguimiento detallado de comisiones y su pago se habilitará próximamente. Por ahora, puedes ver tus referidos exitosos y el balance de comisiones pendientes.</UiAlertDescription></Alert>
+            </CardContent>
+          </Card>
+        </div>
 
-      
-      <Card className="shadow-lg">
-        <CardHeader><div className="flex items-center gap-2"><UserCircle className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mi Perfil</CardTitle></div><CardDescription>Gestiona tu información personal y configuración de cuenta.</CardDescription></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20"><AvatarImage src={currentUser.photoURL || `https://placehold.co/80x80.png?text=${getInitials(currentUser.nombre, currentUser.apellido)}`} alt="Foto de perfil" data-ai-hint="user avatar"/><AvatarFallback>{getInitials(currentUser.nombre, currentUser.apellido)}</AvatarFallback></Avatar><div><p className="text-lg font-semibold">{currentUser.nombre && currentUser.apellido ? `${currentUser.nombre} ${currentUser.apellido}` : (currentUser.displayName || 'Nombre no especificado')}</p><p className="text-sm text-muted-foreground">{currentUser.email || 'Email no especificado'}</p></div></div>
-          {currentUser.bio && (<div className="pt-2"><h4 className="text-sm font-medium text-muted-foreground mb-1">Sobre mí:</h4><p className="text-sm text-foreground/80 whitespace-pre-wrap">{currentUser.bio}</p></div>)}
-          {currentUser.creatorVideoUrl && (<div className="pt-2"><h4 className="text-sm font-medium text-muted-foreground mb-1">Video de Presentación:</h4><Link href={currentUser.creatorVideoUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1"><Film className="h-4 w-4"/> Ver Video</Link></div>)}
-          <div className="flex flex-wrap gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Editar Perfil</Button>
-              {userRole === 'student' && (<AlertDialog open={showBecomeCreatorDialog} onOpenChange={setShowBecomeCreatorDialog}><AlertDialogTrigger asChild><Button variant="default" size="sm" disabled={isRequestingCreatorRole}><Rocket className="mr-2 h-4 w-4" /> Convertirme en Creator</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Quieres convertirte en Creator?</AlertDialogTitle><AlertDialogDescription>Como Creator, podrás crear y vender tus propios cursos. Esta acción cambiará tu rol de Student a Creator.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={isRequestingCreatorRole}>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleRequestCreatorRole} disabled={isRequestingCreatorRole}>{isRequestingCreatorRole ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}{isRequestingCreatorRole ? 'Procesando...' : 'Sí, Convertirme en Creator'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>)}
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="shadow-lg">
-        <CardHeader><div className="flex items-center gap-2"><Award className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mis Certificados</CardTitle></div><CardDescription>Visualiza y descarga los certificados de los cursos completados.</CardDescription></CardHeader>
-        <CardContent><div className="text-center py-6 text-muted-foreground"><Award className="mx-auto h-10 w-10 mb-3 opacity-50" /><p className="font-medium">Funcionalidad de Certificados Próximamente</p><p className="text-sm">Cuando completes tus cursos, tus certificados aparecerán aquí.</p></div></CardContent>
-      </Card>
+        {/* Promociona Cursos y Gana */}
+        <div className="lg:col-span-3">
+          <Card className="shadow-lg h-full">
+            <CardHeader>
+              <div className="flex items-center gap-2"><Share2 className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Promociona Cursos y Gana</CardTitle>
+              </div><CardDescription>Copia enlaces de promoción para cursos específicos que ofrecen comisión.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isLoadingPromotableCourses ? (<div className="grid gap-4 md:grid-cols-2">{[...Array(2)].map((_, i) => (<Card key={i} className="p-4 space-y-3"><div className="flex gap-3 items-start"><Skeleton className="h-16 w-24 rounded-md" /><div className="flex-1 space-y-1.5"><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-1/4" /></div></div><Skeleton className="h-9 w-full" /></Card>))}</div>)
+                : promotableCoursesError ? (<Alert variant="destructive" className="text-sm"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><UiAlertDescription>{promotableCoursesError}</UiAlertDescription></Alert>)
+                : promotableCourses.length > 0 ? (
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {promotableCourses.map(course => (
+                            <Card key={course.id} className="p-4"><div className="flex gap-4 items-start mb-3"><Image src={course.imagenPortadaUrl || 'https://placehold.co/100x60.png'} alt={course.nombre} width={100} height={60} className="rounded-md object-cover aspect-[16/10]" data-ai-hint={course.dataAiHintImagenPortada || 'course promo image'} /><div className="flex-1"><h4 className="font-semibold text-sm leading-tight mb-0.5">{course.nombre}</h4><p className="text-xs text-muted-foreground">{course.categoria}</p><p className="text-xs font-medium text-primary mt-1">Comisión: {course.comisionReferidoPorcentaje}%</p></div></div><Button variant="outline" size="sm" className="w-full" onClick={() => handleCopyReferralLink(course.id)} disabled={!currentUser.referralCodeGenerated || !baseUrl || !navigator.clipboard}><LinkIcon className="mr-2 h-4 w-4" /> Copiar Enlace de Promoción</Button></Card>
+                        ))}
+                    </div>
+                ) : (<p className="text-muted-foreground py-4 text-center text-sm">Actualmente no hay cursos con comisión de referido para promocionar.</p>)}
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Mis Certificados */}
+        <div className="lg:col-span-3">
+          <Card className="shadow-lg h-full">
+            <CardHeader><div className="flex items-center gap-2"><Award className="h-6 w-6 text-primary" /><CardTitle className="text-2xl font-headline">Mis Certificados</CardTitle></div><CardDescription>Visualiza y descarga los certificados de los cursos completados.</CardDescription></CardHeader>
+            <CardContent><div className="text-center py-6 text-muted-foreground"><Award className="mx-auto h-10 w-10 mb-3 opacity-50" /><p className="font-medium">Funcionalidad de Certificados Próximamente</p><p className="text-sm">Cuando completes tus cursos, tus certificados aparecerán aquí.</p></div></CardContent>
+          </Card>
+        </div>
+      </div>
 
       {currentUser && (
         <EditProfileDialog
@@ -361,4 +377,3 @@ export default function StudentDashboardPage() {
     </div>
   );
 }
-

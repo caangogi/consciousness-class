@@ -6,12 +6,23 @@ import type { CreateCourseDto } from '@/features/course/infrastructure/dto/creat
 import type { UpdateCourseDto } from '@/features/course/infrastructure/dto/update-course.dto';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Safely initialize Stripe
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+} else {
+  console.warn('[CourseService] STRIPE_SECRET_KEY is not set. Stripe-related features will be disabled.');
+}
 
 export class CourseService {
   constructor(private readonly courseRepository: ICourseRepository) {}
 
   private async manageStripeProductAndPrice(course: CourseEntity): Promise<{ stripeProductId: string | null; stripePriceId: string | null }> {
+    if (!stripe) {
+      console.warn(`[CourseService] Stripe is not configured. Skipping Stripe product/price management for course ${course.id}.`);
+      return { stripeProductId: course.stripeProductId, stripePriceId: course.stripePriceId };
+    }
+
     let currentStripeProductId = course.stripeProductId;
     let currentStripePriceId = course.stripePriceId;
 

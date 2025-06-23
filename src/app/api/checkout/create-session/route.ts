@@ -5,12 +5,17 @@ import { adminAuth } from '@/lib/firebase/admin';
 import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
 import Stripe from 'stripe';
 
-// Initialize Stripe with the secret key from environment variables
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Safely initialize Stripe
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+} else {
+  console.warn('[API /checkout/create-session] STRIPE_SECRET_KEY is not set. Stripe functionality will be disabled.');
+}
 
 export async function POST(request: NextRequest) {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    console.error('Stripe secret key not configured.');
+  if (!stripe) {
+    console.error('Stripe is not configured because STRIPE_SECRET_KEY is missing.');
     return NextResponse.json({ error: 'Server configuration error', details: 'Stripe is not configured.' }, { status: 503 });
   }
 
@@ -113,4 +118,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: errorMessage, details: errorDetails, stack }, { status: 500 });
   }
 }
+
     

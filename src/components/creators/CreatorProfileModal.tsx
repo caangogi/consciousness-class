@@ -69,7 +69,7 @@ export function CreatorProfileModal({ isOpen, setIsOpen, creator }: CreatorProfi
           <DialogTitle className="text-2xl font-headline">{creator.nombre}</DialogTitle>
           <DialogDescription>Instructor en Consciousness Class</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow pr-4 -mr-4">
+        <ScrollArea className="flex-grow min-h-0 pr-4 -mr-4">
             <div className="py-4 space-y-6">
                 {creator.videoUrl && (
                     <div className="space-y-2">
@@ -81,7 +81,7 @@ export function CreatorProfileModal({ isOpen, setIsOpen, creator }: CreatorProfi
                 {creator.bio && (
                     <div className="space-y-2">
                          <h4 className="font-semibold">Sobre mí</h4>
-                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{creator.bio}</p>
+                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{creator.bio || 'Instructor apasionado con experiencia en la industria.'}</p>
                     </div>
                 )}
             </div>

@@ -3,12 +3,14 @@
 
 import type { Metadata } from 'next'; 
 import './globals.css';
-import { AppLayout } from '@/components/layout/AppLayout'; // This contains Header and Footer
+import { AppLayout } from '@/components/layout/AppLayout';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
 import React, { useEffect, Suspense } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
-import Image from 'next/image'; // Import Image for the GIF loader
+import Image from 'next/image';
+import { ptSans, playfairDisplay } from '@/lib/fonts';
+import { cn } from '@/lib/utils';
 
 // Fallback component for Suspense
 function RootLayoutFallback() {
@@ -69,15 +71,15 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        
         <title>Consciousness Class</title>
         <meta name="description" content="Plataforma de Membresías y Cursos Online" />
         <link rel="icon" href="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ffavicon.png?alt=media&token=a6df2795-0feb-4bc6-87bd-41a7cdee2c9f" type="image/png" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased">
+      <body className={cn(
+        "font-body antialiased",
+        ptSans.variable,
+        playfairDisplay.variable
+      )}>
         <AuthProvider>
           <Suspense fallback={<RootLayoutFallback />}>
             <AppLayout>{children}</AppLayout>

@@ -11,6 +11,7 @@ import { useSearchParams, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { ptSans, playfairDisplay } from '@/lib/fonts';
 import { cn } from '@/lib/utils';
+import { ThemeProvider } from '@/components/shared/ThemeProvider';
 
 // Fallback component for Suspense
 function RootLayoutFallback() {
@@ -69,7 +70,7 @@ export default function RootLayout({
   // Hooks useSearchParams and usePathname are now moved to UrlParamEffects
 
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
         <title>Consciousness Class</title>
         <meta name="description" content="Plataforma de Membresías y Cursos Online" />
@@ -80,13 +81,20 @@ export default function RootLayout({
         ptSans.variable,
         playfairDisplay.variable
       )}>
-        <AuthProvider>
-          <Suspense fallback={<RootLayoutFallback />}>
-            <AppLayout>{children}</AppLayout>
-            <UrlParamEffects /> {/* Render the new component here, inside Suspense */}
-          </Suspense>
-          <Toaster />
-        </AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <Suspense fallback={<RootLayoutFallback />}>
+              <AppLayout>{children}</AppLayout>
+              <UrlParamEffects /> {/* Render the new component here, inside Suspense */}
+            </Suspense>
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

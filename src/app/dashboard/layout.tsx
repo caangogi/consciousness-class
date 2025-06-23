@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/shared/ThemeToggle';
 
 
 const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=5753a168-614a-4060-baa4-4296d4062f14";
@@ -56,7 +57,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   if (loading || !currentUser) {
     return (
-       <div className="flex h-screen items-center justify-center">
+       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
           <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" />
           <p className="text-muted-foreground">Cargando dashboard...</p>
@@ -111,8 +112,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   );
                 })}
               </nav>
-              <div className="border-t p-2 mt-auto">
-                <Button variant="ghost" onClick={handleLogout} className="w-full flex items-center h-10 justify-start px-3 text-sm">
+              <div className="border-t p-2 mt-auto flex items-center justify-between">
+                <ThemeToggle />
+                <Button variant="ghost" onClick={handleLogout} className="flex items-center h-10 justify-start px-3 text-sm">
                   <LogOut className="mr-2 h-4 w-4" />
                   Cerrar Sesión
                 </Button>
@@ -121,6 +123,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </Sheet>
            <div className="md:hidden">
             {/*  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" /> */}
+           </div>
+           <div className="ml-auto">
+             <ThemeToggle />
            </div>
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8 bg-background overflow-auto">

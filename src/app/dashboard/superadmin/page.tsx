@@ -91,10 +91,10 @@ export default function SuperadminDashboardPage() {
   };
   const getRoleBadgeClass = (role: UserRole) => {
     switch (role) {
-        case 'student': return 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100';
-        case 'creator': return 'border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100';
+        case 'student': return 'border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700';
+        case 'creator': return 'border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700';
         case 'superadmin': return 'border-red-400 text-red-100 bg-red-600 hover:bg-red-700';
-        default: return 'border-gray-300 text-gray-600 bg-gray-50 hover:bg-gray-100';
+        default: return 'border-gray-300 text-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600';
     }
   };
 

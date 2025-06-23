@@ -41,25 +41,27 @@ export function CreatorProfileModal({ isOpen, setIsOpen, creator }: CreatorProfi
   const renderVideoPlayer = (url: string) => {
     if (url.includes('youtube.com/embed') || url.includes('player.vimeo.com/video')) {
       return (
-        <iframe
-          src={url}
-          width="100%"
-          height="100%"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          className="rounded-md border aspect-video"
-          title={`Video de presentación de ${creator.nombre}`}
-        ></iframe>
+        <div className="aspect-video">
+            <iframe
+            src={url}
+            width="100%"
+            height="100%"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className="rounded-md border"
+            title={`Video de presentación de ${creator.nombre}`}
+            ></iframe>
+        </div>
       );
     }
-    // Fallback for direct video links
-    return <video controls src={url} className="w-full rounded-md aspect-video bg-black"><track kind="captions" /></video>;
+    // Fallback for direct video links - remove aspect-video to allow natural aspect ratio
+    return <video controls src={url} className="w-full rounded-md bg-black max-h-[60vh]"><track kind="captions" /></video>;
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader className="text-center items-center">
+        <DialogHeader className="text-center items-center pt-6 sm:pt-0">
           <Avatar className="h-24 w-24 mb-4 border-4 border-primary shadow-md">
             <AvatarImage src={creator.avatarUrl} alt={creator.nombre} data-ai-hint={creator.dataAiHint} />
             <AvatarFallback>{getInitials(creator.nombre)}</AvatarFallback>
@@ -82,7 +84,7 @@ export function CreatorProfileModal({ isOpen, setIsOpen, creator }: CreatorProfi
                 </div>
             </div>
         </ScrollArea>
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="pt-4 border-t mt-auto">
           <DialogClose asChild>
             <Button type="button" variant="outline">
               Cerrar

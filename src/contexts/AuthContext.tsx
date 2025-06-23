@@ -26,6 +26,8 @@ export interface UserProfile extends FirebaseUser {
   balanceCredito?: number;
   balanceComisionesPendientes?: number;
   balanceIngresosPendientes?: number; // Revenue from own courses pending payout
+  bio?: string;
+  creatorVideoUrl?: string | null; 
 }
 
 interface AuthContextType {
@@ -79,6 +81,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           balanceCredito: data.balanceCredito || 0,
           balanceComisionesPendientes: data.balanceComisionesPendientes === undefined ? 0 : data.balanceComisionesPendientes,
           balanceIngresosPendientes: data.balanceIngresosPendientes === undefined ? 0 : data.balanceIngresosPendientes,
+          bio: data.bio, 
+          creatorVideoUrl: data.creatorVideoUrl, 
         };
       } else {
          console.warn(`[AuthContext] User document for ${user.uid} not found in Firestore. Defaulting profile fields.`);
@@ -88,6 +92,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
              balanceCredito: 0,
              balanceComisionesPendientes: 0,
              balanceIngresosPendientes: 0,
+             bio: '', 
+             creatorVideoUrl: null, 
          };
       }
 
@@ -113,6 +119,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           referidosExitosos: combinedUser.referidosExitosos,
           balanceComisionesPendientes: combinedUser.balanceComisionesPendientes,
           balanceIngresosPendientes: combinedUser.balanceIngresosPendientes,
+          bioExists: !!combinedUser.bio, 
+          creatorVideoUrlExists: !!combinedUser.creatorVideoUrl, 
       });
       setCurrentUser(combinedUser);
       setUserRole(fetchedRole);
@@ -165,3 +173,4 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+

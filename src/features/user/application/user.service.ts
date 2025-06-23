@@ -59,11 +59,13 @@ export class UserService {
 
   async updateUserProfile(uid: string, dto: UpdateUserProfileDto): Promise<UserEntity | null> {
     try {
-      const dataToUpdate: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'role' | 'referredBy' | 'displayName' | 'cursosInscritos' | 'balanceComisionesPendientes' >> = {};
+      const dataToUpdate: Partial<Omit<UserProperties, 'uid' | 'email' | 'createdAt' | 'referralCodeGenerated' | 'cursosComprados' | 'referidosExitosos' | 'balanceCredito' | 'role' | 'referredBy' | 'displayName' | 'cursosInscritos' | 'balanceComisionesPendientes' | 'balanceIngresosPendientes' >> = {};
       
       if (dto.nombre !== undefined) dataToUpdate.nombre = dto.nombre;
       if (dto.apellido !== undefined) dataToUpdate.apellido = dto.apellido;
       if (dto.photoURL !== undefined) dataToUpdate.photoURL = dto.photoURL;
+      if (dto.bio !== undefined) dataToUpdate.bio = dto.bio;
+      if (dto.creatorVideoUrl !== undefined) dataToUpdate.creatorVideoUrl = dto.creatorVideoUrl;
 
 
       if (Object.keys(dataToUpdate).length === 0) {

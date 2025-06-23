@@ -2,11 +2,13 @@
 // src/features/user/infrastructure/dto/update-user.dto.ts
 import type { UserRole } from '@/features/user/domain/entities/user.entity';
 
-// What a user (student) can update for themselves
+// What a user (student or creator) can update for themselves
 export interface UpdateUserProfileDto {
   nombre?: string;
   apellido?: string;
   photoURL?: string | null; // Can be a URL string or null to remove the photo
+  bio?: string;
+  creatorVideoUrl?: string | null;
 }
 
 // What an admin might update (more extensive)
@@ -15,5 +17,3 @@ export interface AdminUpdateUserDto extends UpdateUserProfileDto {
   balanceCredito?: number;
   // other admin-updatable fields
 }
-
-    

@@ -40,11 +40,17 @@ async function writeWebhookLog(eventId: string, step: string, details: any) {
   }
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+// Safely initialize Stripe
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2024-06-20',
+  });
+} else {
+    console.warn('[Stripe Webhook] STRIPE_SECRET_KEY is not set. Stripe functionality will be disabled.');
+}
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export const config = {
   api: {
@@ -110,6 +116,11 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 
 
     if (tipoAcceso === 'suscripcion' && stripeSubscriptionId) {
+        if (!stripe) {
+            console.error(`[Stripe Webhook] Stripe not initialized, cannot retrieve subscription ${stripeSubscriptionId}.`);
+            await writeWebhookLog(eventId, 'initial_subscription_record_checkout_error_no_stripe', { buyerUserId, stripeSubscriptionId, courseIdPurchased });
+            return;
+        }
         try {
             const subscriptionObject = await stripe.subscriptions.retrieve(stripeSubscriptionId);
 
@@ -330,6 +341,12 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
         return;
     }
 
+    if (!stripe) {
+        console.error(`[Stripe Webhook] Stripe not initialized, cannot retrieve subscription for invoice ${invoice.id}.`);
+        await writeWebhookLog(eventId, 'invoice.payment_succeeded_stripe_not_init', { invoiceId: invoice.id, subscriptionId: invoice.subscription });
+        return;
+    }
+
     const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
     if (subscription) {
         console.log(`[Stripe Webhook] Invoice paid (ID: ${invoice.id}) for subscription: ${invoice.subscription}. Ensuring subscription status is updated.`);
@@ -384,11 +401,11 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
 export async function POST(request: NextRequest) {
   console.log('[Stripe Webhook] Received a request - START.');
 
-  if (!webhookSecret) {
-    console.error('[Stripe Webhook] Server error: Stripe webhook secret missing. STRIPE_WEBHOOK_SECRET env var must be set.');
-    return NextResponse.json({ error: 'Server error: Stripe webhook secret missing.' }, { status: 500 });
+  if (!stripe || !webhookSecret) {
+    console.error('[Stripe Webhook] Server error: Stripe webhook secret or API key missing.');
+    return NextResponse.json({ error: 'Server error: Stripe secrets are not configured.' }, { status: 500 });
   }
-  console.log('[Stripe Webhook] Webhook secret is present.');
+  console.log('[Stripe Webhook] Webhook secrets are present.');
 
   if (!adminDb) {
     console.error('[Stripe Webhook] Server error: Firebase Admin (adminDb) not initialized. Check server startup logs for Firebase Admin SDK issues.');
@@ -465,8 +482,13 @@ export async function POST(request: NextRequest) {
         const invoice = event.data.object as Stripe.Invoice;
         await writeWebhookLog(eventId, 'invoice.payment_failed_received', { invoiceId: invoice.id, subscriptionId: invoice.subscription, customer: invoice.customer });
         if (typeof invoice.subscription === 'string') {
-            const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
-            await handleCustomerSubscriptionEvent(subscription, eventId, 'invoice.payment_failed_subscription_update');
+            if (!stripe) {
+                console.error(`[Stripe Webhook] Stripe not initialized, cannot retrieve subscription ${invoice.subscription} for failed invoice.`);
+                await writeWebhookLog(eventId, 'invoice.payment_failed_stripe_not_init', { invoiceId: invoice.id, subscriptionId: invoice.subscription });
+            } else {
+                const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+                await handleCustomerSubscriptionEvent(subscription, eventId, 'invoice.payment_failed_subscription_update');
+            }
         }
         break;
       }
@@ -486,3 +508,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook processing failed.', details: error.message }, { status: 500 });
   }
 }
+
+    

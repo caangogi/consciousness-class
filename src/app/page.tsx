@@ -178,7 +178,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Hero Section */}
       <motion.section
         className="relative flex-grow flex items-center justify-center py-20 md:py-32 overflow-hidden"
@@ -186,47 +186,19 @@ export default function HomePage() {
         initial="hidden"
         animate="visible"
       >
-        <motion.div
-          className="absolute top-1/4 left-[15%] sm:left-[12%] md:top-1/4 md:left-[15%]"
-          variants={floatingItemVariants(0.1)}
-          initial="initial"
-          animate="animate"
-        >
-          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Filustracion-vectorial-flecha-derecha-3d-realista.png?alt=media&token=a7f8a45b-8b64-44da-a282-cc93caa7ff85" alt="Flecha abstracta 3D" width={80} height={80} data-ai-hint="abstract 3D arrow" className="opacity-70 md:w-[100px] md:h-[100px]" />
-        </motion.div>
-
-        <motion.div
-          className="absolute bottom-[25%] left-[5%] md:bottom-[20%] md:left-[10%]"
-          variants={floatingItemVariants(0.3)}
-          initial="initial"
-          animate="animate"
-        >
-          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Fgente-grupo-3d-icono-vector-empleados-equipo-personal-grafico-clip-art-imagen-multitud-personas-silueta.png?alt=media&token=1067369c-ecd6-4853-9772-91d88289f72e" alt="Icono de comunidad 3D" width={100} height={100} data-ai-hint="3D community icon" className="opacity-70 md:w-[130px] md:h-[130px]" />
-           <motion.div
-            className="absolute -bottom-5 -right-5 md:-bottom-2 md:-right-8 bg-foreground text-background text-xs px-3 py-1.5 rounded-full shadow-soft-xl flex items-center gap-1"
-            variants={floatingItemVariants(0.7)}
-            initial="initial"
-            animate="animate"
-           >
-            <MapPin size={14} /> Comunidad Global
-          </motion.div>
-        </motion.div>
-
-        <motion.div
-          className="absolute top-[10%] right-[2%] w-24 h-24 sm:top-[12%] sm:right-[3%] sm:w-28 sm:h-28 md:top-[15%] md:right-[5%] md:w-32 md:h-32 lg:w-40 lg:h-40"
-           variants={floatingItemVariants(0.2)}
-           initial="initial"
-           animate="animate"
-        >
-          <Image src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficono-chat-grupo-3d-diseno-ilustracion-vectorial.png?alt=media&token=103115fa-0d9e-4dc4-b0eb-38d9a70e5bd5" alt="Icono de chat 3D" width={250} height={250} data-ai-hint="3D chat bubbles" className="opacity-60" />
-        </motion.div>
+        <div
+          className="absolute inset-0 bg-grid-slate-100/50 dark:bg-grid-slate-900/10 [mask-image:linear-gradient(to_bottom,white_10%,transparent_90%)]"
+        />
+        <div
+          className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-transparent"
+        />
 
         <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
           <motion.div
             className="inline-flex items-center gap-2 bg-secondary/70 text-secondary-foreground px-4 py-2 rounded-full text-sm mb-6 shadow-sm"
             variants={itemVariants}
           >
-            <User size={16} className="text-primary"/> Consciousness Class Platform
+            <Zap size={16} className="text-primary"/> Consciousness Class Platform
           </motion.div>
           <motion.h1
             className="font-headline text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-8 text-foreground leading-tight"
@@ -234,8 +206,7 @@ export default function HomePage() {
           >
             Eleva tu aprendizaje,
             <br className="hidden md:block" /> transforma tu <span
-              className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent relative inline-block
-                         animate-backgroundShine bg-[200%_auto]"
+              className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-backgroundShine bg-[200%_auto]"
             >
               potencial.
             </span>
@@ -250,41 +221,12 @@ export default function HomePage() {
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             variants={itemVariants}
           >
-            <Button size="lg" asChild className="rounded-full px-8 py-6 text-base shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105 bg-gradient-to-r from-primary to-blue-400 hover:from-primary/90 hover:to-blue-500 text-primary-foreground">
+            <Button size="lg" asChild className="rounded-full px-8 py-6 text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
               <Link href="/courses">Explorar Cursos <ArrowRight className="ml-2 h-5 w-5" /></Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="rounded-full px-8 py-6 text-base shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105 border-2 hover:bg-secondary/70">
+            <Button size="lg" variant="outline" asChild className="rounded-full px-8 py-6 text-base shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 border-2 hover:bg-secondary/70">
               <Link href="/signup?role=creator">Ser Creator <Zap className="ml-2 h-5 w-5 text-accent" /></Link>
             </Button>
-          </motion.div>
-
-          <motion.div
-            className="absolute bottom-10 right-10 hidden lg:flex items-center gap-2 text-xs text-muted-foreground animate-bounce"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { delay: 1.5} }}
-          >
-            Scroll
-            <svg width="16" height="24" viewBox="0 0 16 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-50">
-              <rect x="1" y="1" width="14" height="22" rx="7" stroke="currentColor" strokeWidth="1.5"/>
-              <circle cx="8" cy="6" r="1.25" fill="currentColor"/>
-            </svg>
-          </motion.div>
-
-           <motion.div
-            className="absolute top-24 right-16 hidden xl:flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs shadow-soft-xl"
-            variants={floatingItemVariants(0.5)}
-            initial="initial"
-            animate="animate"
-          >
-             <MessageSquare size={14} className="text-accent"/> Drop us a line
-          </motion.div>
-          <motion.div
-            className="absolute bottom-36 left-24 hidden xl:flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs shadow-soft-xl"
-            variants={floatingItemVariants(0.6)}
-            initial="initial"
-            animate="animate"
-          >
-             <CheckCircle size={14} className="text-green-500"/> Check our work
           </motion.div>
         </div>
       </motion.section>
@@ -459,7 +401,7 @@ export default function HomePage() {
               className="text-center"
               variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
             >
-              <Button size="lg" asChild className="rounded-full px-10 py-7 text-lg shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105 bg-gradient-to-r from-primary to-blue-400 hover:from-primary/90 hover:to-blue-500 text-primary-foreground">
+              <Button size="lg" asChild className="rounded-full px-10 py-7 text-lg shadow-soft-xl hover:shadow-soft-2xl transition-all duration-300 transform hover:scale-105">
                 <Link href="/signup?role=creator">
                   Comienza a Crear Hoy
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -610,7 +552,7 @@ export default function HomePage() {
 
        {/* Final CTA Section */}
       <motion.section
-        className="py-20 md:py-32 bg-gradient-to-br from-primary/80 to-blue-500/80 text-primary-foreground"
+        className="py-20 md:py-32 bg-gradient-to-br from-primary/90 to-blue-500/90 text-primary-foreground"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true, amount: 0.3 }}
@@ -624,7 +566,7 @@ export default function HomePage() {
             <div className="spinning-loader w-[300px] h-[300px] md:w-[450px] md:h-[450px]" data-ai-hint="growth spiral modern"></div>
           </div>
           <motion.h2
-            className="font-headline text-5xl md:text-5xl font-bold mb-6 pt-12" 
+            className="font-headline text-5xl md:text-5xl font-bold mb-6" 
             variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
           >
             ¿Listo para Iniciar tu Viaje de Aprendizaje?
@@ -655,4 +597,3 @@ export default function HomePage() {
     </div>
   );
 }
-

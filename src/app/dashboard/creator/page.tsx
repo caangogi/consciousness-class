@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { auth } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 
-interface CreatorCourseSummary extends Pick<CourseProperties, 'id' | 'nombre' | 'estado' | 'totalEstudiantes' | 'descripcionCorta'> {}
+interface CreatorCourseSummary extends Pick<CourseProperties, 'id' | 'nombre' | 'estado' | 'totalEstudiantes' | 'descripcionCorta' | 'ingresosBrutosGenerados'> {}
 
 interface CreatorStats {
   totalStudents: number;
@@ -33,7 +33,7 @@ export default function CreatorDashboardPage() {
   const [stats, setStats] = useState<CreatorStats>({
     totalStudents: 0,
     totalCreatorEarningsPending: 0.00,
-    avgRating: 0.0, // Se mantiene como placeholder
+    avgRating: 0.0, 
     activeCourses: 0,
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -46,7 +46,7 @@ export default function CreatorDashboardPage() {
       totalStudents,
       activeCourses,
       totalCreatorEarningsPending: currentBalance || 0.00,
-      avgRating: 0.0, // Mantener como placeholder, se podría calcular si tuviéramos ratings
+      avgRating: 0.0, // Rating promedio sigue siendo placeholder
     });
   }, []);
 
@@ -77,9 +77,9 @@ export default function CreatorDashboardPage() {
         estado: c.estado,
         totalEstudiantes: c.totalEstudiantes,
         descripcionCorta: c.descripcionCorta,
+        ingresosBrutosGenerados: c.ingresosBrutosGenerados,
       })) || [];
       setCourses(loadedCourses);
-      // Usar el balance del currentUser que ya fue refrescado (potencialmente) por handleRefreshData
       calculateAndUpdateStats(loadedCourses, currentUser?.balanceIngresosPendientes);
 
     } catch (err: any) {
@@ -98,26 +98,20 @@ export default function CreatorDashboardPage() {
     setIsRefreshing(true);
     toast({ title: "Actualizando Datos...", description: "Estamos refrescando tu panel de creador."});
     try {
-      await refreshUserProfile(); // Esto actualiza currentUser en el contexto
-      // fetchCreatorData se disparará por el useEffect que depende de currentUser, o lo llamamos explícitamente
-      // Para asegurar que se usa el currentUser más reciente después de refreshUserProfile, 
-      // es mejor que fetchCreatorData dependa directamente de currentUser.
-      // No es necesario llamar fetchCreatorData aquí si el useEffect de abajo lo hace.
+      await refreshUserProfile(); 
     } catch (error) {
       console.error("Error during data refresh:", error);
       toast({ title: "Error al Actualizar", description: "No se pudieron refrescar los datos.", variant: "destructive" });
     } finally {
       setIsRefreshing(false);
-      // Si fetchCreatorData no se dispara automáticamente por cambio de currentUser, llamarlo aquí.
-      // Pero la dependencia en el useEffect debería ser suficiente.
     }
   };
 
   useEffect(() => {
-    if (currentUser) { // Asegurarse de que currentUser no es null
+    if (currentUser) { 
         fetchCreatorData();
     }
-  }, [currentUser, fetchCreatorData]); // fetchCreatorData ahora depende de currentUser
+  }, [currentUser, fetchCreatorData]); 
   
   useEffect(() => {
     if (currentUser && courses.length > 0 && !isLoadingData) {
@@ -150,8 +144,9 @@ export default function CreatorDashboardPage() {
           {[...Array(2)].map((_, i) => (
             <TableRow key={`skeleton-${i}`}>
               <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
-              <TableCell className="text-center hidden md:table-cell"><Skeleton className="h-6 w-20 mx-auto rounded-full" /></TableCell>
+              <TableCell className="text-center hidden sm:table-cell"><Skeleton className="h-6 w-20 mx-auto rounded-full" /></TableCell>
               <TableCell className="text-center hidden md:table-cell"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
+              <TableCell className="text-center hidden lg:table-cell"><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
               <TableCell className="text-right space-x-1"><Skeleton className="h-8 w-8 inline-block rounded-md" /><Skeleton className="h-8 w-8 inline-block rounded-md" /></TableCell>
             </TableRow>
           ))}
@@ -163,7 +158,7 @@ export default function CreatorDashboardPage() {
       return (
         <TableBody>
           <TableRow>
-            <TableCell colSpan={4} className="text-center py-6">
+            <TableCell colSpan={5} className="text-center py-6">
               <AlertTriangle className="mx-auto h-8 w-8 text-destructive mb-2" />
               <p className="text-destructive text-sm">{coursesError}</p>
               <Button onClick={handleRefreshData} variant="link" size="sm" className="mt-2">Reintentar</Button>
@@ -177,7 +172,7 @@ export default function CreatorDashboardPage() {
       return (
         <TableBody>
           <TableRow>
-            <TableCell colSpan={4} className="text-center py-10">
+            <TableCell colSpan={5} className="text-center py-10">
               <BookOpen className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
               <p className="text-muted-foreground">Aún no has creado ningún curso.</p>
               <Button asChild variant="link" className="mt-2">
@@ -201,12 +196,13 @@ export default function CreatorDashboardPage() {
                 </Link>
                 <p className="text-xs text-muted-foreground truncate max-w-xs">{course.descripcionCorta}</p>
             </TableCell>
-            <TableCell className="text-center hidden md:table-cell">
+            <TableCell className="text-center hidden sm:table-cell">
               <Badge variant={getStatusBadgeVariant(course.estado)} className={cn("capitalize", getStatusBadgeClass(course.estado))}>
                 {course.estado.replace('_', ' ')}
               </Badge>
             </TableCell>
             <TableCell className="text-center hidden md:table-cell">{course.totalEstudiantes || 0}</TableCell>
+            <TableCell className="text-center hidden lg:table-cell">{course.ingresosBrutosGenerados?.toFixed(2) || '0.00'} €</TableCell>
             <TableCell className="text-right">
               <div className="flex gap-1 justify-end">
                 <Button variant="ghost" size="icon" asChild title="Editar Curso">
@@ -259,7 +255,7 @@ export default function CreatorDashboardPage() {
           </CardHeader>
           <CardContent>
             {isLoadingData ? <Skeleton className="h-7 w-12"/> : <div className="text-2xl font-bold">{stats.totalStudents}</div>}
-            <p className="text-xs text-muted-foreground">Suma de todos tus cursos cargados.</p>
+            <p className="text-xs text-muted-foreground">En todos tus cursos cargados.</p>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -302,8 +298,9 @@ export default function CreatorDashboardPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Título del Curso</TableHead>
-                <TableHead className="text-center hidden md:table-cell">Estado</TableHead>
+                <TableHead className="text-center hidden sm:table-cell">Estado</TableHead>
                 <TableHead className="text-center hidden md:table-cell">Estudiantes</TableHead>
+                <TableHead className="text-center hidden lg:table-cell">Ingresos Brutos (€)</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -345,5 +342,4 @@ export default function CreatorDashboardPage() {
     </div>
   );
 }
-
-      
+    

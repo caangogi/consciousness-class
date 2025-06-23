@@ -29,6 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 // Sheet components are not directly used here for the main sidebar, but might be for mobile in layout
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ThemeToggle } from '@/components/shared/ThemeToggle';
 
 interface NavItem {
   href: string;
@@ -122,15 +123,18 @@ export function DashboardSidebar() {
 
   return (
     <aside className="hidden md:flex md:flex-col md:w-64 border-r bg-card text-card-foreground">
-      <div className="flex h-16 items-center border-b px-4 gap-2">
-        <Avatar className="h-9 w-9">
-          <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} />
-          <AvatarFallback>{getInitials(currentUser.displayName)}</AvatarFallback>
-        </Avatar>
-        <div className="flex flex-col overflow-hidden"> {/* Added overflow-hidden */}
-         <span className="text-sm font-semibold truncate">{currentUser.displayName || currentUser.email}</span>
-         <span className="text-xs text-muted-foreground capitalize">{userRole}</span>
+      <div className="flex h-16 items-center justify-between border-b px-4 gap-2">
+        <div className="flex items-center gap-2 overflow-hidden">
+          <Avatar className="h-9 w-9">
+            <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} />
+            <AvatarFallback>{getInitials(currentUser.displayName)}</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col overflow-hidden">
+           <span className="text-sm font-semibold truncate">{currentUser.displayName || currentUser.email}</span>
+           <span className="text-xs text-muted-foreground capitalize">{userRole}</span>
+          </div>
         </div>
+        <ThemeToggle />
       </div>
       <ScrollArea className="flex-1 py-4">
         <nav className="grid items-start px-4 text-sm font-medium">
@@ -179,4 +183,3 @@ function AwardIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-

@@ -19,8 +19,8 @@ export function Logo({
   useIconOnly = false,
   className,
   onClick,
-  width = 150, // Default width for desktop
-  height = 40, // Default height for desktop
+  width = 125, // Default width for desktop
+  height = 76, // Default height for desktop
 }: LogoProps) {
   let content;
 

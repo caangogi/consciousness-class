@@ -19,6 +19,8 @@ export interface UserProperties {
   balanceCredito: number; // For general platform credits or rewards
   balanceComisionesPendientes?: number; // Specifically for referral commissions
   balanceIngresosPendientes?: number; // Revenue from own courses pending payout
+  bio?: string;
+  creatorVideoUrl?: string | null;
 }
 
 export class UserEntity {
@@ -38,6 +40,8 @@ export class UserEntity {
   balanceCredito: number;
   balanceComisionesPendientes: number;
   balanceIngresosPendientes: number;
+  bio: string;
+  creatorVideoUrl: string | null;
 
   constructor(props: UserProperties) {
     this.uid = props.uid;
@@ -56,6 +60,8 @@ export class UserEntity {
     this.balanceCredito = props.balanceCredito || 0;
     this.balanceComisionesPendientes = props.balanceComisionesPendientes || 0;
     this.balanceIngresosPendientes = props.balanceIngresosPendientes || 0;
+    this.bio = props.bio || '';
+    this.creatorVideoUrl = props.creatorVideoUrl === undefined ? null : props.creatorVideoUrl;
   }
 
   static create(
@@ -73,6 +79,8 @@ export class UserEntity {
       balanceCredito?: number;
       balanceComisionesPendientes?: number;
       balanceIngresosPendientes?: number;
+      bio?: string;
+      creatorVideoUrl?: string | null;
     }
   ): UserEntity {
     const now = new Date().toISOString();
@@ -101,12 +109,14 @@ export class UserEntity {
       balanceCredito: inputProps.balanceCredito || 0,
       balanceComisionesPendientes: inputProps.balanceComisionesPendientes || 0,
       balanceIngresosPendientes: inputProps.balanceIngresosPendientes || 0,
+      bio: inputProps.bio || '',
+      creatorVideoUrl: inputProps.creatorVideoUrl === undefined ? null : inputProps.creatorVideoUrl,
     };
 
     return new UserEntity(entityConstructorProps);
   }
 
-  updateProfile(data: Partial<Pick<UserProperties, 'nombre' | 'apellido' | 'photoURL' | 'balanceComisionesPendientes' | 'balanceIngresosPendientes'>>) {
+  updateProfile(data: Partial<Pick<UserProperties, 'nombre' | 'apellido' | 'photoURL' | 'balanceComisionesPendientes' | 'balanceIngresosPendientes' | 'bio' | 'creatorVideoUrl'>>) {
     if (data.nombre) this.nombre = data.nombre;
     if (data.apellido) this.apellido = data.apellido;
     if (data.nombre || data.apellido) {
@@ -115,6 +125,8 @@ export class UserEntity {
     if (data.photoURL !== undefined) this.photoURL = data.photoURL;
     if (data.balanceComisionesPendientes !== undefined) this.balanceComisionesPendientes = data.balanceComisionesPendientes;
     if (data.balanceIngresosPendientes !== undefined) this.balanceIngresosPendientes = data.balanceIngresosPendientes;
+    if (data.bio !== undefined) this.bio = data.bio;
+    if (data.creatorVideoUrl !== undefined) this.creatorVideoUrl = data.creatorVideoUrl;
     this.updatedAt = new Date();
   }
 
@@ -136,6 +148,8 @@ export class UserEntity {
       balanceCredito: this.balanceCredito,
       balanceComisionesPendientes: this.balanceComisionesPendientes,
       balanceIngresosPendientes: this.balanceIngresosPendientes,
+      bio: this.bio,
+      creatorVideoUrl: this.creatorVideoUrl,
     };
   }
 }

@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/config';
 import { motion } from 'framer-motion';
+import { CreatorProfileModal } from '@/components/creators/CreatorProfileModal';
 
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];
@@ -55,6 +56,7 @@ export default function CourseDetailPage() {
   const [isProcessingEnrollment, setIsProcessingEnrollment] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false);
 
   const isUserEnrolled = currentUser?.cursosInscritos?.includes(courseIdFromPath) ?? false;
   const isCreatorOfCourse = currentUser?.uid === courseData?.course.creadorUid;
@@ -453,6 +455,7 @@ export default function CourseDetailPage() {
 
 
   return (
+    <>
     <motion.div
       className="bg-secondary/30 min-h-screen"
       initial="hidden"
@@ -479,7 +482,7 @@ export default function CourseDetailPage() {
                 </Avatar>
                 <div>
                   <p className="text-sm">Creado por</p>
-                  <Link href={`/creators/${creatorDisplay.id}`} className="font-semibold hover:underline text-lg">{creatorDisplay.nombre}</Link>
+                  <button onClick={() => setIsCreatorModalOpen(true)} className="font-semibold hover:underline text-lg">{creatorDisplay.nombre}</button>
                 </div>
               </div>
 
@@ -636,18 +639,13 @@ export default function CourseDetailPage() {
                 </Avatar>
                 <h3 className="text-xl font-semibold text-primary mb-1">{creatorDisplay.nombre}</h3>
                 <p className="text-sm text-muted-foreground mt-2 mb-4 px-2">{creatorDisplay.bio}</p>
-                <div className="flex flex-col gap-2">
-                  {creatorDisplay.videoUrl && (
-                    <Button variant="default" asChild className="w-full shadow-sm">
-                      <Link href={creatorDisplay.videoUrl} target="_blank" rel="noopener noreferrer">
-                        <PlayCircle className="mr-2 h-4 w-4" /> Ver Video de Presentación
-                      </Link>
-                    </Button>
-                  )}
-                  <Button variant="outline" asChild className="w-full shadow-sm">
-                    <Link href={`/creators/${creatorDisplay.id}`}>Ver Perfil del Creator</Link>
-                  </Button>
-                </div>
+                <Button
+                    variant="outline"
+                    className="w-full shadow-sm"
+                    onClick={() => setIsCreatorModalOpen(true)}
+                  >
+                    Ver Perfil Completo
+                </Button>
               </CardContent>
             </Card>
 
@@ -676,6 +674,8 @@ export default function CourseDetailPage() {
         </div>
       </div>
     </motion.div>
+    {courseData && <CreatorProfileModal isOpen={isCreatorModalOpen} setIsOpen={setIsCreatorModalOpen} creator={creatorDisplay} />}
+    </>
   );
 }
     

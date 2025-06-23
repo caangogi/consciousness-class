@@ -78,10 +78,12 @@ export function CreatorProfileModal({ isOpen, setIsOpen, creator }: CreatorProfi
                     </div>
                 )}
 
-                <div className="space-y-2">
-                     <h4 className="font-semibold">Sobre mí</h4>
-                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{creator.bio}</p>
-                </div>
+                {creator.bio && (
+                    <div className="space-y-2">
+                         <h4 className="font-semibold">Sobre mí</h4>
+                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{creator.bio}</p>
+                    </div>
+                )}
             </div>
         </ScrollArea>
         <DialogFooter className="pt-4 border-t mt-auto">

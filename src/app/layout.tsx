@@ -1,17 +1,24 @@
 
-'use client'; 
-
-import type { Metadata } from 'next'; 
+import type { Metadata } from 'next';
 import './globals.css';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
-import React, { useEffect, Suspense } from 'react';
-import { useSearchParams, usePathname } from 'next/navigation';
+import React, { Suspense } from 'react';
 import Image from 'next/image';
 import { ptSans, playfairDisplay } from '@/lib/fonts';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/shared/ThemeProvider';
+import { UrlParamEffects } from '@/components/shared/UrlParamEffects';
+
+export const metadata: Metadata = {
+  title: 'MentorBloom',
+  description: 'Plataforma de Membresías y Cursos Online',
+  icons: {
+    icon: 'https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ffavicon.png?alt=media&token=a6df2795-0feb-4bc6-87bd-41a7cdee2c9f',
+  }
+};
+
 
 // Fallback component for Suspense
 function RootLayoutFallback() {
@@ -36,46 +43,14 @@ function RootLayoutFallback() {
   );
 }
 
-// New component to handle URL parameters and their effects
-function UrlParamEffects() {
-  const searchParams = useSearchParams(); 
-  const pathname = usePathname();
-
-  useEffect(() => {
-    const referralCodeFromUrl = searchParams.get('ref');
-    if (referralCodeFromUrl) {
-      
-      if (referralCodeFromUrl.length > 3 && referralCodeFromUrl.length < 50 && /^[a-zA-Z0-9-_]+$/.test(referralCodeFromUrl)) {
-        try {
-          localStorage.setItem('referral_code', referralCodeFromUrl);
-          console.log(`[UrlParamEffects] Referral code "${referralCodeFromUrl}" from URL saved to localStorage.`);
-        } catch (error) {
-          console.error("[UrlParamEffects] Error saving referral code to localStorage:", error);
-        }
-      } else {
-        console.warn(`[UrlParamEffects] Invalid referral code format in URL: "${referralCodeFromUrl}". Not saving.`);
-      }
-    }
-  }, [searchParams, pathname]); 
-
-  return null; // This component does not render any UI itself
-}
-
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Hooks useSearchParams and usePathname are now moved to UrlParamEffects
-
   return (
     <html lang="es" suppressHydrationWarning>
-      <head>
-        <title>Consciousness Class</title>
-        <meta name="description" content="Plataforma de Membresías y Cursos Online" />
-        <link rel="icon" href="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ffavicon.png?alt=media&token=a6df2795-0feb-4bc6-87bd-41a7cdee2c9f" type="image/png" />
-      </head>
       <body className={cn(
         "font-body antialiased",
         ptSans.variable,
@@ -90,7 +65,7 @@ export default function RootLayout({
           <AuthProvider>
             <Suspense fallback={<RootLayoutFallback />}>
               <AppLayout>{children}</AppLayout>
-              <UrlParamEffects /> {/* Render the new component here, inside Suspense */}
+              <UrlParamEffects />
             </Suspense>
             <Toaster />
           </AuthProvider>

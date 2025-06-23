@@ -28,6 +28,8 @@ interface ModuleWithLessons extends ModuleProperties {
 interface CourseWithCreatorDetails extends CourseProperties {
   creadorNombre?: string;
   creadorAvatarUrl?: string | null;
+  creadorBio?: string | null;
+  creadorVideoUrl?: string | null;
 }
 interface CourseStructureData {
   course: CourseWithCreatorDetails;
@@ -385,7 +387,8 @@ export default function CourseDetailPage() {
     nombre: course.creadorNombre || creatorNameFallback,
     avatarUrl: course.creadorAvatarUrl || `https://placehold.co/80x80.png?text=${creatorInitialsFallback}`,
     dataAiHint: "instructor avatar",
-    bio: 'Instructor apasionado con experiencia en la industria.',
+    bio: course.creadorBio || 'Instructor apasionado con experiencia en la industria.',
+    videoUrl: course.creadorVideoUrl || null,
   };
 
   const renderActionButton = () => {
@@ -633,9 +636,18 @@ export default function CourseDetailPage() {
                 </Avatar>
                 <h3 className="text-xl font-semibold text-primary mb-1">{creatorDisplay.nombre}</h3>
                 <p className="text-sm text-muted-foreground mt-2 mb-4 px-2">{creatorDisplay.bio}</p>
-                <Button variant="outline" asChild className="w-full shadow-sm">
-                  <Link href={`/creators/${creatorDisplay.id}`}>Ver Perfil del Creator</Link>
-                </Button>
+                <div className="flex flex-col gap-2">
+                  {creatorDisplay.videoUrl && (
+                    <Button variant="default" asChild className="w-full shadow-sm">
+                      <Link href={creatorDisplay.videoUrl} target="_blank" rel="noopener noreferrer">
+                        <PlayCircle className="mr-2 h-4 w-4" /> Ver Video de Presentación
+                      </Link>
+                    </Button>
+                  )}
+                  <Button variant="outline" asChild className="w-full shadow-sm">
+                    <Link href={`/creators/${creatorDisplay.id}`}>Ver Perfil del Creator</Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 

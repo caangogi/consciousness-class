@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Video } from 'lucide-react';
 
 interface CreatorProfileModalProps {
@@ -54,8 +53,8 @@ export function CreatorProfileModal({ isOpen, setIsOpen, creator }: CreatorProfi
         </div>
       );
     }
-    // Fallback for direct video links - remove aspect-video to allow natural aspect ratio
-    return <video controls src={url} className="w-full rounded-md bg-black max-h-[60vh]"><track kind="captions" /></video>;
+    // Fallback for direct video links
+    return <video controls src={url} className="w-full rounded-md bg-black"><track kind="captions" /></video>;
   };
 
   return (
@@ -69,7 +68,7 @@ export function CreatorProfileModal({ isOpen, setIsOpen, creator }: CreatorProfi
           <DialogTitle className="text-2xl font-headline">{creator.nombre}</DialogTitle>
           <DialogDescription>Instructor en Consciousness Class</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow min-h-0 pr-4 -mr-4">
+        <div className="flex-grow overflow-y-auto pr-4 -mr-4">
             <div className="py-4 space-y-6">
                 {creator.videoUrl && (
                     <div className="space-y-2">
@@ -77,7 +76,6 @@ export function CreatorProfileModal({ isOpen, setIsOpen, creator }: CreatorProfi
                         {renderVideoPlayer(creator.videoUrl)}
                     </div>
                 )}
-
                 {creator.bio && (
                     <div className="space-y-2">
                          <h4 className="font-semibold">Sobre mí</h4>
@@ -85,7 +83,7 @@ export function CreatorProfileModal({ isOpen, setIsOpen, creator }: CreatorProfi
                     </div>
                 )}
             </div>
-        </ScrollArea>
+        </div>
         <DialogFooter className="pt-4 border-t mt-auto">
           <DialogClose asChild>
             <Button type="button" variant="outline">

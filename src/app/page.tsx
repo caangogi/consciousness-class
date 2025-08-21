@@ -187,10 +187,7 @@ export default function HomePage() {
         animate="visible"
       >
         <div
-          className="absolute inset-0 bg-grid-slate-100/50 dark:bg-grid-slate-900/10 [mask-image:linear-gradient(to_bottom,white_10%,transparent_90%)]"
-        />
-        <div
-          className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-transparent"
+          className="absolute inset-0 bg-grid-slate-100/[0.05] dark:bg-grid-slate-900/[0.05] [mask-image:linear-gradient(to_bottom,white_10%,transparent_90%)]"
         />
 
         <div className="container mx-auto px-4 md:px-6 text-center relative z-10">

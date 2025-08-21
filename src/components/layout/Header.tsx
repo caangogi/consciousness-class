@@ -190,7 +190,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-20 items-center justify-between px-4 md:px-6">
         <div className="hidden md:block">
-            <Logo imageUrl={DESKTOP_LOGO_URL} altText="Consciousness Class Logo" width={140} height={38} />
+            <Logo imageUrl={DESKTOP_LOGO_URL} altText="Consciousness Class Logo" width={180} height={48} />
         </div>
         <div className="md:hidden">
             <Logo imageUrl={MOBILE_LOGO_URL} altText="Consciousness Class Logo" width={40} height={40}/>

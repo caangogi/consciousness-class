@@ -189,7 +189,12 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-20 items-center justify-between px-4 md:px-6">
-        <Logo imageUrl={DESKTOP_LOGO_URL} altText="Consciousness Class Logo" />
+        <div className="hidden md:block">
+            <Logo imageUrl={DESKTOP_LOGO_URL} altText="Consciousness Class Logo" width={140} height={38} />
+        </div>
+        <div className="md:hidden">
+            <Logo imageUrl={MOBILE_LOGO_URL} altText="Consciousness Class Logo" width={40} height={40}/>
+        </div>
 
         <nav className="hidden md:flex items-center gap-1 bg-secondary/50 px-2 py-1.5 rounded-full shadow-sm">
           {navLinks.map((link) => (

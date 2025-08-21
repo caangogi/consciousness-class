@@ -5,58 +5,58 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 233 33% 20%; /* #1D1F45 */
+    --foreground: 224 71.4% 4.1%; /* #1d1f45 */
     --card: 0 0% 100%;
-    --card-foreground: 233 33% 20%;
+    --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
-    --popover-foreground: 233 33% 20%;
-    --primary: 199 89% 49%; /* #29ABE2 */
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 348 83% 54%; /* #e63c60 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 216 33% 97%; /* #F0F4F8 */
-    --secondary-foreground: 233 33% 20%;
-    --muted: 216 33% 97%;
-    --muted-foreground: 240 4% 46%;
-    --accent: 34 100% 64%; /* #FFB347 */
-    --accent-foreground: 233 33% 20%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 217 91% 60%; /* #1d3092 */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 199 89% 49%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 348 83% 54%;
     --radius: 0.75rem;
-    --chart-1: 199 89% 49%;
-    --chart-2: 34 100% 64%;
-    --chart-3: 199 89% 69%;
-    --chart-4: 34 100% 84%;
-    --chart-5: 199 89% 39%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
   }
 
   .dark {
-    --background: 222 47% 11%;
+    --background: 224 71.4% 4.1%; /* #151521 */
     --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
+    --card: 224 71.4% 4.1%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    --popover: 224 71.4% 4.1%;
     --popover-foreground: 210 40% 98%;
-    --primary: 199 89% 49%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217 33% 17%;
+    --primary: 348 83% 54%; /* #e63c60 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 34 100% 64%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 63% 31%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217 91% 60%; /* #1d3092 */
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 22%;
-    --input: 217 33% 22%;
-    --ring: 199 89% 49%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 348 83% 54%;
     --radius: 0.75rem;
-    --chart-1: 199 89% 49%;
-    --chart-2: 34 100% 64%;
-    --chart-3: 199 89% 69%;
-    --chart-4: 34 100% 84%;
-    --chart-5: 199 89% 39%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 350 75% 55%;
   }
 }
 
@@ -74,7 +74,7 @@
   /* height and aspect-ratio are now controlled by Tailwind classes on the element */
   box-sizing: border-box;
   position: relative;
-  mask: 
+  mask:
     radial-gradient(transparent 47%, black 48% 71%, transparent 72%) exclude,
     conic-gradient(black 0 0) no-clip;
   animation: spinning-loader-spin 1.5s linear infinite;
@@ -84,9 +84,9 @@
   content: "";
   position: absolute;
   /* Adjusted inset for larger loader. This makes the ::before roughly 40% of the loader's size. */
-  inset: 30% 30% 30%; 
+  inset: 30% 30% 30%;
   border-radius: 50%;
-  background: hsl(var(--primary)); 
+  background: hsl(var(--primary));
   filter: blur(30px); /* Increased blur for larger size */
 }
 @keyframes spinning-loader-spin {

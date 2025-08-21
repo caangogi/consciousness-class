@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=5753a168-614a-4060-baa4-4296d4062f14";
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficon.png?alt=media&token=5b954603-a0a1-4b06-9b3e-db85ed6d4728";
 
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -86,7 +86,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
              <SheetHeader className="border-b p-4"> 
                 <SheetTitle className="sr-only">Navegación del Dashboard</SheetTitle>
                 <SheetDescription className="sr-only">Enlaces y opciones del panel de control.</SheetDescription>
-                 <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" width={120} height={32}/>
+                 <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" width={40} height={40}/>
              </SheetHeader>
               <nav className="flex flex-col gap-1 px-2 py-2 flex-grow overflow-y-auto">
                 {filteredNavItems.map((item) => {

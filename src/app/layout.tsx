@@ -12,10 +12,10 @@ import { ThemeProvider } from '@/components/shared/ThemeProvider';
 import { UrlParamEffects } from '@/components/shared/UrlParamEffects';
 
 export const metadata: Metadata = {
-  title: 'MentorBloom',
+  title: 'Consciousness Class',
   description: 'Plataforma de Membresías y Cursos Online',
   icons: {
-    icon: 'https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ffavicon.png?alt=media&token=a6df2795-0feb-4bc6-87bd-41a7cdee2c9f',
+    icon: 'https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficon.png?alt=media&token=5b954603-a0a1-4b06-9b3e-db85ed6d4728',
   }
 };
 
@@ -31,7 +31,7 @@ function RootLayoutFallback() {
         </p>
         {/* Replace CSS loader with Image component for GIF */}
         <Image 
-            src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo%20consiusness%20class_1.gif?alt=media&token=bbf14d90-4c36-4e2c-9695-39169c145a6b" 
+            src="https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficon.png?alt=media&token=5b954603-a0a1-4b06-9b3e-db85ed6d4728" 
             alt="Cargando..." 
             width={80}  // Ajusta el tamaño según sea necesario
             height={80} // Ajusta el tamaño según sea necesario

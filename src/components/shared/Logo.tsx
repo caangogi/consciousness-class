@@ -13,8 +13,10 @@ interface LogoProps {
   height?: number;
 }
 
+const DEFAULT_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2FLOGO-COUNSCIUSNESS.png?alt=media&token=1aa283aa-2213-4b2f-8ff0-443a31c1d84b";
+
 export function Logo({
-  imageUrl,
+  imageUrl = DEFAULT_LOGO_URL,
   altText = "Consciousness Class Logo",
   useIconOnly = false,
   className,
@@ -32,7 +34,7 @@ export function Logo({
         width={width}
         height={height}
         className="object-contain"
-        // priority y sizes eliminadas temporalmente para restaurar visibilidad
+        priority
       />
     );
   } else {

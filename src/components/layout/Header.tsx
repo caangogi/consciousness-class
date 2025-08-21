@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -20,6 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter, usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '../shared/ThemeToggle';
 
 
 const navLinks = [
@@ -28,7 +30,9 @@ const navLinks = [
   { href: '/#faq', label: 'FAQ', icon: HelpCircleIcon, isHashLink: true },
 ];
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Flogo.png?alt=media&token=5753a168-614a-4060-baa4-4296d4062f14";
+const DESKTOP_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2FLOGO-COUNSCIUSNESS.png?alt=media&token=1aa283aa-2213-4b2f-8ff0-443a31c1d84b";
+const MOBILE_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficon.png?alt=media&token=5b954603-a0a1-4b06-9b3e-db85ed6d4728";
+
 
 export function Header() {
   const { currentUser, userRole, loading, logout } = useAuth();
@@ -185,7 +189,12 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-20 items-center justify-between px-4 md:px-6">
-        <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" />
+        <div className="hidden md:block">
+            <Logo imageUrl={DESKTOP_LOGO_URL} altText="Consciousness Class Logo" width={180} height={48} />
+        </div>
+        <div className="md:hidden">
+            <Logo imageUrl={MOBILE_LOGO_URL} altText="Consciousness Class Logo" width={40} height={40}/>
+        </div>
 
         <nav className="hidden md:flex items-center gap-1 bg-secondary/50 px-2 py-1.5 rounded-full shadow-sm">
           {navLinks.map((link) => (
@@ -213,6 +222,9 @@ export function Header() {
               <Skeleton className="h-9 w-16 rounded-md md:hidden" />
             </div>
           )}
+          <div className="hidden md:block">
+            <ThemeToggle />
+          </div>
 
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
@@ -225,7 +237,7 @@ export function Header() {
                <SheetHeader className="border-b p-4">
                 <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
                 <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
-                 <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" onClick={() => setIsSheetOpen(false)} width={250} height={152}/>
+                 <Logo imageUrl={MOBILE_LOGO_URL} altText="Consciousness Class Icon" onClick={() => setIsSheetOpen(false)} width={40} height={40}/>
               </SheetHeader>
               <nav className="flex flex-col gap-1 px-2 py-2 flex-grow">
                 {navLinks.map((link) => (
@@ -247,6 +259,7 @@ export function Header() {
               </nav>
               <div className="border-t p-2 mt-auto space-y-1">
                  {renderMobileAuthSection(() => setIsSheetOpen(false))}
+                 <ThemeToggle />
               </div>
             </SheetContent>
           </Sheet>

@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
 import React, { Suspense } from 'react';
 import Image from 'next/image';
-import { ptSans, playfairDisplay } from '@/lib/fonts';
+import { ptSans, poppins } from '@/lib/fonts';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/shared/ThemeProvider';
 import { UrlParamEffects } from '@/components/shared/UrlParamEffects';
@@ -54,7 +54,7 @@ export default function RootLayout({
       <body className={cn(
         "font-body antialiased",
         ptSans.variable,
-        playfairDisplay.variable
+        poppins.variable
       )}>
         <ThemeProvider
           attribute="class"

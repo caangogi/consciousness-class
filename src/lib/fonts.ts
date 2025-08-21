@@ -1,4 +1,5 @@
-import { PT_Sans, Playfair_Display } from 'next/font/google';
+
+import { PT_Sans, Poppins } from 'next/font/google';
 
 export const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -7,9 +8,9 @@ export const ptSans = PT_Sans({
   display: 'swap',
 });
 
-export const playfairDisplay = Playfair_Display({
+export const poppins = Poppins({
   subsets: ['latin'],
-  weight: ['700', '900'],
-  variable: '--font-playfair-display',
+  weight: ['400', '500', '600', '700', '800', '900'],
+  variable: '--font-poppins',
   display: 'swap',
 });

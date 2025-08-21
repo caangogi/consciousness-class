@@ -21,6 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter, usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '../shared/ThemeToggle';
 
 
 const navLinks = [
@@ -216,6 +217,9 @@ export function Header() {
               <Skeleton className="h-9 w-16 rounded-md md:hidden" />
             </div>
           )}
+          <div className="hidden md:block">
+            <ThemeToggle />
+          </div>
 
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
@@ -250,6 +254,7 @@ export function Header() {
               </nav>
               <div className="border-t p-2 mt-auto space-y-1">
                  {renderMobileAuthSection(() => setIsSheetOpen(false))}
+                 <ThemeToggle />
               </div>
             </SheetContent>
           </Sheet>

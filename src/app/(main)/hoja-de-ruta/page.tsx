@@ -4,7 +4,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Code, User, Rocket, Layers, ShieldCheck, Database, GitBranch, Terminal, FileCog } from 'lucide-react';
+import { Check, Code, User, Rocket, Layers, ShieldCheck, GitBranch, FileCog, Terminal } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const containerVariants = {
@@ -60,11 +60,12 @@ const roadmapData = [
     status: "Pendiente",
     milestones: [
       {
-        title: "Hito 1.1: Integración de Pagos con Stripe",
+        title: "Hito 1.1: Integración de Pagos con Stripe Connect",
         tasks: [
           { type: 'dev', text: "Backend: Configurar webhooks para `checkout.session.completed` y `invoice.payment_succeeded`." },
-          { type: 'dev', text: "Lógica de Comisiones: Implementar el registro de la comisión de la plataforma y los ingresos brutos del curso tras una compra." },
-          { type: 'user', text: "Configuración Manual: Crear y configurar una cuenta de Stripe. Añadir las claves (secret y publishable) y el secreto del webhook al entorno del proyecto." },
+          { type: 'user', text: "Configuración Manual (Stripe): Activar Stripe Connect, configurar el tipo de cuenta (Express) y el branding de la plataforma." },
+          { type: 'dev', text: "Onboarding del Creator: Desarrollar el flujo para que los creadores puedan conectar su cuenta de Stripe a nuestra plataforma." },
+          { type: 'dev', text: "Lógica de Pagos y Comisiones: Implementar `destination_charges` en la creación de la sesión de Stripe para transferir el pago al creator y retener la comisión de la plataforma (`application_fee_amount`)." },
           { type: 'dev', text: "Infraestructura: Crear la entidad `ComisionRegistrada` en Firestore para un seguimiento detallado de cada transacción." },
         ]
       },
@@ -265,7 +266,7 @@ export default function RoadmapPage() {
                 </div>
                 <div className="flex-1 pt-1">
                     <Badge variant={phaseData.status === 'Completada' ? 'default' : 'secondary'} className={phaseData.status === 'Completada' ? 'bg-green-100 text-green-700' : ''}>
-                        Fase {phaseIndex + 1} - {phaseData.status}
+                        Duración: {phaseData.duration}
                     </Badge>
                     <h2 className="text-2xl md:text-3xl font-bold font-headline mt-1">{phaseData.phase}</h2>
                     <p className="text-muted-foreground mt-1 mb-6">{phaseData.description}</p>

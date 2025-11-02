@@ -4,7 +4,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Code, User, Rocket, Layers, ShieldCheck, GitBranch, FileCog, Terminal } from 'lucide-react';
+import { Check, Code, User, Rocket, Layers, ShieldCheck, GitBranch, FileCog, Terminal, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const containerVariants = {
@@ -49,6 +49,11 @@ const architecturePrinciples = [
         icon: GitBranch,
         title: "Colaboración Humano-IA",
         description: "Combinamos la estrategia humana con la velocidad de implementación de la IA para acelerar el desarrollo y mantener una alta calidad de código."
+    },
+    {
+        icon: Clock,
+        title: "Estimación de Tiempo Flexible",
+        description: "Nuestras estimaciones en semanas son una guía para planificar. A partir del 7 de noviembre, dedicaremos un mínimo de 2 horas diarias de lunes a viernes, ¡así que es posible que avancemos incluso más rápido!"
     }
 ];
 

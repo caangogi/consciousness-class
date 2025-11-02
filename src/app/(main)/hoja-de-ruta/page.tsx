@@ -72,7 +72,7 @@ const roadmapData = [
         title: "Hito 1.2: Expansión del Sistema de Referidos",
         tasks: [
           { type: 'dev', text: "Backend: Modificar la lógica del webhook de Stripe para soportar un sistema de referidos de 2 niveles (requiere análisis previo)." },
-          { type 'dev', text: "Interfaz: Crear una sección en el dashboard del usuario para visualizar su red de referidos y las ganancias generadas."},
+          { type: 'dev', text: "Interfaz: Crear una sección en el dashboard del usuario para visualizar su red de referidos y las ganancias generadas."},
           { type: 'user', text: "Definición de Negocio: Establecer los porcentajes de comisión para el primer y segundo nivel de referidos." },
           { type: 'dev', text: "Legal: Implementar la sección de Términos y Condiciones del sistema de referidos, ganancias y liquidaciones." },
         ]
@@ -143,7 +143,7 @@ const roadmapData = [
             title: "Hito 3.3: Entidad de Banners Dinámicos",
             tasks: [
                 { type: 'dev', text: "Diseño de Arquitectura: Definir la entidad `Banner`, su repositorio y los casos de uso bajo una arquitectura hexagonal." },
-                { type 'dev', text: "Implementación: Crear la API y los componentes de UI para gestionar y mostrar banners dinámicos en la plataforma."},
+                { type: 'dev', text: "Implementación: Crear la API y los componentes de UI para gestionar y mostrar banners dinámicos en la plataforma."},
             ]
         }
     ]

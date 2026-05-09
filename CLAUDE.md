@@ -105,7 +105,13 @@ Path alias: `@/*` → `src/*` (see [tsconfig.json](tsconfig.json)).
 
 ### Stripe
 
-Subscription products and one-shot prices are managed by services (see `manageStripeProductAndPrice` in `course.service.ts`). The webhook handler is at [src/app/api/webhooks/stripe/route.ts](src/app/api/webhooks/stripe/route.ts); checkout sessions are created at `src/app/api/checkout/create-session` and `create-subscription-session`.
+Subscription products and one-shot prices are managed by services (see `manageStripeProductAndPrice` in `course.service.ts`). The **canonical webhook handler** is at [src/app/api/webhooks/stripe/route.ts](src/app/api/webhooks/stripe/route.ts) — handles checkout, subscription create/update/delete, and invoice events; has the F1.4b idempotency guard via `ProcessedStripeEventEntity`. Checkout sessions are created at `src/app/api/checkout/create-session` and `create-subscription-session`.
+
+> **⚠️ TWO webhook handlers exist on purpose** — see [documentation/decisions/0001-defer-wallet-ledger-migration.md](documentation/decisions/0001-defer-wallet-ledger-migration.md). The second one at `src/app/api/checkout/webhook/route.ts` implements the target ledger architecture (writes to `wallets` collection via `WalletTransactionEntity`) but only handles `checkout.session.completed`. **Do not delete it** — it's the migration target, not dead code. Stripe Dashboard currently points only at `/api/webhooks/stripe` (the principal). Until the dedicated "Wallet Ledger Migration" sprint runs, route all new event handling through the principal and treat `wallets` as a sleeping store.
+
+### Wallet
+
+[src/backend/wallet/](src/backend/wallet/) is the dedicated module for balances (extracted from `finance/` in T0.1 per PM decision D1). Today the principal webhook still mutates `usuarios.balance*` directly — wallet ledger transactions exist but are only written via the dormant secondary webhook. The migration that flips reads/writes to the ledger is scheduled for a future sprint (see ADR-0001).
 
 ## Logging
 

@@ -17,9 +17,12 @@ npm run start        # next start
 npm run lint         # next lint
 npm run typecheck    # tsc --noEmit (the source of truth — see "Build vs typecheck" below)
 
-npm test             # vitest run (single pass, what CI runs)
+npm test             # vitest run (unit + integration, single pass)
 npm run test:watch   # vitest --watch (development)
 npm run test:ui      # vitest --ui (visual debug in browser)
+npm run test:e2e     # playwright test (auto-starts npm run dev on :9003)
+npm run test:e2e:ui  # playwright UI mode for debugging
+npm run test:e2e:headed  # see the browser while tests run
 
 npm run genkit:dev   # Genkit dev server, entry src/ai/dev.ts
 npm run genkit:watch # Genkit dev server with --watch
@@ -42,6 +45,12 @@ Full philosophy in [documentation/testing-strategy.md](documentation/testing-str
 **Critical rule for TDD-strict directories:** the PR must show the failing `test(...)` commit *before* the `feat(...)` commit that makes it pass. If review can't see that sequence in git history, the PR is rejected.
 
 When you (Claude Code) are about to edit a file in a TDD-strict directory, **stop and write the failing test first**. Commit it. Then write the implementation. Commit that separately.
+
+### E2E (Playwright)
+
+E2E tests live in `e2e/` (NOT mixed with unit tests in `src/`). Config in [playwright.config.ts](playwright.config.ts) auto-starts `npm run dev` on port 9003. First-time setup on a new machine: `npx playwright install chromium`.
+
+The current smoke test ([e2e/smoke.spec.ts](e2e/smoke.spec.ts)) verifies that the public surfaces (home, /products, /courses redirect) render without 5xx. Behavioral E2E (full checkout, booking, RAG companion) lands per-feature in fases 5/6 once seedable Firebase + Stripe test data exists.
 
 ## Build vs typecheck
 

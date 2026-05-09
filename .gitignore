@@ -50,3 +50,9 @@ firestore-debug.log
 .gh-config/
 .gcloud/
 .direnv/
+
+# Playwright E2E
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/blob-report/

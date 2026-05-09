@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebase/admin';
-import { FirebaseWalletRepository } from '@/backend/finance/infrastructure/repositories/firebase-wallet.repository';
-import { WalletTransactionEntity } from '@/backend/finance/domain/entities/wallet-transaction.entity';
+import { FirebaseWalletRepository } from '@/backend/wallet/infrastructure/repositories/firebase-wallet.repository';
+import { WalletTransactionEntity } from '@/backend/wallet/domain/entities/wallet-transaction.entity';
 import { EnrollmentService } from '@/backend/enrollment/application/enrollment.service';
 import type { AssetType } from '@/backend/shared/domain/interfaces/asset.interface';
 import * as admin from 'firebase-admin';

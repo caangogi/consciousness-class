@@ -1,6 +1,6 @@
 import { adminDb } from '@/lib/firebase/admin';
-import { WalletEntity } from '@/backend/finance/domain/entities/wallet.entity';
-import { WalletTransactionEntity } from '@/backend/finance/domain/entities/wallet-transaction.entity';
+import { WalletEntity } from '@/backend/wallet/domain/entities/wallet.entity';
+import { WalletTransactionEntity } from '@/backend/wallet/domain/entities/wallet-transaction.entity';
 import * as admin from 'firebase-admin';
 
 export class FirebaseWalletRepository {

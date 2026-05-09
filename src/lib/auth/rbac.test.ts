@@ -150,19 +150,22 @@ describe('requireRoles', () => {
   });
 
   // -------------------------------------------------------------
-  // 8. Dev-superadmin override por caangogi@gmail.com hardcoded
+  // 8. SECURITY: caangogi@gmail.com must NOT be a hardcoded backdoor.
+  //    Without NEXT_PUBLIC_SUPERADMIN_DEV_EMAIL set, the same email lands
+  //    a 403 just like any other student. Test #7 already covers the
+  //    legitimate env-var-driven dev-superadmin bypass.
   // -------------------------------------------------------------
-  it('bypasses role check when email is the hardcoded caangogi@gmail.com', async () => {
+  it('does NOT bypass role check for caangogi@gmail.com when env var is unset', async () => {
+    // beforeEach already deletes NEXT_PUBLIC_SUPERADMIN_DEV_EMAIL.
     verifyIdToken.mockResolvedValueOnce({
       uid: 'caa_uid',
       role: 'student',
       email: 'caangogi@gmail.com',
     } as any);
     const result = await requireRoles(makeRequest('Bearer good.token'), ['superadmin']);
-    expect(result).toEqual(
-      expect.objectContaining({ uid: 'caa_uid', role: 'student' })
-    );
-    expect(result).not.toHaveProperty('error');
+    const { status, body } = await readErrorBody(result);
+    expect(status).toBe(403);
+    expect(body.error).toMatch(/Prohibido/i);
   });
 
   // -------------------------------------------------------------

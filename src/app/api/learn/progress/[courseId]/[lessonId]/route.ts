@@ -2,9 +2,9 @@
 // src/app/api/learn/progress/[courseId]/[lessonId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import { UserCourseProgressService } from '@/features/progress/application/user-course-progress.service';
-import { FirebaseUserCourseProgressRepository } from '@/features/progress/infrastructure/repositories/firebase-user-course-progress.repository';
-import type { ToggleLessonCompletionDto } from '@/features/progress/infrastructure/dto/toggle-lesson-completion.dto';
+import { UserCourseProgressService } from '@/backend/progress/application/user-course-progress.service';
+import { FirebaseUserCourseProgressRepository } from '@/backend/progress/infrastructure/repositories/firebase-user-course-progress.repository';
+import type { ToggleLessonCompletionDto } from '@/backend/progress/infrastructure/dto/toggle-lesson-completion.dto';
 
 interface RouteParams {
   params: { courseId: string; lessonId: string };

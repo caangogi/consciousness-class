@@ -2,7 +2,7 @@
 // src/app/api/checkout/create-subscription-session/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
+import { FirebaseCourseRepository } from '@/backend/course/infrastructure/repositories/firebase-course.repository';
 import Stripe from 'stripe';
 
 // Safely initialize Stripe

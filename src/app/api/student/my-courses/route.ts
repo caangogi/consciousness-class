@@ -1,13 +1,9 @@
-
-// src/app/api/student/my-courses/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
-import type { UserCourseProgressProperties } from '@/features/progress/domain/entities/user-course-progress.entity';
+import { adminAuth } from '@/lib/firebase/admin';
+import { FirebaseEnrollmentRepository } from '@/backend/enrollment/infrastructure/repositories/firebase-enrollment.repository';
+import { adminDb } from '@/lib/firebase/admin';
 
-interface EnrolledCourseDetails extends CourseProperties {
-  progress?: UserCourseProgressProperties;
-}
+const enrollmentRepo = new FirebaseEnrollmentRepository();
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,78 +17,45 @@ export async function GET(request: NextRequest) {
     try {
       decodedToken = await adminAuth.verifyIdToken(idToken);
     } catch (error: any) {
-      console.error('Error verifying ID token in /api/student/my-courses:', error);
       return NextResponse.json({ error: 'Unauthorized: Invalid ID token', details: error.message }, { status: 401 });
     }
     const userId = decodedToken.uid;
 
-    // 1. Get user document to find enrolled course IDs
-    const userDocRef = adminDb.collection('usuarios').doc(userId);
-    const userDocSnap = await userDocRef.get();
+    // Get all active enrollments from the subcollection
+    const enrollments = await enrollmentRepo.getEnrollments(userId);
 
-    if (!userDocSnap.exists) {
-      return NextResponse.json({ error: 'User profile not found.' }, { status: 404 });
-    }
-    const userData = userDocSnap.data();
-    const enrolledCourseIds: string[] = userData?.cursosInscritos || [];
-
-    if (enrolledCourseIds.length === 0) {
-      return NextResponse.json({ enrolledCourses: [] }, { status: 200 });
+    if (enrollments.length === 0) {
+      return NextResponse.json({ enrolledItems: [] }, { status: 200 });
     }
 
-    // 2. Fetch details for each enrolled course
-    const coursePromises = enrolledCourseIds.map(courseId => 
-      adminDb.collection('cursos').doc(courseId).get()
-    );
-    const courseSnapshots = await Promise.all(coursePromises);
+    const enrolledIds = enrollments.map(e => e.assetId);
 
-    // 3. Fetch progress for each enrolled course
-    const progressPromises = enrolledCourseIds.map(courseId =>
-      userDocRef.collection('progresoCursos').doc(courseId).get()
-    );
-    const progressSnapshots = await Promise.all(progressPromises);
+    // Fetch catalog item details for the enrolled assets (batch in chunks of 10)
+    const enrolledItems: any[] = [];
+    const chunks: string[][] = [];
+    for (let i = 0; i < enrolledIds.length; i += 10) {
+      chunks.push(enrolledIds.slice(i, i + 10));
+    }
 
-    // 4. Combine course details with progress
-    const enrolledCourses: EnrolledCourseDetails[] = [];
-    courseSnapshots.forEach((courseSnap, index) => {
-      if (courseSnap.exists) {
-        const courseData = courseSnap.data() as CourseProperties;
-        const progressSnap = progressSnapshots[index];
-        let courseWithProgress: EnrolledCourseDetails = { ...courseData };
-        if (progressSnap.exists) {
-          courseWithProgress.progress = progressSnap.data() as UserCourseProgressProperties;
-        } else {
-          // If no progress document, assume 0% progress
-          courseWithProgress.progress = {
-            userId: userId,
-            courseId: courseData.id,
-            lessonIdsCompletadas: [],
-            porcentajeCompletado: 0,
-            fechaUltimaActualizacion: new Date().toISOString(),
-          };
-        }
-        enrolledCourses.push(courseWithProgress);
-      } else {
-        console.warn(`Course with ID ${enrolledCourseIds[index]} not found, but user ${userId} is enrolled.`);
-      }
-    });
-    
-    // Sort courses, e.g., by name or last updated progress (optional)
-    // For now, keeping the order from cursosInscritos
+    for (const chunk of chunks) {
+      const snap = await adminDb.collection('catalog_items')
+        .where('assetReferenceId', 'in', chunk)
+        .get();
+      snap.docs.forEach(doc => {
+        const enrollment = enrollments.find(e => e.assetId === doc.data().assetReferenceId);
+        enrolledItems.push({
+          ...doc.data(),
+          enrolledAt: enrollment?.enrolledAt.toISOString(),
+          accessType: enrollment?.accessType,
+          assetType: enrollment?.assetType,
+        });
+      });
+    }
 
-    return NextResponse.json({ enrolledCourses }, { status: 200 });
+    return NextResponse.json({ enrolledItems }, { status: 200 });
 
   } catch (error: any) {
     console.error('Error in GET /api/student/my-courses:', error);
-    let errorMessage = 'Internal Server Error';
-    let errorDetails = 'An unexpected error occurred while fetching enrolled courses.';
-    
-    if (error instanceof Error) {
-      errorDetails = error.message;
-      errorMessage = error.name === 'Error' ? 'Enrolled Courses Fetch Error' : error.name;
-    }
-    
-    const stack = process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined;
-    return NextResponse.json({ error: errorMessage, details: errorDetails, stack }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
 }

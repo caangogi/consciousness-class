@@ -1,8 +1,8 @@
 
 // src/app/api/courses/promotable/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { CourseService } from '@/features/course/application/course.service';
-import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
+import { CourseService } from '@/backend/course/application/course.service';
+import { FirebaseCourseRepository } from '@/backend/course/infrastructure/repositories/firebase-course.repository';
 
 export async function GET(request: NextRequest) {
   try {

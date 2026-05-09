@@ -2,9 +2,9 @@
 // src/app/api/courses/create/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import { CourseService } from '@/features/course/application/course.service';
-import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
-import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
+import { CourseService } from '@/backend/course/application/course.service';
+import { FirebaseCourseRepository } from '@/backend/course/infrastructure/repositories/firebase-course.repository';
+import type { CreateCourseDto } from '@/backend/course/infrastructure/dto/create-course.dto';
 
 export async function POST(request: NextRequest) {
   try {

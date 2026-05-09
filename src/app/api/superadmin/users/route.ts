@@ -2,8 +2,8 @@
 // src/app/api/superadmin/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import { UserService } from '@/features/user/application/user.service';
-import { FirebaseUserRepository } from '@/features/user/infrastructure/repositories/firebase-user.repository';
+import { UserService } from '@/backend/user/application/user.service';
+import { FirebaseUserRepository } from '@/backend/user/infrastructure/repositories/firebase-user.repository';
 
 export async function GET(request: NextRequest) {
   try {

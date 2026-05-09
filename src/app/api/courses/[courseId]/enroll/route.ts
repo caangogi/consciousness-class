@@ -2,17 +2,15 @@
 // src/app/api/courses/[courseId]/enroll/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import { EnrollmentService } from '@/features/enrollment/application/enrollment.service';
-import { FirebaseUserRepository } from '@/features/user/infrastructure/repositories/firebase-user.repository';
-import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
+import { EnrollmentService } from '@/backend/enrollment/application/enrollment.service';
 
 interface RouteParams {
-  params: { courseId: string };
+  params: Promise<{ courseId: string }>;
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const courseId = params.courseId;
+    const { courseId } = await params;
     if (!courseId) {
       return NextResponse.json({ error: 'Bad Request: Missing course ID in path.' }, { status: 400 });
     }
@@ -32,16 +30,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
     const userId = decodedToken.uid;
 
-    const userRepository = new FirebaseUserRepository();
-    const courseRepository = new FirebaseCourseRepository();
-    const enrollmentService = new EnrollmentService(userRepository, courseRepository);
-
-    await enrollmentService.enrollStudentToCourse(userId, courseId);
+    const enrollmentService = new EnrollmentService();
+    await enrollmentService.enrollStudentToAsset(userId, courseId, 'course', 'free');
 
     return NextResponse.json({ message: 'Successfully enrolled in course.' }, { status: 200 });
 
   } catch (error: any) {
-    console.error(`Error in POST /api/courses/${params.courseId}/enroll:`, error);
+    console.error('Error in POST /api/courses/[courseId]/enroll:', error);
     let errorMessage = 'Internal Server Error';
     let errorDetails = 'An unexpected error occurred during enrollment.';
     let statusCode = 500;

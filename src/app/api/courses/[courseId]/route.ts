@@ -1,7 +1,8 @@
 // src/app/api/courses/[courseId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { CourseService } from '@/features/course/application/course.service';
-import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
+export const dynamic = 'force-dynamic';
+import { CourseService } from '@/backend/course/application/course.service';
+import { FirebaseCourseRepository } from '@/backend/course/infrastructure/repositories/firebase-course.repository';
 // Potentially add adminAuth for creator verification if needed for GET, though may not be required if page is already protected
 // import { adminAuth } from '@/lib/firebase/admin';
 

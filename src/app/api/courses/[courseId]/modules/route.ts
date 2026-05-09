@@ -1,10 +1,11 @@
 // src/app/api/courses/[courseId]/modules/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { adminAuth } from '@/lib/firebase/admin';
-import { ModuleService } from '@/features/course/application/module.service';
-import { FirebaseModuleRepository } from '@/features/course/infrastructure/repositories/firebase-module.repository';
-import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
-import type { CreateModuleDto } from '@/features/course/infrastructure/dto/create-module.dto';
+import { ModuleService } from '@/backend/course/application/module.service';
+import { FirebaseModuleRepository } from '@/backend/course/infrastructure/repositories/firebase-module.repository';
+import { FirebaseCourseRepository } from '@/backend/course/infrastructure/repositories/firebase-course.repository';
+import type { CreateModuleDto } from '@/backend/course/infrastructure/dto/create-module.dto';
 
 interface RouteContext {
   params: { courseId: string };

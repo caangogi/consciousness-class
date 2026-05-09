@@ -2,10 +2,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebase/admin';
-import { FirebaseUserRepository } from '@/features/user/infrastructure/repositories/firebase-user.repository';
-import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
-import { EnrollmentService } from '@/features/enrollment/application/enrollment.service';
+import { FirebaseUserRepository } from '@/backend/user/infrastructure/repositories/firebase-user.repository';
+import { FirebaseCourseRepository } from '@/backend/course/infrastructure/repositories/firebase-course.repository';
+import { EnrollmentService } from '@/backend/enrollment/application/enrollment.service';
 import { FieldValue } from 'firebase-admin/firestore';
+import { PaymentOrchestratorService } from '@/backend/payments/application/payment.orchestrator.service';
+import { ReferralService } from '@/backend/referrals/application/referral.service';
+import { FirebaseReferralPolicyRepository } from '@/backend/referrals/infrastructure/repositories/firebase-referral-policy.repository';
 
 const LOGS_COLLECTION = 'webhookLogs';
 const COMMISSIONS_COLLECTION = 'comisionesRegistradas';
@@ -65,179 +68,87 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
   if (session.payment_status === 'paid') {
     console.log('[Stripe Webhook] Payment status is "paid". Extracting metadata...');
 
-    const buyerUserId = session.metadata?.userId;
-    const courseIdPurchased = session.metadata?.courseId;
+    const buyerUserId = session.metadata?.userId || session.metadata?.buyerUid;
+    const courseIdPurchased = session.metadata?.courseId || session.metadata?.assetReferenceId;
+    const assetType = session.metadata?.assetType || 'course';
     const referralCodeUsed = session.metadata?.referralCodeUsed;
     const promotedCourseId = session.metadata?.promotedCourseId;
     const tipoAcceso = session.metadata?.tipoAcceso;
     const stripeSubscriptionId = session.subscription as string | null;
+    const bookingId = session.metadata?.bookingId;
 
     console.log('[Stripe Webhook] Raw Metadata from Stripe session:', JSON.stringify(session.metadata));
-    console.log(`[Stripe Webhook] Extracted - Buyer User ID: ${buyerUserId}, Course ID Purchased: ${courseIdPurchased}, Referral Code Used: ${referralCodeUsed}, Promoted Course ID: ${promotedCourseId}, Tipo Acceso: ${tipoAcceso}, Stripe Subscription ID: ${stripeSubscriptionId}`);
-    await writeWebhookLog(eventId, 'extracted_metadata', { buyerUserId, courseIdPurchased, referralCodeUsed, promotedCourseId, tipoAcceso, stripeSubscriptionId, rawMetadata: session.metadata });
+    console.log(`[Stripe Webhook] Extracted - Buyer User ID: ${buyerUserId}, Asset ID: ${courseIdPurchased}, Asset Type: ${assetType}, Booking ID: ${bookingId}`);
+    await writeWebhookLog(eventId, 'extracted_metadata', { buyerUserId, courseIdPurchased, assetType, bookingId, rawMetadata: session.metadata });
 
     if (!buyerUserId || !courseIdPurchased) {
-      console.error(`[Stripe Webhook] CRITICAL: Missing essential metadata. Buyer User ID: ${buyerUserId}, Course ID Purchased: ${courseIdPurchased}. Cannot proceed for session ${session.id}.`);
+      console.error(`[Stripe Webhook] CRITICAL: Missing essential metadata. Buyer User ID: ${buyerUserId}, Asset ID Purchased: ${courseIdPurchased}. Cannot proceed for session ${session.id}.`);
       await writeWebhookLog(eventId, 'missing_metadata_error_core', { buyerUserId, courseIdPurchased, rawMetadata: session.metadata });
       return;
     }
 
     const userRepository = new FirebaseUserRepository();
     const courseRepository = new FirebaseCourseRepository();
-    const enrollmentService = new EnrollmentService(userRepository, courseRepository);
+    const enrollmentService = new EnrollmentService();
 
-    await enrollmentService.enrollStudentToCourse(buyerUserId, courseIdPurchased);
-    console.log(`[Stripe Webhook] EnrollmentService.enrollStudentToCourse completed successfully for User: ${buyerUserId}, Course: ${courseIdPurchased}.`);
+    // 1. Core Enrollment
+    await enrollmentService.enrollStudentToAsset(buyerUserId, courseIdPurchased, assetType as any, 'paid_one_time', session.id);
+    console.log(`[Stripe Webhook] EnrollmentService completed for User: ${buyerUserId}, Asset: ${courseIdPurchased}.`);
     await writeWebhookLog(eventId, 'enrollment_service_success', { buyerUserId, courseIdPurchased });
 
-    // ---- Creator Revenue and Course Revenue Logic ----
+    // 2. Booking Confirmation (if applicable)
+    if (bookingId) {
+      try {
+        const { BookingService } = await import('@/backend/booking/application/booking.service');
+        const bookingService = new BookingService();
+        await bookingService.confirmBooking(bookingId);
+        console.log(`[Stripe Webhook] Confirmed booking: ${bookingId}`);
+        await writeWebhookLog(eventId, 'booking_confirmed', { bookingId });
+      } catch (err: any) {
+        console.error(`[Stripe Webhook] Error confirming booking ${bookingId}:`, err);
+        await writeWebhookLog(eventId, 'booking_confirmation_error', { bookingId, error: err.message });
+      }
+    }
+
+    // ---- Creator Revenue and Referral Logic via PaymentOrchestrator ----
     try {
         const coursePurchasedEntity = await courseRepository.findById(courseIdPurchased);
-        if (coursePurchasedEntity && coursePurchasedEntity.creadorUid && session.amount_total) {
-            const grossAmount = session.amount_total / 100; // Convert from cents
-            const platformFee = grossAmount * PLATFORM_COMMISSION_PERCENTAGE;
-            const creatorNetRevenue = grossAmount - platformFee;
+        const creatorUid = session.metadata?.creatorUid || coursePurchasedEntity?.creadorUid;
 
-            await courseRepository.incrementCourseRevenue(courseIdPurchased, grossAmount);
-            console.log(`[Stripe Webhook] Course ${courseIdPurchased} gross revenue incremented by ${grossAmount.toFixed(2)}.`);
-            await writeWebhookLog(eventId, 'course_revenue_incremented', { courseId: courseIdPurchased, amount: grossAmount });
+        if (creatorUid && session.amount_total) {
+            const orchestrator = new PaymentOrchestratorService(userRepository as any, new ReferralService());
             
-            await userRepository.updateCreatorPendingRevenue(coursePurchasedEntity.creadorUid, creatorNetRevenue);
-            console.log(`[Stripe Webhook] Creator ${coursePurchasedEntity.creadorUid} pending revenue updated by ${creatorNetRevenue.toFixed(2)} for course ${courseIdPurchased}.`);
-            await writeWebhookLog(eventId, 'creator_revenue_updated', { creatorUid: coursePurchasedEntity.creadorUid, amount: creatorNetRevenue, courseId: courseIdPurchased });
-        } else {
-            console.warn(`[Stripe Webhook] Could not process creator revenue. Course: ${!!coursePurchasedEntity}, CreatorUID: ${coursePurchasedEntity?.creadorUid}, AmountTotal: ${session.amount_total}`);
-            await writeWebhookLog(eventId, 'creator_revenue_processing_skipped', { courseId: courseIdPurchased, courseExists: !!coursePurchasedEntity, creatorUid: coursePurchasedEntity?.creadorUid, amount_total: session.amount_total });
-        }
-    } catch (revError: any) {
-        console.error(`[Stripe Webhook] Error processing creator/course revenue for course ${courseIdPurchased}:`, revError.message);
-        await writeWebhookLog(eventId, 'creator_course_revenue_error', { courseId: courseIdPurchased, error: revError.message, stack: revError.stack });
-    }
+            // Extract Affiliate and Policy metadata
+            const referralPolicyId = session.metadata?.referralPolicyId;
+            const affiliate1Uid = session.metadata?.affiliate1Uid;
+            const affiliate2Uid = session.metadata?.affiliate2Uid;
 
-
-    if (tipoAcceso === 'suscripcion' && stripeSubscriptionId) {
-        if (!stripe) {
-            console.error(`[Stripe Webhook] Stripe not initialized, cannot retrieve subscription ${stripeSubscriptionId}.`);
-            await writeWebhookLog(eventId, 'initial_subscription_record_checkout_error_no_stripe', { buyerUserId, stripeSubscriptionId, courseIdPurchased });
-            return;
-        }
-        try {
-            const subscriptionObject = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-
-            const createdAtISO = typeof subscriptionObject.created === 'number' ? new Date(subscriptionObject.created * 1000).toISOString() : new Date().toISOString();
-            const currentPeriodStartISO = typeof subscriptionObject.current_period_start === 'number' ? new Date(subscriptionObject.current_period_start * 1000).toISOString() : null;
-            const currentPeriodEndISO = typeof subscriptionObject.current_period_end === 'number' ? new Date(subscriptionObject.current_period_end * 1000).toISOString() : null;
-
-            console.log(`[Stripe Webhook - InitialSub CS] Timestamps - created_raw: ${subscriptionObject.created}, created_iso: ${createdAtISO}`);
-            console.log(`[Stripe Webhook - InitialSub CS] Timestamps - start_raw: ${subscriptionObject.current_period_start}, start_iso: ${currentPeriodStartISO}`);
-            console.log(`[Stripe Webhook - InitialSub CS] Timestamps - end_raw: ${subscriptionObject.current_period_end}, end_iso: ${currentPeriodEndISO}`);
-
-            if (!createdAtISO) {
-                console.error(`[Stripe Webhook - InitialSub CS] CRITICAL: createdAt timestamp is missing or invalid for subscription ${stripeSubscriptionId}.`);
-                throw new Error(`Stripe createdAt timestamp is missing or invalid for subscription ${stripeSubscriptionId}.`);
-            }
-             if (!currentPeriodStartISO || !currentPeriodEndISO) {
-                 console.warn(`[Stripe Webhook - InitialSub CS] current_period_start or current_period_end is null after conversion for subscription ${stripeSubscriptionId}. This might be acceptable for some statuses. Proceeding with available data.`);
+            let policy = null;
+            if (referralPolicyId) {
+                const policyRepo = new FirebaseReferralPolicyRepository();
+                policy = await policyRepo.getById(referralPolicyId);
             }
 
-            const userSubscriptionRef = adminDb!.collection('usuarios').doc(buyerUserId).collection(SUBSCRIPTIONS_COLLECTION).doc(stripeSubscriptionId);
-            const subscriptionDataToStore: any = {
-                stripeSubscriptionId: stripeSubscriptionId,
-                stripeCustomerId: typeof subscriptionObject.customer === 'string' ? subscriptionObject.customer : subscriptionObject.customer.id,
-                stripePriceId: session.metadata?.stripePriceId || subscriptionObject.items.data[0]?.price?.id || subscriptionObject.items.data[0]?.id || null,
-                courseId: courseIdPurchased,
-                status: subscriptionObject.status,
-                cancelAtPeriodEnd: subscriptionObject.cancel_at_period_end,
-                createdAt: createdAtISO,
-                updatedAt: new Date().toISOString(),
-            };
-
-            if (currentPeriodStartISO) subscriptionDataToStore.currentPeriodStart = currentPeriodStartISO;
-            if (currentPeriodEndISO) subscriptionDataToStore.currentPeriodEnd = currentPeriodEndISO;
-
-             Object.keys(subscriptionDataToStore).forEach(key => {
-                if (subscriptionDataToStore[key] === undefined) {
-                    delete subscriptionDataToStore[key];
-                }
+            // Distribute Funds
+            await orchestrator.distributeStripePayment({
+                grossAmount: session.amount_total / 100,
+                currency: session.currency || 'eur',
+                platformFeePercentage: PLATFORM_COMMISSION_PERCENTAGE,
+                policy: policy,
+                creatorUid: creatorUid,
+                affiliate1Uid: affiliate1Uid,
+                affiliate2Uid: affiliate2Uid
             });
 
-            await userSubscriptionRef.set(subscriptionDataToStore, { merge: true });
-            console.log(`[Stripe Webhook] Initial subscription record created/merged from checkout.session for user ${buyerUserId}, subscription ${stripeSubscriptionId}, course ${courseIdPurchased}.`);
-            await writeWebhookLog(eventId, 'initial_subscription_record_checkout_created', { buyerUserId, stripeSubscriptionId, courseIdPurchased, dataStored: subscriptionDataToStore });
-        } catch (subError: any) {
-            console.error(`[Stripe Webhook] Error creating initial subscription record from checkout.session for user ${buyerUserId}, subscription ${stripeSubscriptionId}:`, subError.message, subError.stack);
-            await writeWebhookLog(eventId, 'initial_subscription_record_checkout_error', { buyerUserId, stripeSubscriptionId, error: subError.message, stack: subError.stack });
-        }
-    }
-
-    console.log(`[Stripe Webhook] Checking conditions for referral processing: referralCodeUsed ('${referralCodeUsed}') and buyerUserId ('${buyerUserId}') must be present.`);
-    if (referralCodeUsed && buyerUserId) {
-      console.log(`[Stripe Webhook] Referral code "${referralCodeUsed}" found. Processing referral for buyer ${buyerUserId}...`);
-      const referrerUser = await userRepository.findByReferralCode(referralCodeUsed);
-
-      if (referrerUser) {
-        console.log(`[Stripe Webhook] Referrer found: UID ${referrerUser.uid}.`);
-        if (referrerUser.uid === buyerUserId) {
-          console.log(`[Stripe Webhook] Buyer ${buyerUserId} used their own referral code. No commission or referral increment.`);
-          await writeWebhookLog(eventId, 'self_referral_attempt', { referralCodeUsed, buyerUserId });
+            console.log(`[Stripe Webhook] Payment distributed via Orchestrator for session ${session.id}`);
+            await writeWebhookLog(eventId, 'payment_distributed_via_orchestrator', { creatorUid, affiliate1Uid, affiliate2Uid, policyId: referralPolicyId });
         } else {
-          console.log(`[Stripe Webhook] Referrer ${referrerUser.uid} is different from buyer ${buyerUserId}. Proceeding with referral logic.`);
-          await userRepository.incrementSuccessfulReferrals(referrerUser.uid);
-          console.log(`[Stripe Webhook] Incremented successful referrals for referrer ${referrerUser.uid}.`);
-          await writeWebhookLog(eventId, 'referrer_successful_referral_incremented', { referrerUid: referrerUser.uid });
-
-          const coursePurchasedEntity = await courseRepository.findById(courseIdPurchased);
-          if (coursePurchasedEntity) {
-            console.log(`[Stripe Webhook] Course purchased details: ID ${coursePurchasedEntity.id}, Name: ${coursePurchasedEntity.nombre}, Commission %: ${coursePurchasedEntity.comisionReferidoPorcentaje}`);
-            if (typeof coursePurchasedEntity.comisionReferidoPorcentaje === 'number' && coursePurchasedEntity.comisionReferidoPorcentaje > 0) {
-              console.log(`[Stripe Webhook] Course ${courseIdPurchased} has a commission of ${coursePurchasedEntity.comisionReferidoPorcentaje}%.`);
-              console.log(`[Stripe Webhook] Checking if purchased course (${courseIdPurchased}) matches promoted course (${promotedCourseId}).`);
-
-              if (courseIdPurchased === promotedCourseId) {
-                console.log(`[Stripe Webhook] Purchased course ${courseIdPurchased} MATCHES promoted course ${promotedCourseId}. Calculating commission.`);
-                const purchaseAmount = session.amount_total ? session.amount_total / 100 : 0;
-                const commissionAmount = purchaseAmount * (coursePurchasedEntity.comisionReferidoPorcentaje / 100);
-
-                const commissionData = {
-                  referenteUid: referrerUser.uid,
-                  referidoUid: buyerUserId,
-                  courseIdComprado: courseIdPurchased,
-                  nombreCursoComprado: coursePurchasedEntity.nombre,
-                  promotedCourseId: promotedCourseId,
-                  stripeSessionId: session.id,
-                  montoCompra: purchaseAmount,
-                  porcentajeComisionCurso: coursePurchasedEntity.comisionReferidoPorcentaje,
-                  montoComisionCalculado: commissionAmount,
-                  fechaCreacion: new Date().toISOString(),
-                  estadoPagoComision: 'pendiente' as 'pendiente' | 'pagada' | 'cancelada',
-                };
-                await adminDb!.collection(COMMISSIONS_COLLECTION).add(commissionData);
-                console.log(`[Stripe Webhook] Commission registered in '${COMMISSIONS_COLLECTION}' for referrer ${referrerUser.uid} for course ${courseIdPurchased}. Amount: ${commissionAmount.toFixed(2)}`);
-                await writeWebhookLog(eventId, 'commission_registered', commissionData);
-
-                await userRepository.updateReferrerBalance(referrerUser.uid, commissionAmount);
-                console.log(`[Stripe Webhook] Updated pending commission balance for referrer ${referrerUser.uid} by ${commissionAmount.toFixed(2)}.`);
-                await writeWebhookLog(eventId, 'referrer_balance_updated', { referrerUid: referrerUser.uid, amount: commissionAmount });
-              } else {
-                console.log(`[Stripe Webhook] Commission NOT registered: Purchased course ${courseIdPurchased} (Name: ${coursePurchasedEntity.nombre}) does NOT match promoted course ${promotedCourseId}. No commission for this specific promotion link.`);
-                await writeWebhookLog(eventId, 'commission_not_registered_course_mismatch', { courseIdPurchased, promotedCourseId, courseCommission: coursePurchasedEntity.comisionReferidoPorcentaje });
-              }
-            } else {
-              console.log(`[Stripe Webhook] Course ${courseIdPurchased} (Name: ${coursePurchasedEntity.nombre}) has no referral commission percentage defined (value: ${coursePurchasedEntity.comisionReferidoPorcentaje}). No commission registered.`);
-              await writeWebhookLog(eventId, 'commission_not_registered_no_course_commission_percentage', { courseIdPurchased, courseCommission: coursePurchasedEntity.comisionReferidoPorcentaje });
-            }
-          } else {
-            console.error(`[Stripe Webhook] CRITICAL: Course with ID ${courseIdPurchased} NOT FOUND in database, but was part of a paid session. Cannot process commission.`);
-            await writeWebhookLog(eventId, 'commission_error_course_not_found', { courseIdPurchased });
-          }
+            console.warn(`[Stripe Webhook] Could not process orchestrator revenue. CreatorUID: ${creatorUid}, AmountTotal: ${session.amount_total}`);
+            await writeWebhookLog(eventId, 'orchestrator_revenue_processing_skipped', { courseExists: !!coursePurchasedEntity, creatorUid, amount_total: session.amount_total });
         }
-      } else {
-        console.log(`[Stripe Webhook] Referrer not found for code "${referralCodeUsed}". No commission action.`);
-        await writeWebhookLog(eventId, 'referrer_not_found_for_code', { referralCodeUsed, buyerUserId });
-      }
-    } else {
-      console.log(`[Stripe Webhook] Skipping referral/commission processing: referralCodeUsed is '${referralCodeUsed}', buyerUserId is '${buyerUserId}'.`);
-      await writeWebhookLog(eventId, 'skipping_referral_no_code_or_buyer', { referralCodeUsed, buyerUserId });
+    } catch (revError: any) {
+        console.error(`[Stripe Webhook] Error processing payment orchestrator for course ${courseIdPurchased}:`, revError.message);
+        await writeWebhookLog(eventId, 'orchestrator_revenue_error', { courseId: courseIdPurchased, error: revError.message, stack: revError.stack });
     }
   } else {
     console.log(`[Stripe Webhook] Payment status is '${session.payment_status}', not 'paid'. No enrollment or commission action taken for session ${session.id}.`);
@@ -310,10 +221,8 @@ async function handleCustomerSubscriptionEvent(subscription: Stripe.Subscription
         await writeWebhookLog(eventId, `${eventType}_record_saved`, { userId, stripeSubscriptionId, courseId, status: subscription.status, dataStored: subscriptionDataToStore });
 
         if ((eventType === 'customer.subscription.created' || eventType === 'customer.subscription.updated') && (subscription.status === 'active' || subscription.status === 'trialing') && courseId) {
-            const userRepository = new FirebaseUserRepository();
-            const courseRepository = new FirebaseCourseRepository();
-            const enrollmentService = new EnrollmentService(userRepository, courseRepository);
-            await enrollmentService.enrollStudentToCourse(userId, courseId);
+            const enrollmentService = new EnrollmentService();
+            await enrollmentService.enrollStudentToAsset(userId, courseId, 'course', 'paid_subscription', stripeSubscriptionId);
             console.log(`[Stripe Webhook] ${eventType}: Ensured enrollment for user ${userId} to course ${courseId}.`);
             await writeWebhookLog(eventId, `${eventType}_enrollment_ensured`, { userId, courseId });
         }

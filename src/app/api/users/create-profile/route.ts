@@ -2,9 +2,9 @@
 // src/app/api/users/create-profile/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { FirebaseUserRepository } from '@/features/user/infrastructure/repositories/firebase-user.repository';
-import { UserService } from '@/features/user/application/user.service';
-import type { CreateUserDto } from '@/features/user/infrastructure/dto/create-user.dto';
+import { FirebaseUserRepository } from '@/backend/user/infrastructure/repositories/firebase-user.repository';
+import { UserService } from '@/backend/user/application/user.service';
+import type { CreateUserDto } from '@/backend/user/infrastructure/dto/create-user.dto';
 
 export async function POST(request: NextRequest) {
   try {

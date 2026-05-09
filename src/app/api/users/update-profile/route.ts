@@ -2,9 +2,9 @@
 // src/app/api/users/update-profile/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { FirebaseUserRepository } from '@/features/user/infrastructure/repositories/firebase-user.repository';
-import { UserService } from '@/features/user/application/user.service';
-import type { UpdateUserProfileDto } from '@/features/user/infrastructure/dto/update-user.dto';
+import { FirebaseUserRepository } from '@/backend/user/infrastructure/repositories/firebase-user.repository';
+import { UserService } from '@/backend/user/application/user.service';
+import type { UpdateUserProfileDto } from '@/backend/user/infrastructure/dto/update-user.dto';
 
 export async function POST(request: NextRequest) {
   try {

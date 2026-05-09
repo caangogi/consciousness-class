@@ -3,7 +3,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import type { UserProfile } from '@/contexts/AuthContext';
+import { FirebaseEnrollmentRepository } from '@/backend/enrollment/infrastructure/repositories/firebase-enrollment.repository';
+import { resolveUserProfile } from '@/lib/community/resolve-user-profile';
+
+const enrollmentRepo = new FirebaseEnrollmentRepository();
 
 interface RouteContext {
   params: { courseId: string; moduleId: string; lessonId: string };
@@ -87,17 +90,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
     const userId = decodedToken.uid;
 
-    const userDocSnap = await adminDb.collection('usuarios').doc(userId).get();
     const courseDocSnap = await adminDb.collection('cursos').doc(courseId).get();
-
-    if (!userDocSnap.exists || !courseDocSnap.exists) {
-        return NextResponse.json({ error: 'User or Course not found' }, { status: 404 });
+    if (!courseDocSnap.exists) {
+        return NextResponse.json({ error: 'Course not found' }, { status: 404 });
     }
-    const userData = userDocSnap.data() as UserProfile;
     const courseData = courseDocSnap.data();
 
     const isCreator = courseData?.creadorUid === userId;
-    const isEnrolled = userData.cursosInscritos?.includes(courseId);
+    const isEnrolled = await enrollmentRepo.isEnrolled(userId, courseId);
 
     if (!isCreator && !isEnrolled) {
         return NextResponse.json({ error: 'Forbidden: User must be enrolled or be the course creator to comment.' }, { status: 403 });
@@ -114,8 +114,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         return NextResponse.json({ error: 'Bad Request: Invalid parentId format.' }, { status: 400 });
     }
 
-    const userDisplayName = userData.displayName || userData.nombre || "Usuario Anónimo";
-    const userPhotoURL = userData.photoURL || null;
+    const { displayName: userDisplayName, photoURL: userPhotoURL } = await resolveUserProfile(userId);
 
     const newCommentRef = adminDb
       .collection('cursos').doc(courseId)

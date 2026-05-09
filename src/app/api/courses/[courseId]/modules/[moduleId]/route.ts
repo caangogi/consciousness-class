@@ -1,10 +1,10 @@
 // src/app/api/courses/[courseId]/modules/[moduleId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import { ModuleService } from '@/features/course/application/module.service';
-import { FirebaseModuleRepository } from '@/features/course/infrastructure/repositories/firebase-module.repository';
-import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
-import type { UpdateModuleDto } from '@/features/course/infrastructure/dto/update-module.dto';
+import { ModuleService } from '@/backend/course/application/module.service';
+import { FirebaseModuleRepository } from '@/backend/course/infrastructure/repositories/firebase-module.repository';
+import { FirebaseCourseRepository } from '@/backend/course/infrastructure/repositories/firebase-course.repository';
+import type { UpdateModuleDto } from '@/backend/course/infrastructure/dto/update-module.dto';
 
 interface RouteParams {
   params: { courseId: string; moduleId: string };

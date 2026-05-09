@@ -1,17 +1,17 @@
 
 // src/app/api/learn/course-structure/[courseId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { CourseService } from '@/features/course/application/course.service';
-import { ModuleService } from '@/features/course/application/module.service';
-import { LessonService } from '@/features/course/application/lesson.service';
-import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
-import { FirebaseModuleRepository } from '@/features/course/infrastructure/repositories/firebase-module.repository';
-import { FirebaseLessonRepository } from '@/features/course/infrastructure/repositories/firebase-lesson.repository';
-import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
-import type { LessonProperties } from '@/features/course/domain/entities/lesson.entity';
+import { CourseService } from '@/backend/course/application/course.service';
+import { ModuleService } from '@/backend/course/application/module.service';
+import { LessonService } from '@/backend/course/application/lesson.service';
+import { FirebaseCourseRepository } from '@/backend/course/infrastructure/repositories/firebase-course.repository';
+import { FirebaseModuleRepository } from '@/backend/course/infrastructure/repositories/firebase-module.repository';
+import { FirebaseLessonRepository } from '@/backend/course/infrastructure/repositories/firebase-lesson.repository';
+import type { ModuleProperties } from '@/backend/course/domain/entities/module.entity';
+import type { LessonProperties } from '@/backend/course/domain/entities/lesson.entity';
 import { adminDb } from '@/lib/firebase/admin'; 
-import type { UserProperties } from '@/features/user/domain/entities/user.entity';
-import type { CourseProperties as DomainCourseProperties } from '@/features/course/domain/entities/course.entity';
+import type { UserProperties } from '@/backend/user/domain/entities/user.entity';
+import type { CourseProperties as DomainCourseProperties } from '@/backend/course/domain/entities/course.entity';
 
 interface ModuleWithLessons extends ModuleProperties {
   lessons: LessonProperties[];

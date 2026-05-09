@@ -1,11 +1,11 @@
 // src/app/api/courses/[courseId]/modules/[moduleId]/lessons/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import { LessonService } from '@/features/course/application/lesson.service';
-import { FirebaseLessonRepository } from '@/features/course/infrastructure/repositories/firebase-lesson.repository';
-import { FirebaseModuleRepository } from '@/features/course/infrastructure/repositories/firebase-module.repository';
-import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
-import type { CreateLessonDto } from '@/features/course/infrastructure/dto/create-lesson.dto';
+import { LessonService } from '@/backend/course/application/lesson.service';
+import { FirebaseLessonRepository } from '@/backend/course/infrastructure/repositories/firebase-lesson.repository';
+import { FirebaseModuleRepository } from '@/backend/course/infrastructure/repositories/firebase-module.repository';
+import { FirebaseCourseRepository } from '@/backend/course/infrastructure/repositories/firebase-course.repository';
+import type { CreateLessonDto } from '@/backend/course/infrastructure/dto/create-lesson.dto';
 
 interface RouteContext {
   params: { courseId: string; moduleId: string };

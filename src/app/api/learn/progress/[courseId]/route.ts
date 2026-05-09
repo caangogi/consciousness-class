@@ -2,8 +2,8 @@
 // src/app/api/learn/progress/[courseId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import { UserCourseProgressService } from '@/features/progress/application/user-course-progress.service';
-import { FirebaseUserCourseProgressRepository } from '@/features/progress/infrastructure/repositories/firebase-user-course-progress.repository';
+import { UserCourseProgressService } from '@/backend/progress/application/user-course-progress.service';
+import { FirebaseUserCourseProgressRepository } from '@/backend/progress/infrastructure/repositories/firebase-user-course-progress.repository';
 
 interface RouteContext { 
   params: { courseId: string };

@@ -1,9 +1,7 @@
-
-// src/app/api/checkout/create-session/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
-import { FirebaseCourseRepository } from '@/features/course/infrastructure/repositories/firebase-course.repository';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import Stripe from 'stripe';
+import { CatalogItemEntity } from '@/backend/catalog/domain/entities/catalog-item.entity';
 
 // Safely initialize Stripe
 let stripe: Stripe | null = null;
@@ -30,75 +28,103 @@ export async function POST(request: NextRequest) {
     try {
       decodedToken = await adminAuth.verifyIdToken(idToken);
     } catch (error: any) {
-      console.error('Error verifying ID token in /api/checkout/create-session:', error);
+      console.error('Error verifying ID token in checkout:', error);
       return NextResponse.json({ error: 'Unauthorized: Invalid ID token', details: error.message }, { status: 401 });
     }
     const userId = decodedToken.uid;
     const userEmail = decodedToken.email;
 
-    const { courseId, referralCode, promotedCourseId } = await request.json();
-    console.log('[API /checkout/create-session] Received payload:', { courseId, referralCode, promotedCourseId });
+    // Accept both for backwards compatibility
+    const { catalogItemId, courseId, referralCode, bookingId } = await request.json();
+    const itemId = catalogItemId || courseId;
+    
+    console.log('[API /checkout/create-session] Payload:', { itemId, referralCode, bookingId });
 
-    if (!courseId || typeof courseId !== 'string') {
-      return NextResponse.json({ error: 'Bad Request: Missing or invalid courseId.' }, { status: 400 });
+    if (!itemId || typeof itemId !== 'string') {
+      return NextResponse.json({ error: 'Bad Request: Missing or invalid catalogItemId/courseId.' }, { status: 400 });
     }
 
-    const courseRepository = new FirebaseCourseRepository();
-    const course = await courseRepository.findById(courseId);
+    // 1. Fetch from Unified Catalog
+    const catalogDoc = await adminDb.collection('catalog_items').doc(itemId).get();
+    
+    if (!catalogDoc.exists) {
+      return NextResponse.json({ error: 'Product not found in catalog.' }, { status: 404 });
+    }
+    
+    const catalogItem = catalogDoc.data() as any;
 
-    if (!course) {
-      return NextResponse.json({ error: 'Course not found.' }, { status: 404 });
+    if (catalogItem.status !== 'published') {
+      return NextResponse.json({ error: 'Product not available for purchase.' }, { status: 403 });
     }
-    if (course.estado !== 'publicado') {
-      return NextResponse.json({ error: 'Course not available for purchase.' }, { status: 403 });
-    }
-    if (course.precio <= 0) { 
-      return NextResponse.json({ error: 'This course cannot be purchased this way (e.g., free or subscription-based).' }, { status: 400 });
+    if (catalogItem.price <= 0) { 
+      return NextResponse.json({ error: 'This product cannot be purchased this way (e.g., free or subscription-based).' }, { status: 400 });
     }
 
     const origin = request.headers.get('origin') || 'http://localhost:9003'; 
 
+    // 2. Base Metadata
     const metadata: Stripe.MetadataParam = {
-        courseId: course.id,
-        userId: userId,
+        catalogItemId: catalogItem.id,
+        assetReferenceId: catalogItem.assetReferenceId,
+        assetType: catalogItem.assetType,
+        creatorUid: catalogItem.creatorUid,
+        buyerUid: userId,
     };
 
-    if (referralCode) {
-        metadata.referralCodeUsed = referralCode;
-        console.log(`[API /checkout/create-session] Adding referralCodeUsed to metadata: ${referralCode}`);
+    if (bookingId) {
+      metadata.bookingId = bookingId;
     }
-    if (promotedCourseId) {
-        metadata.promotedCourseId = promotedCourseId;
-        console.log(`[API /checkout/create-session] Adding promotedCourseId to metadata: ${promotedCourseId}`);
+
+    // 3. Referral Metadata resolving
+    if (referralCode && catalogItem.referralPolicyId) {
+      metadata.referralPolicyId = catalogItem.referralPolicyId;
+
+      const usersSnap = await adminDb.collection('usuarios').where('referralCodeGenerated', '==', referralCode).limit(1).get();
+      if (!usersSnap.empty) {
+        const affiliate1Uid = usersSnap.docs[0].id;
+        
+        // Prevent self-referral
+        if (affiliate1Uid !== userId) {
+          metadata.affiliate1Uid = affiliate1Uid;
+
+          const affiliate1Data = usersSnap.docs[0].data();
+          if (affiliate1Data.referredBy) {
+            const parentAffSnap = await adminDb.collection('usuarios').where('referralCodeGenerated', '==', affiliate1Data.referredBy).limit(1).get();
+            if (!parentAffSnap.empty) {
+              metadata.affiliate2Uid = parentAffSnap.docs[0].id;
+            }
+          }
+        }
+      }
     }
     
-    console.log('[API /checkout/create-session] Final metadata for Stripe session:', metadata);
+    console.log('[API /checkout/create-session] Final metadata:', metadata);
 
+    // 4. Create Stripe Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
-            currency: 'eur', 
+            currency: catalogItem.currency || 'eur', 
             product_data: {
-              name: course.nombre,
-              description: course.descripcionCorta,
-              images: course.imagenPortadaUrl ? [course.imagenPortadaUrl] : [],
+              name: catalogItem.publicName,
+              description: `Acceso a ${catalogItem.assetType}`,
+              images: catalogItem.coverUrl ? [catalogItem.coverUrl] : [],
             },
-            unit_amount: Math.round(course.precio * 100), 
+            unit_amount: Math.round(catalogItem.price * 100), 
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
-      success_url: `${origin}/payment/success?session_id={CHECKOUT_SESSION_ID}&courseId=${courseId}`,
-      cancel_url: `${origin}/courses/${courseId}?canceled=true`,
+      success_url: `${origin}/payment/success?session_id={CHECKOUT_SESSION_ID}&catalogItemId=${catalogItem.id}`,
+      cancel_url: `${origin}/products/${catalogItem.id}?canceled=true`,
       customer_email: userEmail, 
       metadata: metadata,
     });
 
     if (!session.id || !session.url) {
-      console.error("Stripe session ID or URL is null or undefined after creation.");
       throw new Error("Failed to create Stripe checkout session ID or URL.");
     }
 
@@ -106,17 +132,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error creating Stripe checkout session:', error);
-    let errorMessage = 'Internal Server Error';
-    let errorDetails = 'An unexpected error occurred while creating the checkout session.';
-    
-    if (error instanceof Error) {
-      errorDetails = error.message;
-      errorMessage = error.name === 'Error' ? 'Checkout Session Error' : error.name;
-    }
-    
-    const stack = process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined;
-    return NextResponse.json({ error: errorMessage, details: errorDetails, stack }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
 }
-
-    

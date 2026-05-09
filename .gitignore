@@ -39,7 +39,14 @@ next-env.d.ts
 
 .genkit/*
 .env*
+!.envrc.example
 
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+# project isolation (per-project tooling configs — NEVER commit)
+.envrc.local
+.gh-config/
+.gcloud/
+.direnv/

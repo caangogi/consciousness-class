@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "apple-ui-design": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "30e2a14deceef915fad0b7c64446829fe7ebf557bdbc00241ef1b00acc46bd81"
+    }
+  }
+}

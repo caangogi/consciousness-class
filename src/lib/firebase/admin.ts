@@ -1,9 +1,9 @@
 
 import admin from 'firebase-admin';
 
-let adminAuth: admin.auth.Auth | null = null;
-let adminDb: admin.firestore.Firestore | null = null;
-let adminStorage: admin.storage.Storage | null = null;
+let adminAuth: admin.auth.Auth = null as any;
+let adminDb: admin.firestore.Firestore = null as any;
+let adminStorage: admin.storage.Storage = null as any;
 
 if (!admin.apps.length) {
   try {
@@ -16,9 +16,9 @@ if (!admin.apps.length) {
         'CRITICAL: Firebase Admin SDK init failed: Missing required env vars (FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY).'
       );
       // Early exit if essential vars are missing
-      adminAuth = null;
-      adminDb = null;
-      adminStorage = null;
+      adminAuth = null as any;
+      adminDb = null as any;
+      adminStorage = null as any;
     } else {
       let processedKey = privateKeyFromEnv.trim();
       if (processedKey.length !== privateKeyFromEnv.length) {
@@ -72,6 +72,7 @@ if (!admin.apps.length) {
       
       admin.initializeApp({
         credential: admin.credential.cert(credentialConfig),
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       });
       
       console.log('Firebase Admin SDK initialized successfully. Project ID used: ' + projectIdFromEnv);

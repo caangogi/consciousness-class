@@ -1,4 +1,3 @@
-
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -9,10 +8,17 @@ export default {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
       fontFamily: {
-        body: ['var(--font-pt-sans)', 'sans-serif'],
-        headline: ['var(--font-poppins)', 'serif'],
+        body: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"Segoe UI"', 'sans-serif'],
+        headline: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"Segoe UI"', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
@@ -56,52 +62,58 @@ export default {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
+        brand: {
+          chambray: '#7A9CB3',
+          terracotta: '#AD7556',
+          sandstone: '#DCCFB8',
+          muslin: '#F1EFE6',
+          clove: '#53443D',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
-        xl: 'calc(var(--radius) + 4px)', // Added for potentially larger rounding
+        xl: 'calc(var(--radius) + 4px)',
         '2xl': 'calc(var(--radius) + 8px)',
         '3xl': 'calc(var(--radius) + 16px)',
-        '4xl': 'calc(var(--radius) + 24px)', // For pill-like buttons
+        '4xl': 'calc(var(--radius) + 24px)',
         full: '9999px',
+      },
+      spacing: {
+        'xs': '4px',
+        'sm': '8px',
+        'md': '16px',
+        'lg': '24px',
+        'xl': '48px',
+        '2xl': '96px',
       },
       keyframes: {
         'accordion-down': {
-          from: {
-            height: '0',
-          },
-          to: {
-            height: 'var(--radix-accordion-content-height)',
-          },
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
         },
         'accordion-up': {
-          from: {
-            height: 'var(--radix-accordion-content-height)',
-          },
-          to: {
-            height: '0',
-          },
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
         },
-        'fadeInUp': {
+        'fadeUp': {
           '0%': { opacity: '0', transform: 'translateY(20px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         'backgroundShine': {
-          'from': { backgroundPosition: '0 0' },
-          'to': { backgroundPosition: '-200% 0' },
+          from: { backgroundPosition: '0 0' },
+          to: { backgroundPosition: '-200% 0' },
         }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'fadeInUp': 'fadeInUp 0.5s ease-out forwards',
+        'fadeUp': 'fadeUp 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
         'backgroundShine': 'backgroundShine 2s linear infinite',
       },
       boxShadow: {
-        'soft-xl': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 20px 50px -12px rgba(0, 0, 0, 0.07)',
-        'soft-2xl': '0 15px 35px -10px rgba(0, 0, 0, 0.06), 0 30px 70px -15px rgba(0, 0, 0, 0.08)',
+        'apple': '0 4px 24px rgba(0,0,0,0.06)',
       }
     },
   },

@@ -15,12 +15,16 @@ export class ReferralService {
     affiliateTier1AccountId?: string,
     affiliateTier2AccountId?: string
   ): FundSplit[] {
+    if (amount <= 0) {
+      throw new Error('Amount must be greater than zero — free or invalid amounts cannot flow through splits');
+    }
+
     const splits: FundSplit[] = [];
     let remainingAmount = amount;
 
-    // 1. Calculate Tier 1 Affiliate (if exists)
+    // 1. Tier 1 Affiliate (if exists). Round to 2 decimals to avoid sub-cent drift.
     if (affiliateTier1AccountId && policy.tier1Percentage > 0) {
-      const tier1Amount = (amount * policy.tier1Percentage) / 100;
+      const tier1Amount = round2((amount * policy.tier1Percentage) / 100);
       splits.push({
         destinationAccountId: affiliateTier1AccountId,
         amount: tier1Amount,
@@ -30,10 +34,9 @@ export class ReferralService {
       remainingAmount -= tier1Amount;
     }
 
-    // 2. Calculate Tier 2 Affiliate (if exists and allowed)
-    // Note: Tier 2 is only possible if there is a Tier 1 who referred the buyer.
+    // 2. Tier 2 Affiliate (only valid if there is a Tier 1).
     if (affiliateTier1AccountId && affiliateTier2AccountId && policy.tier2Percentage > 0) {
-      const tier2Amount = (amount * policy.tier2Percentage) / 100;
+      const tier2Amount = round2((amount * policy.tier2Percentage) / 100);
       splits.push({
         destinationAccountId: affiliateTier2AccountId,
         amount: tier2Amount,
@@ -43,11 +46,13 @@ export class ReferralService {
       remainingAmount -= tier2Amount;
     }
 
-    // 3. The remainder goes to the Creator
-    if (remainingAmount > 0) {
+    // 3. Creator absorbs the rounding residual so the sum equals `amount` exactly.
+    //    Round the residual to 2 decimals to clean up tiny float artifacts (e.g. 59.989999...).
+    const creatorAmount = round2(remainingAmount);
+    if (creatorAmount > 0) {
       splits.push({
         destinationAccountId: creatorAccountId,
-        amount: remainingAmount,
+        amount: creatorAmount,
         currency,
         reason: 'creator_payout',
       });
@@ -55,4 +60,9 @@ export class ReferralService {
 
     return splits;
   }
+}
+
+/** Round to 2 decimals (half-up). Domain values are EUR/USD-like currencies. */
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
 }

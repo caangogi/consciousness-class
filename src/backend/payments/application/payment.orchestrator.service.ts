@@ -32,6 +32,21 @@ export class PaymentOrchestratorService {
   async distributeStripePayment(data: StripePaymentData): Promise<void> {
     const { grossAmount, currency, platformFeePercentage, policy, creatorUid, affiliate1Uid, affiliate2Uid } = data;
 
+    // 0. Validate that the combined commission share does not exceed the gross.
+    //    The policy entity already validates tier1+tier2 ≤ 100, but it is
+    //    unaware of the platform fee — a "valid" 90% policy combined with a
+    //    20% platform fee would still exceed 100% and produce a negative
+    //    creator share. Fail loud BEFORE touching the repo (atomicity).
+    if (policy) {
+      const combinedShare = (policy.tier1Percentage + policy.tier2Percentage) / 100 + platformFeePercentage;
+      if (combinedShare > 1 + Number.EPSILON) {
+        throw new Error(
+          `Combined commission share (tier1+tier2+platform = ${(combinedShare * 100).toFixed(2)}%) ` +
+          `must not exceed 100%`
+        );
+      }
+    }
+
     // 1. Calculate Net Amount after Platform Fee
     const platformFee = grossAmount * platformFeePercentage;
     const netAmount = grossAmount - platformFee;

@@ -9,6 +9,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { PaymentOrchestratorService } from '@/backend/payments/application/payment.orchestrator.service';
 import { ReferralService } from '@/backend/referrals/application/referral.service';
 import { FirebaseReferralPolicyRepository } from '@/backend/referrals/infrastructure/repositories/firebase-referral-policy.repository';
+import { ProcessedStripeEventEntity } from '@/backend/payments/domain/entities/processed-stripe-event.entity';
+import { FirebaseProcessedStripeEventRepository } from '@/backend/payments/infrastructure/repositories/firebase-processed-stripe-event.repository';
 
 const LOGS_COLLECTION = 'webhookLogs';
 const COMMISSIONS_COLLECTION = 'comisionesRegistradas';
@@ -356,6 +358,29 @@ export async function POST(request: NextRequest) {
   const eventId = event.id;
   await writeWebhookLog(eventId, 'received_and_verified_event', { type: event.type, id: event.id });
 
+  // F1.4b · idempotency guard. Atomic insert into processedStripeEvents
+  // (using Firestore .create()) gives first-writer-wins under concurrent
+  // re-deliveries. If markProcessed returns false, this event has already
+  // been processed — return 200 OK so Stripe stops retrying.
+  try {
+    const idempotencyRepo = new FirebaseProcessedStripeEventRepository();
+    const marker = ProcessedStripeEventEntity.create({
+      id: event.id,
+      eventType: event.type,
+    });
+    const isFirstTime = await idempotencyRepo.markProcessed(marker);
+    if (!isFirstTime) {
+      console.log(`[Stripe Webhook] Duplicate event ${event.id} (${event.type}) — skipping reprocessing.`);
+      await writeWebhookLog(eventId, 'duplicate_event_skipped', { type: event.type });
+      return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
+    }
+  } catch (idemErr: any) {
+    // If the idempotency check itself fails, we MUST 5xx so Stripe retries
+    // — better to retry than to silently drop a payment.
+    console.error(`[Stripe Webhook] Idempotency check failed for event ${event.id}:`, idemErr);
+    await writeWebhookLog(eventId, 'idempotency_check_failed', { type: event.type, error: idemErr.message });
+    return NextResponse.json({ error: 'Idempotency check failed', details: idemErr.message }, { status: 503 });
+  }
 
   try {
     switch (event.type) {

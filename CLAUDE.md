@@ -98,6 +98,13 @@ Path alias: `@/*` → `src/*` (see [tsconfig.json](tsconfig.json)).
 
 Subscription products and one-shot prices are managed by services (see `manageStripeProductAndPrice` in `course.service.ts`). The webhook handler is at [src/app/api/webhooks/stripe/route.ts](src/app/api/webhooks/stripe/route.ts); checkout sessions are created at `src/app/api/checkout/create-session` and `create-subscription-session`.
 
+## Logging
+
+- New code MUST use the structured logger at [src/lib/logger.ts](src/lib/logger.ts) (`import { logger } from '@/lib/logger'`). It emits Cloud Logging-compatible single-line JSON in production and pretty text in dev.
+- Levels: `logger.debug`, `logger.info`, `logger.warn`, `logger.error`. Each takes `(message: string, context?: Record<string, unknown>)`.
+- `Error` instances passed in context are auto-serialized (name + message + stack + cause).
+- Pre-existing `console.*` calls (especially in `src/app/api/webhooks/stripe/route.ts`) will be migrated incrementally — don't sweep them in unrelated PRs.
+
 ## Conventions worth knowing
 
 - The codebase mixes Spanish (domain language: `nombre`, `precio`, `tipoAcceso`, `cursosInscritos`, `inscripciones`) and English (technical terms). Keep new domain fields in Spanish to match — consistency matters more than language preference.

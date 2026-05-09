@@ -85,6 +85,7 @@ The "dup" is in fact the *target architecture* (ledger pattern, source-of-truth 
 
 ## References
 
+- **Operational follow-up (sprint plan):** [`documentation/prds/wallet-ledger-migration.md`](../prds/wallet-ledger-migration.md) — full PRD with 5 phases (W1–W5), §3 PM decisions to lock, rollback plan, ops runbook
 - Roadmap viewer: `documentation/index.html` § Fase 0
 - Testing strategy: `documentation/testing-strategy.md` (TDD-strict applies to the eventual migration code)
 - Idempotency entity introduced in F1.4b: `src/backend/payments/domain/entities/processed-stripe-event.entity.ts`

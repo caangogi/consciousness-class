@@ -1,4 +1,12 @@
-export type BookingStatus = 'pending_payment' | 'scheduled' | 'completed' | 'cancelled';
+export type BookingStatus =
+  | 'pending_payment'
+  | 'scheduled'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show';
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const NO_SHOW_GRACE_MS = 30 * 60 * 1000;
 
 export interface BookingProperties {
   id: string;
@@ -11,8 +19,9 @@ export interface BookingProperties {
   endTime: Date | string;
   status: BookingStatus;
   meetLink?: string | null;
-  paymentSessionId?: string | null; // For tracking unpaid bookings
+  paymentSessionId?: string | null;
   notes?: string | null;
+  refundEligible?: boolean | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -30,6 +39,7 @@ export class BookingEntity {
   public meetLink: string | null;
   public paymentSessionId: string | null;
   public notes: string | null;
+  public refundEligible: boolean | null;
   public createdAt: Date;
   public updatedAt: Date;
 
@@ -46,11 +56,16 @@ export class BookingEntity {
     this.meetLink = properties.meetLink || null;
     this.paymentSessionId = properties.paymentSessionId || null;
     this.notes = properties.notes || null;
+    this.refundEligible = properties.refundEligible ?? null;
     this.createdAt = new Date(properties.createdAt);
     this.updatedAt = new Date(properties.updatedAt);
   }
 
-  static create(input: Omit<BookingProperties, 'id' | 'createdAt' | 'updatedAt' | 'status'> & { status?: BookingStatus }): BookingEntity {
+  static create(
+    input: Omit<BookingProperties, 'id' | 'createdAt' | 'updatedAt' | 'status'> & {
+      status?: BookingStatus;
+    }
+  ): BookingEntity {
     const now = new Date();
     return new BookingEntity({
       ...input,
@@ -61,13 +76,65 @@ export class BookingEntity {
     });
   }
 
+  /** pending_payment → scheduled. Throws from any other state. */
   confirm(): void {
+    if (this.status !== 'pending_payment') {
+      throw new Error(
+        `Illegal transition: cannot confirm a booking in status '${this.status}'`
+      );
+    }
     this.status = 'scheduled';
-    this.updatedAt = new Date();
+    this.touch();
   }
 
-  cancel(): void {
+  /**
+   * pending_payment → cancelled (refundEligible stays null, no payment).
+   * scheduled       → cancelled, refundEligible computed vs 24h window.
+   * Throws from completed / cancelled / no_show.
+   */
+  cancel(now: Date): void {
+    if (this.status !== 'pending_payment' && this.status !== 'scheduled') {
+      throw new Error(
+        `Illegal transition: cannot cancel a booking in status '${this.status}'`
+      );
+    }
+    if (this.status === 'scheduled') {
+      const msUntilStart = this.startTime.getTime() - now.getTime();
+      this.refundEligible = msUntilStart > ONE_DAY_MS;
+    }
     this.status = 'cancelled';
+    this.touch();
+  }
+
+  /** scheduled → completed. Only after endTime. Throws otherwise. */
+  complete(now: Date): void {
+    if (this.status !== 'scheduled') {
+      throw new Error(
+        `Illegal transition: cannot complete a booking in status '${this.status}'`
+      );
+    }
+    if (now.getTime() < this.endTime.getTime()) {
+      throw new Error('Cannot complete a booking before endTime');
+    }
+    this.status = 'completed';
+    this.touch();
+  }
+
+  /** scheduled → no_show. Only ≥30min after endTime (grace period). */
+  markNoShow(now: Date): void {
+    if (this.status !== 'scheduled') {
+      throw new Error(
+        `Illegal transition: cannot mark no_show a booking in status '${this.status}'`
+      );
+    }
+    if (now.getTime() < this.endTime.getTime() + NO_SHOW_GRACE_MS) {
+      throw new Error('Cannot mark no_show within the 30-minute grace period after endTime');
+    }
+    this.status = 'no_show';
+    this.touch();
+  }
+
+  private touch(): void {
     this.updatedAt = new Date();
   }
 
@@ -85,6 +152,7 @@ export class BookingEntity {
       meetLink: this.meetLink,
       paymentSessionId: this.paymentSessionId,
       notes: this.notes,
+      refundEligible: this.refundEligible,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
     };

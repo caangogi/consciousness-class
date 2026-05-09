@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Consciousness Class · Hoja de Ruta</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bone:        #F4EFE6;
+    --bone-soft:   #FAF7EF;
+    --olive:       #6B7A4F;
+    --olive-dark:  #4A5638;
+    --olive-soft:  rgba(107,122,79,0.10);
+    --charcoal:    #2A2A2A;
+    --terracotta:  #C66A3D;
+    --terracotta-soft: rgba(198,106,61,0.12);
+    --muted:       #8A8578;
+    --line:        rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+    background: var(--bone);
+    color: var(--charcoal);
+    line-height: 1.55;
+    font-size: 15px;
+  }
+  .layout { display: flex; min-height: 100vh; }
+  nav.sidebar {
+    width: 260px;
+    background: var(--charcoal);
+    color: var(--bone);
+    padding: 28px 20px;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  nav.sidebar h1 {
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--terracotta);
+    margin: 0 0 6px;
+    font-weight: 600;
+  }
+  nav.sidebar .subtitle {
+    font-size: 12px;
+    opacity: 0.5;
+    margin-bottom: 28px;
+  }
+  nav.sidebar .group-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.4;
+    margin: 22px 0 6px;
+  }
+  nav.sidebar a {
+    display: block;
+    color: var(--bone);
+    text-decoration: none;
+    padding: 7px 10px;
+    border-radius: 6px;
+    opacity: 0.7;
+    font-size: 14px;
+    transition: all 120ms ease;
+    cursor: pointer;
+  }
+  nav.sidebar a:hover { opacity: 1; background: rgba(255,255,255,0.05); }
+  nav.sidebar a.active {
+    opacity: 1;
+    background: var(--terracotta-soft);
+    color: var(--terracotta);
+  }
+  main {
+    flex: 1;
+    padding: 48px 64px 96px;
+    max-width: 1180px;
+  }
+  h1.page-title {
+    font-size: 32px;
+    margin: 0 0 8px;
+    color: var(--olive-dark);
+    letter-spacing: -0.01em;
+  }
+  .page-tagline { color: var(--muted); margin-bottom: 32px; font-size: 16px; }
+  h2 {
+    font-size: 22px;
+    color: var(--olive-dark);
+    margin: 40px 0 12px;
+    letter-spacing: -0.01em;
+  }
+  h3 { color: var(--olive-dark); font-size: 17px; margin-top: 24px; }
+  p, li { color: var(--charcoal); }
+  a.inline { color: var(--terracotta); text-decoration: none; }
+  a.inline:hover { text-decoration: underline; }
+  code {
+    background: var(--olive-soft);
+    color: var(--olive-dark);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+    font-size: 13px;
+  }
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin: 14px 0 22px;
+    font-size: 14px;
+  }
+  th {
+    background: var(--olive-dark);
+    color: var(--bone);
+    text-align: left;
+    padding: 12px 14px;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+  td { padding: 12px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+  tr:hover td { background: var(--bone-soft); }
+  .badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .b-must  { background: var(--terracotta); color: white; }
+  .b-should { background: var(--olive); color: white; }
+  .b-could { background: #C9C2B0; color: var(--charcoal); }
+  .b-status-todo    { background: rgba(0,0,0,0.06); color: var(--muted); }
+  .b-status-doing   { background: var(--terracotta-soft); color: var(--terracotta); }
+  .b-status-done    { background: rgba(107,122,79,0.18); color: var(--olive-dark); }
+  .b-blocked        { background: #f4d6d6; color: #8b3838; }
+  .phase-card {
+    background: white;
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin: 18px 0;
+    border-left: 4px solid var(--olive);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .phase-card.fase-0 { border-color: var(--terracotta); }
+  .phase-card .phase-meta { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  .mermaid {
+    background: white;
+    border-radius: 14px;
+    padding: 28px;
+    margin: 18px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    overflow-x: auto;
+  }
+  section { display: none; }
+  section.active { display: block; }
+  .pill-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    margin: 14px 0 22px;
+  }
+  .pill {
+    background: white;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .pill .label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .pill .value { font-size: 22px; font-weight: 600; color: var(--olive-dark); margin-top: 4px; }
+  .pill .hint  { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .callout {
+    background: var(--terracotta-soft);
+    border-left: 3px solid var(--terracotta);
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 14px 0;
+    color: var(--charcoal);
+  }
+  .callout strong { color: var(--terracotta); }
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 12px 0 18px;
+    flex-wrap: wrap;
+  }
+  .filter-bar input, .filter-bar select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: white;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .filter-bar input:focus, .filter-bar select:focus {
+    outline: 2px solid var(--olive);
+    outline-offset: 1px;
+  }
+  ul.deps { margin: 4px 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px; }
+  ul.deps li {
+    background: var(--olive-soft);
+    color: var(--olive-dark);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'SF Mono', monospace;
+  }
+  .branch {
+    font-family: 'SF Mono', monospace;
+    font-size: 12px;
+    color: var(--olive-dark);
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar">
+    <h1>Consciousness Class</h1>
+    <div class="subtitle">Hoja de ruta · v1</div>
+
+    <div class="group-label">Visión</div>
+    <a class="nav-link active" data-target="overview">Resumen ejecutivo</a>
+    <a class="nav-link" data-target="roadmap">Roadmap visual</a>
+    <a class="nav-link" data-target="dependencies">Grafo de dependencias</a>
+
+    <div class="group-label">Fases</div>
+    <a class="nav-link" data-target="fase-0">Fase 0 · Saneamiento</a>
+    <a class="nav-link" data-target="fase-4-1">Fase 4.1 · Email</a>
+    <a class="nav-link" data-target="fase-5-1">Fase 5.1 · Booking close</a>
+    <a class="nav-link" data-target="fase-3">Fase 3 · Referidos + Connect</a>
+    <a class="nav-link" data-target="fase-4-2">Fase 4.2 · CRM + WhatsApp</a>
+    <a class="nav-link" data-target="fase-6-0">Fase 6.0 · Plataforma AI</a>
+    <a class="nav-link" data-target="fase-6-1">Fase 6.1 · Journaling</a>
+    <a class="nav-link" data-target="fase-6-2">Fase 6.2 · RAG Companion</a>
+    <a class="nav-link" data-target="fase-6-3">Fase 6.3 · Agente Secretarial</a>
+
+    <div class="group-label">Operaciones</div>
+    <a class="nav-link" data-target="tareas">Tareas (deps)</a>
+    <a class="nav-link" data-target="agentes">Agentes paralelos</a>
+    <a class="nav-link" data-target="aislamiento">Aislamiento entornos</a>
+
+    <div class="group-label">Producto</div>
+    <a class="nav-link" data-target="decisiones">Decisiones tomadas</a>
+    <a class="nav-link" data-target="metricas">Métricas norte</a>
+    <a class="nav-link" data-target="riesgos">Riesgos</a>
+    <a class="nav-link" data-target="missing">Falta cubrir</a>
+  </nav>
+
+  <main>
+    <!-- ============= OVERVIEW ============= -->
+    <section id="overview" class="active">
+      <h1 class="page-title">Hoja de Ruta · Consciousness Class</h1>
+      <div class="page-tagline">Plataforma AI-First para creadores holísticos · Plan de implementación de fases 3 → 6 + saneamiento.</div>
+
+      <div class="pill-grid">
+        <div class="pill"><div class="label">Fases pendientes</div><div class="value">5</div><div class="hint">incl. Fase 0 saneamiento</div></div>
+        <div class="pill"><div class="label">Tareas atómicas</div><div class="value" id="task-count">—</div><div class="hint">trackeables · ramificables</div></div>
+        <div class="pill"><div class="label">Tracks paralelizables</div><div class="value">3</div><div class="hint">tras Fase 0</div></div>
+        <div class="pill"><div class="label">Decisiones cerradas</div><div class="value">5/5</div><div class="hint">listo para PRD</div></div>
+      </div>
+
+      <h2>Estado por fase</h2>
+      <table>
+        <thead><tr><th>Fase</th><th>Madurez</th><th>Bloqueadores</th></tr></thead>
+        <tbody>
+          <tr><td><strong>0</strong> · Saneamiento</td><td>🔴 nuevo</td><td>—</td></tr>
+          <tr><td><strong>3</strong> · Referidos + Pagos abstractos</td><td>🟡 50% — ejecución fragmentada</td><td>Fase 0</td></tr>
+          <tr><td><strong>4.1</strong> · Email transaccional</td><td>🔴 5% — greenfield</td><td>Fase 0</td></tr>
+          <tr><td><strong>4.2</strong> · CRM + WhatsApp</td><td>🔴 0%</td><td>Fase 4.1</td></tr>
+          <tr><td><strong>5.1</strong> · Cierre Booking</td><td>🟢 85% — UX restante</td><td>Fase 4.1 (notificaciones)</td></tr>
+          <tr><td><strong>6.0</strong> · Plataforma AI común</td><td>🟡 30% — refactor</td><td>Fase 0</td></tr>
+          <tr><td><strong>6.1</strong> · Journaling + Sentiment</td><td>🔴 0%</td><td>Fase 6.0</td></tr>
+          <tr><td><strong>6.2</strong> · RAG Companion</td><td>🔴 0%</td><td>Fase 6.0</td></tr>
+          <tr><td><strong>6.3</strong> · Agente Secretarial</td><td>🔴 0%</td><td>4.2 + 5.1</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>Decisión PM clave:</strong> insertar <em>Fase 0 — Saneamiento</em> antes de extender. Hay duplicación crítica (<code>referral/</code> vs <code>referrals/</code>, dos webhooks Stripe, balances en User vs Wallet) que multiplicaría la deuda si seguimos construyendo encima.
+      </div>
+    </section>
+
+    <!-- ============= ROADMAP MERMAID ============= -->
+    <section id="roadmap">
+      <h1 class="page-title">Roadmap visual</h1>
+      <div class="page-tagline">Secuencia lógica con dependencias. Sin fechas duras: bloques relativos.</div>
+
+      <h2>Línea de tiempo (Gantt relativo)</h2>
+      <div class="mermaid">
+gantt
+    title Roadmap propuesto
+    dateFormat  YYYY-MM-DD
+    axisFormat %b %d
+    section Fundación
+    Fase 0 Saneamiento                 :a0, 2026-05-12, 14d
+    section Track A
+    Fase 4.1 Email transaccional        :a1, after a0, 14d
+    Fase 5.1 Booking close              :a2, after a1, 10d
+    Fase 3 Referidos + Connect          :a3, after a2, 28d
+    Fase 4.2 CRM + WhatsApp             :a4, after a3, 28d
+    section Track B
+    Fase 6.0 Plataforma AI común        :b0, after a0, 14d
+    Fase 6.1 Journaling                 :b1, after b0, 21d
+    Fase 6.2 RAG Companion              :b2, after b1, 28d
+    section Convergencia
+    Fase 6.3 Agente Secretarial         :c1, after a4 b2, 21d
+      </div>
+    </section>
+
+    <!-- ============= GRAFO DE DEPENDENCIAS ============= -->
+    <section id="dependencies">
+      <h1 class="page-title">Grafo de dependencias</h1>
+      <div class="page-tagline">Tareas que no comparten flecha pueden ejecutarse en paralelo (en ramas distintas).</div>
+      <div class="mermaid">
+graph TD
+    F0[Fase 0 · Saneamiento]:::saneo
+
+    F0 --> F41[Fase 4.1 · Email transaccional]
+    F0 --> F60[Fase 6.0 · Plataforma AI]
+    F0 --> F3A[Fase 3.A · Política referidos UI]
+
+    F41 --> F51[Fase 5.1 · Booking close]
+    F41 --> F42[Fase 4.2 · CRM + WhatsApp]
+
+    F3A --> F3B[Fase 3.B · Stripe Connect Express]
+    F3B --> F3C[Fase 3.C · Payouts reales]
+
+    F60 --> F61[Fase 6.1 · Journaling]
+    F60 --> F62[Fase 6.2 · RAG Companion]
+
+    F61 --> F613[6.1.3 · Mensaje empático]
+    F41 --> F613
+
+    F42 --> F63[Fase 6.3 · Agente Secretarial]
+    F51 --> F63
+    F62 --> F63
+
+    classDef saneo fill:#C66A3D,stroke:#8a4322,color:#fff;
+      </div>
+
+      <div class="callout">
+        <strong>Tracks paralelos tras Fase 0:</strong>
+        <br>· <strong>Track A</strong> — Pagos & Comunicación: 4.1 → 5.1 → 3 → 4.2
+        <br>· <strong>Track B</strong> — AI: 6.0 → 6.1 ‖ 6.2
+        <br>· <strong>Convergencia</strong> — 6.3 (necesita 4.2 + 5.1 + 6.2)
+      </div>
+    </section>
+
+    <!-- ============= FASES (cards densas) ============= -->
+    <section id="fase-0">
+      <h1 class="page-title">Fase 0 · Saneamiento</h1>
+      <div class="page-tagline">2 sprints. Pre-requisito de todo lo demás. Freeze de cambios funcionales en backend financiero/referral.</div>
+      <div class="phase-card fase-0">
+        <div class="phase-meta">5 tareas · ~2 sprints · 1 dev backend senior</div>
+        <h3>Objetivo</h3>
+        <p>Convergir las dos implementaciones paralelas de referidos, los dos webhooks Stripe, y los dos sistemas de balances (UserEntity vs WalletEntity) a una única fuente de verdad.</p>
+        <h3>Entregables</h3>
+        <ul>
+          <li>Módulo <code>src/backend/wallet/</code> independiente (extraído de <code>finance/</code>).</li>
+          <li>Directorio <code>src/backend/referral/</code> (singular) eliminado, todo en <code>referrals/</code>.</li>
+          <li>Webhook único registrado en Stripe Dashboard.</li>
+          <li>Migración Firestore: balances de <code>UserEntity</code> → <code>WalletEntity</code>.</li>
+          <li>Smoke test E2E manual: checkout → webhook → wallet actualizado.</li>
+        </ul>
+        <h3>Criterios de aceptación</h3>
+        <ul>
+          <li><code>grep -r "src/backend/referral/" src/</code> no devuelve resultados.</li>
+          <li>Solo un endpoint webhook está registrado en Stripe (consola).</li>
+          <li><code>UserEntity</code> ya no expone <code>balanceComisionesPendientes</code> ni <code>balanceIngresosPendientes</code>.</li>
+          <li>Decisión documentada en <code>CLAUDE.md</code>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="fase-4-1">
+      <h1 class="page-title">Fase 4.1 · Email transaccional</h1>
+      <div class="page-tagline">MVP de comunicación. Desbloquea el valor del booking ya construido.</div>
+      <div class="phase-card">
+        <h3>JTBD</h3>
+        <p><em>"Cuando un paciente paga una sesión, quiero que reciba la confirmación por email sin que yo tenga que hacer nada, para no parecer un negocio improvisado."</em></p>
+        <h3>Scope</h3>
+        <ul>
+          <li>Sistema de eventos de dominio (<code>booking.confirmed</code>, <code>booking.cancelled</code>, <code>enrollment.created</code>).</li>
+          <li>Wrapper Nodemailer con SMTP del creador (si configurado) o fallback plataforma.</li>
+          <li>4 plantillas Natureza: confirmación booking (paciente/creador), inscripción curso, cancelación.</li>
+          <li>Settings creador en <code>/dashboard/settings</code>: SMTP, sender, "Enviar correo de prueba".</li>
+          <li><code>EmailLogEntity</code> para trazabilidad.</li>
+        </ul>
+        <h3>Edge cases</h3>
+        <ul>
+          <li>Creador sin SMTP → fallback plataforma con <code>noreply@consciousness.class</code>.</li>
+          <li>Email inválido → notificación in-app al creador, no bloquea booking.</li>
+          <li>Reintento exponencial 3x · 4º fallo emite <code>NotificationEntity</code>.</li>
+        </ul>
+        <h3>Métricas norte</h3>
+        <ul>
+          <li>% bookings con email entregado &lt; 5min: <strong>&gt;95%</strong></li>
+          <li>Bounce rate: <strong>&lt;2%</strong></li>
+          <li>Tickets "no recibí confirmación": <strong>−80% vs baseline</strong></li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="fase-5-1">
+      <h1 class="page-title">Fase 5.1 · Cierre del bucle de Booking</h1>
+      <div class="page-tagline">~10 días. Cierra el feature ya 85% construido.</div>
+      <div class="phase-card">
+        <h3>Scope</h3>
+        <ul>
+          <li><strong>MUST</strong>: vista paciente <code>/dashboard/learning/my-bookings</code>.</li>
+          <li><strong>MUST</strong>: vista creador <code>/dashboard/coaching/bookings</code> (calendar + lista).</li>
+          <li><strong>MUST</strong>: cancelación con regla 24h (refund full vs no refund).</li>
+          <li><strong>SHOULD</strong>: estado <code>no-show</code> + UI marca tras +30min del slot.</li>
+          <li><strong>SHOULD</strong>: UI excepciones (vacaciones) en availability.</li>
+          <li><strong>COULD</strong> (post-MVP): Google Calendar OAuth + Meet automático.</li>
+        </ul>
+        <h3>Reglas duras (no "debería", "debe")</h3>
+        <ul>
+          <li>Transición <code>scheduled → cancelled</code> con &lt;24h <strong>debe</strong> marcar <code>refundEligible: false</code>.</li>
+          <li>Slot <strong>no debe</strong> ser reservable si solapa con otro booking <code>scheduled</code> (incluido <code>durationMinutes</code>).</li>
+          <li><code>no-show</code> <strong>solo</strong> es transición válida desde <code>scheduled</code> y solo después de <code>slot.endTime</code>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="fase-3">
+      <h1 class="page-title">Fase 3 · Referidos multi-nivel + Stripe Connect Express</h1>
+      <div class="page-tagline">~4 sprints. Pre-requisito Fase 0.</div>
+      <div class="phase-card">
+        <h3>3.A — Política asignable</h3>
+        <ul>
+          <li>UI dropdown "Política de Referidos" en cada builder de activo.</li>
+          <li>Validación dura <code>tier1 + tier2 + plataforma ≤ 100%</code>.</li>
+          <li>Política con uso &gt; 0 no eliminable.</li>
+          <li>Snapshot de política en <code>Booking</code>/<code>Enrollment</code> al crearse (immune a cambios futuros).</li>
+        </ul>
+        <h3>3.B — Adaptador Stripe Connect Express</h3>
+        <ul>
+          <li>Implementar <code>PaymentGatewayInterface</code> con primer adaptador real.</li>
+          <li>Modelo: <strong>destination charges</strong> con <code>application_fee_amount</code> + <code>transfers</code> a afiliados.</li>
+          <li>Onboarding creador: <code>/dashboard/settings/payouts</code> → redirect Stripe Express.</li>
+          <li><strong>Medidas de seguridad:</strong> 3DS obligatorio, rate-limit en endpoint payout (1 req/min/uid), webhook signature verification, idempotency keys, monitoreo de payouts > €500 con alerta superadmin.</li>
+        </ul>
+        <h3>3.C — Payouts reales</h3>
+        <ul>
+          <li>Cron semanal cuando saldo ≥ €X (configurable).</li>
+          <li>UI <code>/dashboard/finances</code>: disponible · pendiente · histórico.</li>
+          <li>Estado fiscal (residencia + datos KYC delegados a Stripe) bloqueante para payout > €1k.</li>
+        </ul>
+        <h3>Edge cases críticos</h3>
+        <ul>
+          <li>Reembolso post-comisión a afiliado → descuento en próximo payout (no clawback retroactivo).</li>
+          <li>Afiliado sin Connect → comisiones se acumulan en <code>pendingBalance</code>.</li>
+          <li>Cadena circular A→B→A → validación al asignar <code>referredBy</code>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="fase-4-2">
+      <h1 class="page-title">Fase 4.2 · CRM + WhatsApp Business</h1>
+      <div class="page-tagline">~4 sprints. Pre-requisito Fase 4.1.</div>
+      <div class="phase-card">
+        <h3>Scope</h3>
+        <ul>
+          <li>Entidad <code>Contact</code> agregada (inscripciones + bookings + leads manuales) — vista unificada por persona.</li>
+          <li>Segmentos componibles: "inscritos curso X", "compraron en últimos 30d", "no abrieron último email".</li>
+          <li>Editor de campañas (no transaccional): asunto + plantilla + segmento + cola con rate-limit.</li>
+          <li>WhatsApp Business API directo (Meta) por número del creador. Onboarding incluye verificación + plantillas aprobadas (HSM).</li>
+          <li>Trigger automatizado: "estudiante sin progreso 7 días" → email empático opcional.</li>
+        </ul>
+        <h3>Decisiones de producto</h3>
+        <ul>
+          <li><strong>WhatsApp:</strong> usamos solo plantillas pre-aprobadas para mensajes proactivos (24h window de Meta).</li>
+          <li><strong>Privacidad:</strong> creador no puede exportar lista de contactos sin double opt-in del usuario.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="fase-6-0">
+      <h1 class="page-title">Fase 6.0 · Plataforma AI común</h1>
+      <div class="page-tagline">~2 sprints. Sin esto, cada sub-feature reinventa errores.</div>
+      <div class="phase-card">
+        <ul>
+          <li>Biblioteca centralizada <code>src/lib/ai/prompts/</code> con versionado.</li>
+          <li>Wrapper único: timeout · retry · fallback model · streaming · token logging.</li>
+          <li><code>AIUsageLog</code> (uid, endpoint, model, tokensIn/Out, cost, ts) + dashboard superadmin.</li>
+          <li>Hard caps por creador (presupuesto AI mensual configurable).</li>
+          <li>Mini suite de evals: golden set por feature, score manual al cambiar de modelo.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="fase-6-1">
+      <h1 class="page-title">Fase 6.1 · Journaling + Sentiment</h1>
+      <div class="page-tagline">~3 sprints. <strong>MVP: solo señal</strong> (creador no ve texto, solo score/tendencia).</div>
+      <div class="phase-card">
+        <h3>Decisiones AI-First (PM)</h3>
+        <table>
+          <thead><tr><th>Pregunta</th><th>Respuesta</th></tr></thead>
+          <tbody>
+            <tr><td>¿Qué pasa si el modelo malinterpreta?</td><td>Privacy-first: creador NO ve texto. Falso positivo cuesta poco.</td></tr>
+            <tr><td>¿Cuándo interviene humano?</td><td>Siempre. Modelo solo sugiere "considera saludar a Ana".</td></tr>
+            <tr><td>¿Falla del modelo?</td><td>Sin alerta esa semana, sin error visible al estudiante.</td></tr>
+            <tr><td>Datos sensibles</td><td>Texto nunca sale de Firebase salvo análisis. No fine-tuning. Zero-retention con proveedor.</td></tr>
+            <tr><td>UX de "decisión IA"</td><td>Etiqueta clara: "Sugerencia generada por IA · no diagnóstico".</td></tr>
+          </tbody>
+        </table>
+        <h3>Crisis detection</h3>
+        <ul>
+          <li>Lista de keywords (suicid*, autolesión, "no puedo más"...) → escalación inmediata + recurso de ayuda en pantalla del estudiante.</li>
+          <li>Notificación URGENTE al creador con disclaimer legal.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="fase-6-2">
+      <h1 class="page-title">Fase 6.2 · RAG Companion</h1>
+      <div class="page-tagline">~4 sprints. Stack: <strong>Firebase Vector Search</strong> (Firestore + extensión).</div>
+      <div class="phase-card">
+        <h3>Política dura</h3>
+        <ul>
+          <li>Si no encuentra contexto suficiente → "Esto no está cubierto en el material del curso. Pregunta a tu creador."</li>
+          <li>Cita siempre fuente: lección + timestamp/página.</li>
+          <li>Disclaimer permanente: no consejo médico/psicológico.</li>
+          <li>Hard cap por creador. Al alcanzar: widget muestra "Vuelve mañana".</li>
+        </ul>
+        <h3>Pipeline indexación (MVP solo PDF)</h3>
+        <ol>
+          <li>Subir PDF → cola async.</li>
+          <li>Chunk por sección/página (overlap 100 tokens).</li>
+          <li>Embedding con <code>text-embedding-004</code>.</li>
+          <li>Persistir en Firestore Vector Search con metadata (lessonId, page).</li>
+          <li>Query: top-K=5 por similitud + reranking.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="fase-6-3">
+      <h1 class="page-title">Fase 6.3 · Agente Secretarial AI</h1>
+      <div class="page-tagline">~3 sprints. Pre-requisito: 4.2 + 5.1 + 6.2.</div>
+      <div class="phase-card">
+        <h3>Tools del agente</h3>
+        <ul>
+          <li><code>getAvailableSlots(creatorId, dateRange)</code></li>
+          <li><code>createBooking(slotId, patientName, patientEmail)</code> → genera link de pago</li>
+          <li><code>cancelBooking(bookingId)</code> con verificación de identidad</li>
+          <li><code>escalateToHuman(reason)</code> — fallback obligatorio</li>
+        </ul>
+        <h3>Reglas duras</h3>
+        <ul>
+          <li>El agente <strong>nunca</strong> confirma reserva sin pago verificado.</li>
+          <li>El agente <strong>nunca</strong> comparte info de otros pacientes.</li>
+          <li>Mensajes de riesgo (palabras clave: crisis, suicid*, urgente) → escalación inmediata + recurso.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============= TAREAS ============= -->
+    <section id="tareas">
+      <h1 class="page-title">Tareas atómicas con dependencias</h1>
+      <div class="page-tagline">Cada tarea es ramificable independiente. Filtrable. La columna <em>branch</em> sugiere el nombre de rama git.</div>
+
+      <div class="filter-bar">
+        <input type="search" id="task-search" placeholder="Buscar tarea o ID..." />
+        <select id="task-phase">
+          <option value="">Todas las fases</option>
+          <option>0</option><option>3</option><option>4.1</option><option>4.2</option><option>5.1</option>
+          <option>6.0</option><option>6.1</option><option>6.2</option><option>6.3</option>
+        </select>
+        <select id="task-priority">
+          <option value="">Todas las prioridades</option>
+          <option>MUST</option><option>SHOULD</option><option>COULD</option>
+        </select>
+      </div>
+
+      <table id="task-table">
+        <thead>
+          <tr>
+            <th>ID</th><th>Tarea</th><th>Prioridad</th><th>Depende de</th><th>Branch sugerida</th><th>Agente sugerido</th>
+          </tr>
+        </thead>
+        <tbody><!-- generado por JS --></tbody>
+      </table>
+    </section>
+
+    <!-- ============= AGENTES PARALELOS ============= -->
+    <section id="agentes">
+      <h1 class="page-title">Agentes en paralelo</h1>
+      <div class="page-tagline">Cómo coordinar varios agentes Claude Code trabajando en ramas distintas sin colisionar.</div>
+
+      <h2>Convención de ramas</h2>
+      <table>
+        <thead><tr><th>Patrón</th><th>Uso</th></tr></thead>
+        <tbody>
+          <tr><td><code>feature/T&lt;phase&gt;-&lt;slug&gt;</code></td><td>Tareas funcionales nuevas. Ej: <code>feature/T0.1-extract-wallet</code>.</td></tr>
+          <tr><td><code>refactor/T&lt;phase&gt;-&lt;slug&gt;</code></td><td>Saneamiento sin cambio funcional. Ej: <code>refactor/T0.2-consolidate-referral</code>.</td></tr>
+          <tr><td><code>chore/&lt;slug&gt;</code></td><td>Config, scripts, infra (no produce features de cara al usuario).</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Reglas para agentes en paralelo</h2>
+      <ul>
+        <li>Una rama = un agente = una tarea atómica del listado.</li>
+        <li>Antes de despachar: confirmar que las tareas <em>depende de</em> ya están <code>merged</code> a <code>develop</code>.</li>
+        <li>Cada agente abre PR contra <code>develop</code>, no contra <code>master</code>.</li>
+        <li>Tareas que tocan el mismo módulo backend (ej. dos tareas de Fase 3 en <code>backend/payments/</code>) <strong>no</strong> se paralelizan — se serializan.</li>
+        <li>Cada agente debe correr <code>npm run typecheck</code> antes de cerrar (no <code>build</code> — recordatorio en CLAUDE.md).</li>
+      </ul>
+
+      <h2>Aislamiento de worktree</h2>
+      <p>Para evitar que dos agentes pisen el mismo working directory, usar git worktrees:</p>
+      <pre style="background:white;padding:16px;border-radius:8px;font-family:monospace;font-size:13px;overflow:auto;">git worktree add ../cc-T0.1 -b feature/T0.1-extract-wallet
+git worktree add ../cc-T6.1.1 -b feature/T6.1.1-journal-entity</pre>
+      <p>Cada worktree es un directorio distinto con su propia rama. Lanzar el agente Claude Code dentro de cada worktree.</p>
+    </section>
+
+    <!-- ============= AISLAMIENTO ============= -->
+    <section id="aislamiento">
+      <h1 class="page-title">Aislamiento de entornos</h1>
+      <div class="page-tagline">Git · GitHub · gcloud — configuración local al proyecto, sin contaminar otros repos.</div>
+
+      <div class="callout">
+        Ver guía detallada en <code>documentation/setup-isolation.md</code>. Script ejecutable: <code>scripts/setup-project-env.sh</code> (Linux/macOS/git-bash) y <code>scripts/setup-project-env.ps1</code> (Windows PowerShell).
+      </div>
+
+      <h2>Resumen rápido</h2>
+      <table>
+        <thead><tr><th>Herramienta</th><th>Mecanismo de aislamiento</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Git</strong></td>
+            <td><code>git config --local user.name/user.email</code> · sin <code>--global</code>. Hooks locales en <code>.githooks/</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>GitHub CLI</strong></td>
+            <td>Variable <code>GH_CONFIG_DIR=./.gh-config</code> exportada por proyecto. Token específico en <code>.envrc.local</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>gcloud</strong></td>
+            <td>Configuración nombrada (<code>gcloud config configurations create consciousness-class</code>) + <code>CLOUDSDK_CONFIG=./.gcloud</code> exportado por proyecto.</td>
+          </tr>
+          <tr>
+            <td><strong>Service Account</strong></td>
+            <td><code>GOOGLE_APPLICATION_CREDENTIALS</code> apuntando a clave local <code>./.gcloud/sa-key.json</code> (gitignored).</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============= DECISIONES ============= -->
+    <section id="decisiones">
+      <h1 class="page-title">Decisiones tomadas</h1>
+      <table>
+        <thead><tr><th>#</th><th>Pregunta</th><th>Decisión</th><th>Implicación</th></tr></thead>
+        <tbody>
+          <tr><td>D1</td><td>Source-of-truth de saldos</td><td>Wallet entidad dedicada (módulo nuevo <code>src/backend/wallet/</code>)</td><td>Migración Firestore en Fase 0</td></tr>
+          <tr><td>D2</td><td>Modelo Stripe Connect</td><td>Express + medidas de seguridad</td><td>3DS · rate-limit · webhook signature · idempotency · alertas &gt;€500</td></tr>
+          <tr><td>D3</td><td>Canal WhatsApp</td><td>WhatsApp Business API directo (Meta)</td><td>Onboarding más lento; templates HSM pre-aprobados</td></tr>
+          <tr><td>D4</td><td>Vector store RAG</td><td>Firebase Vector Search</td><td>Stack 100% GCP; sin nuevo vendor</td></tr>
+          <tr><td>D5</td><td>Privacidad journal</td><td>Solo señal en MVP (creador no ve texto)</td><td>Texto resumido solo con consentimiento granular post-validación</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============= MÉTRICAS ============= -->
+    <section id="metricas">
+      <h1 class="page-title">Métricas norte por fase</h1>
+      <table>
+        <thead><tr><th>Fase</th><th>Métrica</th><th>Target 90d post-launch</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>Decisiones técnicas convergidas</td><td>100% (binaria)</td></tr>
+          <tr><td>4.1</td><td>% bookings con email entregado &lt;5min</td><td>&gt;95%</td></tr>
+          <tr><td>5.1</td><td>% bookings que llegan a <code>completed</code></td><td>&gt;75%</td></tr>
+          <tr><td>3</td><td>% creadores con payout exitoso</td><td>&gt;60% activos pagantes</td></tr>
+          <tr><td>4.2</td><td>Open rate campañas</td><td>&gt;35%</td></tr>
+          <tr><td>6.1</td><td>% alertas IA accionadas por creador</td><td>&gt;25%</td></tr>
+          <tr><td>6.2</td><td>% preguntas con cita vs "no cubierto"</td><td>&gt;70% con cita</td></tr>
+          <tr><td>6.3</td><td>% reservas vía agente sin escalación</td><td>&gt;50%</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============= RIESGOS ============= -->
+    <section id="riesgos">
+      <h1 class="page-title">Riesgos top &amp; mitigaciones</h1>
+      <table>
+        <thead><tr><th>Riesgo</th><th>Prob</th><th>Impacto</th><th>Mitigación</th></tr></thead>
+        <tbody>
+          <tr><td>Stripe Connect onboarding bloquea creadores no-tech</td><td>Alta</td><td>Alto</td><td>Onboarding guiado paso a paso + soporte humano 90d</td></tr>
+          <tr><td>WhatsApp Business API rechaza número del creador</td><td>Media</td><td>Alto</td><td>Pre-screening del número + documentación pre-onboarding + apoyo en quality rating</td></tr>
+          <tr><td>RAG alucina y da consejo médico</td><td>Media</td><td><strong>Crítico</strong></td><td>Disclaimer permanente + filtros de tema + evals con casos clínicos antes de GA</td></tr>
+          <tr><td>Coste Gemini se dispara con journaling diario</td><td>Media</td><td>Medio</td><td>Hard caps por creador + caché embeddings + batch nocturno</td></tr>
+          <tr><td>Refactor Fase 0 introduce regresión en checkout</td><td>Media</td><td>Crítico</td><td>Freeze funcional + smoke test E2E manual antes de merge</td></tr>
+          <tr><td>Política referidos cambia con compras pendientes</td><td>Baja</td><td>Medio</td><td>Snapshot de política en <code>Booking</code>/<code>Enrollment</code> al crearse</td></tr>
+          <tr><td>Crisis en journal sin detección</td><td>Baja</td><td><strong>Crítico legal</strong></td><td>Lista de keywords + escalación + recurso visible + DPA legal</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============= MISSING ============= -->
+    <section id="missing">
+      <h1 class="page-title">Falta cubrir (más allá del PM)</h1>
+      <div class="page-tagline">Áreas que no están en el roadmap actual y deberían añadirse antes de producción.</div>
+
+      <h2>UI/UX</h2>
+      <ul>
+        <li><strong>Design system formal:</strong> tokens (espaciado, motion, radii) sin documentar. Componentes shadcn instalados pero sin guía de uso consistente.</li>
+        <li><strong>Onboarding del creador:</strong> el momento "signup → primer asset publicado" no tiene flujo guiado. Punto de mayor abandono.</li>
+        <li><strong>Onboarding Stripe Connect:</strong> drop-off conocido en la industria. Necesita copy + UI cuidados (Fase 3).</li>
+        <li><strong>UX conversacional:</strong> RAG widget y agente secretarial necesitan diseño dedicado (turnos, errores, citas, fallbacks).</li>
+        <li><strong>Empty states + AI loading:</strong> latencia 2-5s requiere skeleton/streaming feedback.</li>
+        <li><strong>Mobile-first audit:</strong> los terapeutas usan móvil; verificar dashboard + builders.</li>
+        <li><strong>Accesibilidad WCAG AA:</strong> audiencia mental health = más crítica. Auditoría con axe-core.</li>
+      </ul>
+
+      <h2>Legal &amp; Compliance</h2>
+      <ul>
+        <li><strong>GDPR + datos de salud especiales:</strong> el journal entra en Art. 9 GDPR. Necesita base legal explícita y DPIA.</li>
+        <li><strong>Términos &amp; Privacidad:</strong> actualizar para reflejar uso de IA, retención, sub-procesadores (Google, Stripe, Meta).</li>
+        <li><strong>Política de retención:</strong> ¿cuánto tiempo guardamos journal/chats? ¿cómo se borra?</li>
+        <li><strong>Disclaimer médico/psicológico</strong> visible y aceptado al onboarding del estudiante.</li>
+        <li><strong>DPA con Google (Vertex/Gemini), Stripe, Meta.</strong></li>
+      </ul>
+
+      <h2>Trust &amp; Safety</h2>
+      <ul>
+        <li><strong>Crisis detection</strong> en journal y chat (mencionado en Fase 6).</li>
+        <li><strong>Moderación community:</strong> Fase Core ya tiene Community pero no hay reportes/bloqueo de usuarios.</li>
+        <li><strong>Verificación creador:</strong> ¿cómo evitamos que cualquiera se haga pasar por terapeuta? KYC ligero antes de publicar coaching.</li>
+        <li><strong>Age gating:</strong> producto no apto para menores; verificar.</li>
+      </ul>
+
+      <h2>Datos &amp; Operaciones</h2>
+      <ul>
+        <li><strong>Analytics + event tracking:</strong> sin esto las métricas norte que definimos no se pueden medir. Recomendación: PostHog (open source, on-premise).</li>
+        <li><strong>Testing strategy:</strong> el repo no tiene runner. Para pagos + booking + AI es crítico antes de producción. Mínimo: Vitest + Playwright para flujos críticos.</li>
+        <li><strong>Observabilidad:</strong> logs estructurados, métricas, alertas. Stack: Cloud Logging + Cloud Monitoring (consistencia GCP).</li>
+        <li><strong>Backups &amp; disaster recovery:</strong> Firestore export programado; runbook ante pérdida de datos.</li>
+        <li><strong>Performance SLOs:</strong> p99 booking confirmation, latencia AI streaming, tiempo de respuesta RAG.</li>
+        <li><strong>i18n:</strong> español primero, pero strings hardcodeadas. Si se planea catalán/inglés/portugués brasileño, extraer ahora.</li>
+      </ul>
+
+      <h2>Negocio</h2>
+      <ul>
+        <li><strong>Pricing del producto plataforma:</strong> ¿cobramos % de transacción? ¿tier mensual al creador? ¿free tier? Afecta arquitectura billing.</li>
+        <li><strong>Soporte:</strong> ¿quién responde tickets de creadores? ¿Status page pública?</li>
+        <li><strong>Help center / docs públicas</strong> para creadores y estudiantes.</li>
+        <li><strong>Programa de referidos plataforma</strong> (distinto del de creadores) para crecimiento.</li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+    primaryColor: '#F4EFE6',
+    primaryTextColor: '#2A2A2A',
+    primaryBorderColor: '#6B7A4F',
+    lineColor: '#8A8578',
+    fontFamily: '-apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif'
+  }});
+
+  // ============== TAREAS ATÓMICAS (single source of truth) ==============
+  const TASKS = [
+    // Fase 0
+    { id: 'T0.1', phase: '0', title: 'Extraer Wallet a src/backend/wallet/ (de finance/)', priority: 'MUST', deps: [], branch: 'refactor/T0.1-extract-wallet', agent: 'general-purpose' },
+    { id: 'T0.2', phase: '0', title: 'Eliminar src/backend/referral/ (singular), consolidar en referrals/', priority: 'MUST', deps: [], branch: 'refactor/T0.2-consolidate-referral', agent: 'general-purpose' },
+    { id: 'T0.3', phase: '0', title: 'Consolidar webhooks Stripe a un único endpoint', priority: 'MUST', deps: ['T0.1'], branch: 'refactor/T0.3-unify-stripe-webhook', agent: 'general-purpose' },
+    { id: 'T0.4', phase: '0', title: 'Migración Firestore: balances UserEntity → WalletEntity', priority: 'MUST', deps: ['T0.1'], branch: 'chore/T0.4-balance-migration', agent: 'general-purpose' },
+    { id: 'T0.5', phase: '0', title: 'Smoke test E2E checkout → wallet', priority: 'MUST', deps: ['T0.3','T0.4'], branch: 'chore/T0.5-checkout-e2e-smoke', agent: 'general-purpose' },
+
+    // Fase 4.1
+    { id: 'T4.1.1', phase: '4.1', title: 'Sistema de eventos de dominio (booking.confirmed, enrollment.created, ...)', priority: 'MUST', deps: ['T0.5'], branch: 'feature/T4.1.1-domain-events', agent: 'general-purpose' },
+    { id: 'T4.1.2', phase: '4.1', title: 'Wrapper Nodemailer + fallback plataforma + retry', priority: 'MUST', deps: ['T4.1.1'], branch: 'feature/T4.1.2-mailer-wrapper', agent: 'general-purpose' },
+    { id: 'T4.1.3', phase: '4.1', title: '4 plantillas Natureza (booking confirm/cancel, enrollment, creator alert)', priority: 'MUST', deps: ['T4.1.2'], branch: 'feature/T4.1.3-email-templates', agent: 'general-purpose' },
+    { id: 'T4.1.4', phase: '4.1', title: 'Settings creador SMTP en /dashboard/settings', priority: 'MUST', deps: ['T4.1.2'], branch: 'feature/T4.1.4-smtp-settings', agent: 'general-purpose' },
+    { id: 'T4.1.5', phase: '4.1', title: 'EmailLogEntity + dashboard de envíos', priority: 'SHOULD', deps: ['T4.1.2'], branch: 'feature/T4.1.5-email-log', agent: 'general-purpose' },
+
+    // Fase 5.1
+    { id: 'T5.1.1', phase: '5.1', title: 'Vista paciente /dashboard/learning/my-bookings', priority: 'MUST', deps: ['T4.1.3'], branch: 'feature/T5.1.1-patient-bookings', agent: 'general-purpose' },
+    { id: 'T5.1.2', phase: '5.1', title: 'Vista creador /dashboard/coaching/bookings', priority: 'MUST', deps: ['T4.1.3'], branch: 'feature/T5.1.2-creator-bookings', agent: 'general-purpose' },
+    { id: 'T5.1.3', phase: '5.1', title: 'Endpoint cancelación + regla 24h refund', priority: 'MUST', deps: ['T4.1.1'], branch: 'feature/T5.1.3-cancel-rule', agent: 'general-purpose' },
+    { id: 'T5.1.4', phase: '5.1', title: 'Estado no-show + UI marca tras +30min', priority: 'SHOULD', deps: ['T5.1.2'], branch: 'feature/T5.1.4-no-show', agent: 'general-purpose' },
+    { id: 'T5.1.5', phase: '5.1', title: 'UI excepciones (vacaciones) en availability', priority: 'SHOULD', deps: [], branch: 'feature/T5.1.5-availability-exceptions', agent: 'general-purpose' },
+    { id: 'T5.1.6', phase: '5.1', title: 'Google Calendar OAuth + Meet automático', priority: 'COULD', deps: ['T5.1.2'], branch: 'feature/T5.1.6-gcal-meet', agent: 'general-purpose' },
+
+    // Fase 3
+    { id: 'T3.A.1', phase: '3', title: 'UI dropdown política referidos en builders', priority: 'MUST', deps: ['T0.2'], branch: 'feature/T3.A.1-policy-dropdown', agent: 'general-purpose' },
+    { id: 'T3.A.2', phase: '3', title: 'Validación tier1+tier2+plataforma ≤ 100%', priority: 'MUST', deps: ['T3.A.1'], branch: 'feature/T3.A.2-policy-validation', agent: 'general-purpose' },
+    { id: 'T3.A.3', phase: '3', title: 'Snapshot política en Booking/Enrollment al crearse', priority: 'MUST', deps: ['T3.A.1'], branch: 'feature/T3.A.3-policy-snapshot', agent: 'general-purpose' },
+    { id: 'T3.B.1', phase: '3', title: 'Implementar StripeConnectAdapter (PaymentGatewayInterface)', priority: 'MUST', deps: ['T0.5'], branch: 'feature/T3.B.1-connect-adapter', agent: 'general-purpose' },
+    { id: 'T3.B.2', phase: '3', title: 'Onboarding Express en /dashboard/settings/payouts + medidas seguridad', priority: 'MUST', deps: ['T3.B.1'], branch: 'feature/T3.B.2-connect-onboarding', agent: 'general-purpose' },
+    { id: 'T3.C.1', phase: '3', title: 'Cron payouts semanales', priority: 'MUST', deps: ['T3.B.2'], branch: 'feature/T3.C.1-payout-cron', agent: 'general-purpose' },
+    { id: 'T3.C.2', phase: '3', title: 'UI /dashboard/finances (disponible/pendiente/histórico)', priority: 'MUST', deps: ['T3.C.1'], branch: 'feature/T3.C.2-finances-ui', agent: 'general-purpose' },
+    { id: 'T3.C.3', phase: '3', title: 'Campos fiscales y bloqueo payout > €1k sin KYC', priority: 'SHOULD', deps: ['T3.B.2'], branch: 'feature/T3.C.3-tax-fields', agent: 'general-purpose' },
+
+    // Fase 4.2
+    { id: 'T4.2.1', phase: '4.2', title: 'Entidad Contact agregada (inscripciones + bookings + leads)', priority: 'MUST', deps: ['T4.1.5'], branch: 'feature/T4.2.1-contact-entity', agent: 'general-purpose' },
+    { id: 'T4.2.2', phase: '4.2', title: 'Segmentos componibles (curso X, compras 30d, no-open)', priority: 'MUST', deps: ['T4.2.1'], branch: 'feature/T4.2.2-segments', agent: 'general-purpose' },
+    { id: 'T4.2.3', phase: '4.2', title: 'Editor de campañas + cola con rate-limit', priority: 'MUST', deps: ['T4.2.2'], branch: 'feature/T4.2.3-campaigns', agent: 'general-purpose' },
+    { id: 'T4.2.4', phase: '4.2', title: 'WhatsApp Business API + plantillas HSM', priority: 'MUST', deps: ['T4.2.1'], branch: 'feature/T4.2.4-whatsapp-business', agent: 'general-purpose' },
+    { id: 'T4.2.5', phase: '4.2', title: 'Trigger churn 7d sin progreso', priority: 'SHOULD', deps: ['T4.2.3'], branch: 'feature/T4.2.5-churn-trigger', agent: 'general-purpose' },
+
+    // Fase 6.0
+    { id: 'T6.0.1', phase: '6.0', title: 'Biblioteca prompts versionada en src/lib/ai/prompts/', priority: 'MUST', deps: ['T0.5'], branch: 'refactor/T6.0.1-prompt-library', agent: 'general-purpose' },
+    { id: 'T6.0.2', phase: '6.0', title: 'Wrapper único AI (timeout · retry · fallback · streaming)', priority: 'MUST', deps: ['T6.0.1'], branch: 'refactor/T6.0.2-ai-wrapper', agent: 'general-purpose' },
+    { id: 'T6.0.3', phase: '6.0', title: 'AIUsageLog + dashboard coste superadmin', priority: 'MUST', deps: ['T6.0.2'], branch: 'feature/T6.0.3-ai-usage-log', agent: 'general-purpose' },
+    { id: 'T6.0.4', phase: '6.0', title: 'Hard caps por creador (presupuesto AI mensual)', priority: 'MUST', deps: ['T6.0.3'], branch: 'feature/T6.0.4-ai-budget-cap', agent: 'general-purpose' },
+    { id: 'T6.0.5', phase: '6.0', title: 'Mini suite evals (golden set por feature)', priority: 'SHOULD', deps: ['T6.0.2'], branch: 'chore/T6.0.5-ai-evals', agent: 'general-purpose' },
+
+    // Fase 6.1
+    { id: 'T6.1.1', phase: '6.1', title: 'JournalEntity + UI estudiante /dashboard/learning/journal', priority: 'MUST', deps: ['T6.0.2'], branch: 'feature/T6.1.1-journal-entity', agent: 'general-purpose' },
+    { id: 'T6.1.2', phase: '6.1', title: 'Pipeline batch nocturno sentiment scoring', priority: 'MUST', deps: ['T6.1.1'], branch: 'feature/T6.1.2-sentiment-pipeline', agent: 'general-purpose' },
+    { id: 'T6.1.3', phase: '6.1', title: 'Dashboard creador "tendencias" (sin texto)', priority: 'MUST', deps: ['T6.1.2'], branch: 'feature/T6.1.3-trends-dashboard', agent: 'general-purpose' },
+    { id: 'T6.1.4', phase: '6.1', title: 'Botón "Mensaje empático" → composer Fase 4.1', priority: 'SHOULD', deps: ['T6.1.3','T4.1.3'], branch: 'feature/T6.1.4-empathic-composer', agent: 'general-purpose' },
+    { id: 'T6.1.5', phase: '6.1', title: 'Crisis detection + escalación + recurso ayuda', priority: 'MUST', deps: ['T6.1.1'], branch: 'feature/T6.1.5-crisis-detection', agent: 'general-purpose' },
+
+    // Fase 6.2
+    { id: 'T6.2.1', phase: '6.2', title: 'Pipeline indexación PDF (chunk + embedding)', priority: 'MUST', deps: ['T6.0.2'], branch: 'feature/T6.2.1-pdf-indexing', agent: 'general-purpose' },
+    { id: 'T6.2.2', phase: '6.2', title: 'Setup Firebase Vector Search (extensión + schema)', priority: 'MUST', deps: ['T6.2.1'], branch: 'chore/T6.2.2-firestore-vector', agent: 'general-purpose' },
+    { id: 'T6.2.3', phase: '6.2', title: 'Endpoint /api/learn/companion con streaming', priority: 'MUST', deps: ['T6.2.2'], branch: 'feature/T6.2.3-companion-endpoint', agent: 'general-purpose' },
+    { id: 'T6.2.4', phase: '6.2', title: 'Widget chat en /learn/[courseId]/[lessonId]', priority: 'MUST', deps: ['T6.2.3'], branch: 'feature/T6.2.4-companion-widget', agent: 'general-purpose' },
+    { id: 'T6.2.5', phase: '6.2', title: 'Hard cap diario por creador + UI vacía', priority: 'MUST', deps: ['T6.2.3','T6.0.4'], branch: 'feature/T6.2.5-companion-cap', agent: 'general-purpose' },
+    { id: 'T6.2.6', phase: '6.2', title: 'Citas en respuesta (lección + página/timestamp)', priority: 'MUST', deps: ['T6.2.3'], branch: 'feature/T6.2.6-companion-citations', agent: 'general-purpose' },
+
+    // Fase 6.3
+    { id: 'T6.3.1', phase: '6.3', title: 'Tool definitions (getSlots, createBooking, cancel, escalate)', priority: 'MUST', deps: ['T5.1.3','T6.0.2'], branch: 'feature/T6.3.1-agent-tools', agent: 'general-purpose' },
+    { id: 'T6.3.2', phase: '6.3', title: 'Chat state persistence (Conversation entity)', priority: 'MUST', deps: ['T6.3.1'], branch: 'feature/T6.3.2-chat-state', agent: 'general-purpose' },
+    { id: 'T6.3.3', phase: '6.3', title: 'Crisis keyword filter en agente', priority: 'MUST', deps: ['T6.3.2','T6.1.5'], branch: 'feature/T6.3.3-agent-crisis-filter', agent: 'general-purpose' },
+    { id: 'T6.3.4', phase: '6.3', title: 'Identity verification flow para cancelación', priority: 'MUST', deps: ['T6.3.1'], branch: 'feature/T6.3.4-identity-verify', agent: 'general-purpose' },
+    { id: 'T6.3.5', phase: '6.3', title: 'WhatsApp Business webhook → agente', priority: 'MUST', deps: ['T4.2.4','T6.3.2'], branch: 'feature/T6.3.5-wa-agent-bridge', agent: 'general-purpose' },
+  ];
+
+  // ============== UI ==============
+  function renderTasks() {
+    const search = document.getElementById('task-search').value.toLowerCase();
+    const phase  = document.getElementById('task-phase').value;
+    const prio   = document.getElementById('task-priority').value;
+    const tbody  = document.querySelector('#task-table tbody');
+    tbody.innerHTML = '';
+    let count = 0;
+    TASKS.forEach(t => {
+      if (search && !(t.id.toLowerCase().includes(search) || t.title.toLowerCase().includes(search))) return;
+      if (phase && t.phase !== phase) return;
+      if (prio && t.priority !== prio) return;
+      count++;
+      const depsHtml = t.deps.length
+        ? `<ul class="deps">${t.deps.map(d => `<li>${d}</li>`).join('')}</ul>`
+        : '<span style="color:var(--muted);font-size:12px;">—</span>';
+      const prioCls = { MUST:'b-must', SHOULD:'b-should', COULD:'b-could' }[t.priority];
+      tbody.insertAdjacentHTML('beforeend',
+        `<tr>
+          <td><code>${t.id}</code></td>
+          <td>${t.title}</td>
+          <td><span class="badge ${prioCls}">${t.priority}</span></td>
+          <td>${depsHtml}</td>
+          <td><span class="branch">${t.branch}</span></td>
+          <td><code>${t.agent}</code></td>
+        </tr>`);
+    });
+    document.getElementById('task-count').textContent = TASKS.length;
+  }
+
+  ['task-search','task-phase','task-priority'].forEach(id =>
+    document.getElementById(id).addEventListener('input', renderTasks));
+
+  // SPA routing
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const target = link.dataset.target;
+      document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+      document.getElementById(target).classList.add('active');
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      link.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // re-run mermaid for the newly-visible section
+      if (window.mermaid) mermaid.run({ nodes: document.querySelectorAll('section.active .mermaid') });
+    });
+  });
+
+  renderTasks();
+</script>
+</body>
+</html>

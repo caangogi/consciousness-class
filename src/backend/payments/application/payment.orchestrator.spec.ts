@@ -94,8 +94,64 @@ describe('PaymentOrchestratorService', () => {
 
     // 80 Net.
     // Creator: 100% of 80 = 80
-    
+
     expect(mockUserRepository.updateReferrerBalance).not.toHaveBeenCalled();
     expect(mockUserRepository.updateCreatorPendingRevenue).toHaveBeenCalledWith('creator123', 80);
+  });
+
+  // ============================================================
+  // F1.4a · Edge cases — TDD-strict gaps identified in audit
+  // ============================================================
+  describe('edge cases (F1.4a)', () => {
+    it('throws when policy.tier1 + policy.tier2 + platformFee*100 > 100', async () => {
+      // Policy is internally valid (tier1+tier2 = 90 ≤ 100)
+      // but combined with a 20% platform fee, total is 110% — illegal.
+      const policy = new ReferralPolicyEntity({
+        id: 'p_high', creatorUid: 'c1', name: 'Aggressive',
+        tier1Percentage: 80, tier2Percentage: 10,
+        isDefault: false, createdAt: '', updatedAt: '',
+      });
+
+      await expect(
+        orchestrator.distributeStripePayment({
+          grossAmount: 100,
+          currency: 'eur',
+          platformFeePercentage: 0.20, // 80 + 10 + 20 = 110%
+          policy,
+          creatorUid: 'creator123',
+          affiliate1Uid: 'aff1',
+          affiliate2Uid: 'aff2',
+        })
+      ).rejects.toThrow(/exceed.*100|sum.*100/i);
+
+      // No writes happened — must fail before touching repo
+      expect(mockUserRepository.updateCreatorPendingRevenue).not.toHaveBeenCalled();
+      expect(mockUserRepository.updateReferrerBalance).not.toHaveBeenCalled();
+    });
+
+    it('accepts the boundary case tier1+tier2+platform = 100 exactly', async () => {
+      // 70 + 10 + 20 = 100 — legal, creator gets 0 net but no error.
+      const policy = new ReferralPolicyEntity({
+        id: 'p_edge', creatorUid: 'c1', name: 'Boundary',
+        tier1Percentage: 70, tier2Percentage: 10,
+        isDefault: false, createdAt: '', updatedAt: '',
+      });
+
+      await orchestrator.distributeStripePayment({
+        grossAmount: 100,
+        currency: 'eur',
+        platformFeePercentage: 0.20,
+        policy,
+        creatorUid: 'creator123',
+        affiliate1Uid: 'aff1',
+        affiliate2Uid: 'aff2',
+      });
+
+      // 100 gross. platform=20. net=80. tier1=70% of 80=56. tier2=10% of 80=8.
+      // creator = 80 - 56 - 8 = 16.
+      expect(mockUserRepository.updateReferrerBalance).toHaveBeenCalledWith('aff1', 56);
+      expect(mockUserRepository.updateReferrerBalance).toHaveBeenCalledWith('aff2', 8);
+      expect(mockUserRepository.updateCreatorPendingRevenue).toHaveBeenCalledWith('creator123', 16);
+    });
   });
 });

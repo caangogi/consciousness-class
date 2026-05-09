@@ -9,8 +9,7 @@ import { ptSans, poppins } from '@/lib/fonts';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/shared/ThemeProvider';
 import { UrlParamEffects } from '@/components/shared/UrlParamEffects';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
+import { LayoutWrapper } from '@/components/layout/LayoutWrapper';
 
 export const metadata: Metadata = {
   title: 'Consciousness Class',
@@ -44,24 +43,12 @@ function RootLayoutFallback() {
   );
 }
 
-function PublicLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-grow">{children}</main>
-      <Footer />
-    </div>
-  );
-}
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Este es un truco para acceder a las props del children, no es una práctica estándar
-  const childProps = (children as any)?.props?.childProp?.segment;
-  const isDashboard = childProps === 'dashboard';
 
   return (
     <html lang="es" suppressHydrationWarning>
@@ -78,11 +65,9 @@ export default function RootLayout({
         >
           <AuthProvider>
             <Suspense fallback={<RootLayoutFallback />}>
-              {isDashboard ? (
-                <>{children}</>
-              ) : (
-                <PublicLayout>{children}</PublicLayout>
-              )}
+              <LayoutWrapper>
+                {children}
+              </LayoutWrapper>
               <UrlParamEffects />
             </Suspense>
             <Toaster />

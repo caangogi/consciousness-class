@@ -23,6 +23,8 @@ import {
   Palette,
   MessageSquare,
   PlusCircle, // Added for "Crear Nuevo Curso"
+  Sparkles,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -30,45 +32,27 @@ import { Skeleton } from '@/components/ui/skeleton';
 // Sheet components are not directly used here for the main sidebar, but might be for mobile in layout
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
+import { NotificationBell } from '@/components/community/NotificationBell';
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  roles: ('student' | 'creator' | 'superadmin')[];
+  roles: ('student' | 'creator' | 'admin' | 'superadmin')[];
   subItems?: NavItem[];
+  colorClass?: string;
 }
 
 // This navItems array is now the single source of truth for navigation structure
 export const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Resumen General', icon: LayoutDashboard, roles: ['student', 'creator', 'superadmin'] },
-  
-  // Student specific (grouping conceptually)
-  // The actual student dashboard page is now at /dashboard/student
-  { href: '/dashboard/student', label: 'Panel Estudiante', icon: LayoutDashboard, roles: ['student'] },
-  // { href: '/dashboard/student/my-courses', label: 'Mis Cursos', icon: BookOpen, roles: ['student'] }, // Example if we had sub-pages
-  // { href: '/dashboard/student/profile', label: 'Mi Perfil', icon: UserCircle, roles: ['student'] },
-  // { href: '/dashboard/student/referrals', label: 'Mis Referidos', icon: Gift, roles: ['student'] },
-  // { href: '/dashboard/student/certificates', label: 'Certificados', icon: AwardIcon, roles: ['student'] },
-  
-  // Creator specific
-  { href: '/dashboard/creator', label: 'Panel Creator', icon: LayoutDashboard, roles: ['creator'] },
-  { href: '/dashboard/creator/courses', label: 'Gestionar Cursos', icon: BookOpen, roles: ['creator'] }, // Changed icon from Edit3 to BookOpen for consistency
-  { href: '/dashboard/creator/courses/new', label: 'Crear Nuevo Curso', icon: PlusCircle, roles: ['creator'] },
-  // { href: '/dashboard/creator/lessons', label: 'Gestionar Lecciones', icon: Palette, roles: ['creator'] }, // Maybe combine with course management
-  { href: '/dashboard/creator/stats', label: 'Estadísticas', icon: BarChart2, roles: ['creator'] },
-  { href: '/dashboard/creator/referral-config', label: 'Config. Referidos', icon: Settings, roles: ['creator'] },
-  { href: '/dashboard/creator/earnings', label: 'Ingresos', icon: DollarSign, roles: ['creator'] },
-  { href: '/dashboard/creator/comments', label: 'Comentarios', icon: MessageSquare, roles: ['creator'] },
-  
-  // Superadmin specific
-  { href: '/dashboard/superadmin', label: 'Panel Admin', icon: LayoutDashboard, roles: ['superadmin'] },
-  { href: '/dashboard/superadmin/user-management', label: 'Gestión Usuarios', icon: Users, roles: ['superadmin'] },
-  { href: '/dashboard/superadmin/course-management', label: 'Gestión Cursos', icon: BookOpen, roles: ['superadmin'] },
-  { href: '/dashboard/superadmin/platform-stats', label: 'Métricas Plataforma', icon: BarChart2, roles: ['superadmin'] },
-  { href: '/dashboard/superadmin/settings', label: 'Config. Global', icon: Settings, roles: ['superadmin'] },
-  { href: '/dashboard/superadmin/coupons', label: 'Cupones', icon: Ticket, roles: ['superadmin'] },
-  { href: '/dashboard/superadmin/security', label: 'Seguridad', icon: ShieldCheck, roles: ['superadmin'] },
+  { href: '/dashboard', label: 'Inicio', icon: LayoutDashboard, roles: ['student', 'creator', 'admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
+  { href: '/dashboard/learning', label: 'Mis Cursos', icon: BookOpen, roles: ['student', 'admin', 'superadmin'], colorClass: 'text-brand-terracotta dark:text-brand-terracotta' },
+  { href: '/dashboard/products', label: 'Mis Productos', icon: BookOpen, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-terracotta dark:text-brand-terracotta' },
+  { href: '/dashboard/availability', label: 'Mi Agenda', icon: Calendar, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
+  { href: '/dashboard/users', label: 'Usuarios', icon: Users, roles: ['admin', 'superadmin'], colorClass: 'text-brand-clove dark:text-brand-sandstone' },
+  { href: '/dashboard/finances', label: 'Finanzas', icon: DollarSign, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
+  { href: '/dashboard/settings/ai', label: 'Modelos IA', icon: Sparkles, roles: ['admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
+  { href: '/dashboard/settings', label: 'Ajustes Generales', icon: Settings, roles: ['student', 'creator', 'admin', 'superadmin'] },
 ];
 
 
@@ -102,7 +86,7 @@ export function DashboardSidebar() {
 
   if (loading) {
     return (
-      <aside className="hidden md:flex md:flex-col md:w-64 border-r bg-card text-card-foreground">
+      <aside className="hidden md:flex md:flex-col md:w-64 border-r bg-card text-card-foreground h-full overflow-hidden">
         <div className="flex h-16 items-center border-b px-6">
           <Logo />
         </div>
@@ -122,8 +106,8 @@ export function DashboardSidebar() {
 
 
   return (
-    <aside className="hidden md:flex md:flex-col md:w-64 border-r bg-card text-card-foreground">
-      <div className="flex h-16 items-center justify-between border-b px-4 gap-2">
+    <aside className="hidden md:flex md:flex-col md:w-64 border-r border-black/5 dark:border-white/10 bg-secondary/30 dark:bg-black/20 backdrop-blur-3xl text-foreground h-full overflow-hidden">
+      <div className="flex h-16 items-center justify-between border-b border-black/5 dark:border-white/10 px-4 gap-2">
         <div className="flex items-center gap-2 overflow-hidden">
           <Avatar className="h-9 w-9">
             <AvatarImage src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`} alt={currentUser.displayName || "User Avatar"} />
@@ -134,7 +118,10 @@ export function DashboardSidebar() {
            <span className="text-xs text-muted-foreground capitalize">{userRole}</span>
           </div>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <ThemeToggle />
+        </div>
       </div>
       <ScrollArea className="flex-1 py-4">
         <nav className="grid items-start px-4 text-sm font-medium">
@@ -143,17 +130,21 @@ export function DashboardSidebar() {
               key={item.href + item.label} 
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10',
-                (pathname === item.href || (item.href !== '/dashboard' && item.href !== '/dashboard/creator' && item.href !== '/dashboard/student' && item.href !== '/dashboard/superadmin' && pathname.startsWith(item.href)) ) && 'bg-primary/10 text-primary font-semibold'
+                'flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-secondary-foreground transition-all hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 ios-button group',
+                (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)) ) && 'bg-primary text-white font-medium hover:text-white hover:bg-primary/90'
               )}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className={cn("h-4 w-4 transition-colors", 
+                (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)) ) 
+                  ? "text-white" 
+                  : item.colorClass || "text-muted-foreground group-hover:text-foreground"
+              )} />
               {item.label}
             </Link>
           ))}
         </nav>
       </ScrollArea>
-      <div className="mt-auto p-4 border-t">
+      <div className="mt-auto p-4 py-6 border-t border-black/5 dark:border-white/10">
          <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             Cerrar Sesión

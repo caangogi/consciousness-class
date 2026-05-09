@@ -17,9 +17,9 @@ import {
     Info, HelpCircle, Loader2, AlertTriangle, Menu, Send, StarIcon, Trash2, Edit, CornerDownRight, Reply
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
-import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
-import type { LessonProperties } from '@/features/course/domain/entities/lesson.entity';
+import type { CourseProperties } from '@/backend/course/domain/entities/course.entity';
+import type { ModuleProperties } from '@/backend/course/domain/entities/module.entity';
+import type { LessonProperties } from '@/backend/course/domain/entities/lesson.entity';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';

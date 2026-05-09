@@ -17,17 +17,20 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
-import { useRouter, useParams } from 'next/navigation'; // Import useParams
-import type { CreateCourseDto } from '@/features/course/infrastructure/dto/create-course.dto';
-import type { UpdateCourseDto } from '@/features/course/infrastructure/dto/update-course.dto';
-import { type CourseAccessType, type CourseStatus, type CourseProperties } from '@/features/course/domain/entities/course.entity';
-import type { ModuleEntity, ModuleProperties } from '@/features/course/domain/entities/module.entity';
-import type { CreateModuleDto } from '@/features/course/infrastructure/dto/create-module.dto';
-import type { UpdateModuleDto } from '@/features/course/infrastructure/dto/update-module.dto';
-import type { CreateLessonDto } from '@/features/course/infrastructure/dto/create-lesson.dto';
-import type { UpdateLessonDto } from '@/features/course/infrastructure/dto/update-lesson.dto';
-import { type LessonProperties, type LessonContentType } from '@/features/course/domain/entities/lesson.entity';
-import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud, GripVertical, Trash2, Edit, Rocket, Eye, Percent } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import type { CreateCourseDto } from '@/backend/course/infrastructure/dto/create-course.dto';
+import type { UpdateCourseDto } from '@/backend/course/infrastructure/dto/update-course.dto';
+import { type CourseAccessType, type CourseStatus, type CourseProperties } from '@/backend/course/domain/entities/course.entity';
+import type { ModuleEntity, ModuleProperties } from '@/backend/course/domain/entities/module.entity';
+import type { CreateModuleDto } from '@/backend/course/infrastructure/dto/create-module.dto';
+import type { UpdateModuleDto } from '@/backend/course/infrastructure/dto/update-module.dto';
+import type { CreateLessonDto } from '@/backend/course/infrastructure/dto/create-lesson.dto';
+import type { UpdateLessonDto } from '@/backend/course/infrastructure/dto/update-lesson.dto';
+import { type LessonProperties, type LessonContentType } from '@/backend/course/domain/entities/lesson.entity';
+import { MiniStudioDialog } from '@/components/dashboard/courses/MiniStudioDialog';
+import { CourseCoverManager } from '@/components/dashboard/courses/CourseCoverManager';
+import { ReferralPolicySelector } from '@/components/dashboard/ReferralPolicySelector';
+import { ArrowRight, Loader2, Info, ListChecks, Settings, Image as ImageIcon, FileText, PlusCircle, UploadCloud, GripVertical, Trash2, Edit, Rocket, Eye, Percent, Wand2, Sparkles, Brain } from 'lucide-react';
 import { auth, storage } from '@/lib/firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
@@ -44,7 +47,7 @@ const step1Schema = z.object({
   tipoAcceso: z.enum(['unico', 'suscripcion'], { required_error: 'Debes seleccionar un tipo de acceso.' }),
   precio: z.coerce.number().min(0, { message: 'El precio debe ser 0 o mayor.' }),
   duracionEstimada: z.string().min(3, { message: 'La duración estimada es requerida.'}),
-  comisionReferidoPorcentaje: z.coerce.number().min(0, "La comisión debe ser 0 o mayor.").max(100, "La comisión no puede exceder 100%.").optional().nullable(),
+  referralPolicyId: z.string().optional().nullable(),
 });
 type Step1FormValues = z.infer<typeof step1Schema>;
 
@@ -88,16 +91,13 @@ const courseStatuses: CourseStatus[] = ['borrador', 'publicado', 'en_revision', 
 const lessonContentTypes: LessonContentType[] = ['video', 'documento_pdf', 'texto_rico', 'quiz', 'audio'];
 
 
-export default function ManageCoursePage() { // Renamed component
+export default function NewCoursePage() {
   const { toast } = useToast();
   const router = useRouter();
-  const params = useParams(); // Get route parameters
-  const courseIdFromRoute = typeof params.id === 'string' && params.id !== 'new' ? params.id : null;
-
   const [currentStep, setCurrentStep] = useState<string>("info"); 
   const [isLoading, setIsLoading] = useState(false);
   
-  const [createdCourseId, setCreatedCourseId] = useState<string | null>(courseIdFromRoute); // Initialize with ID from route
+  const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
   const [courseDetails, setCourseDetails] = useState<CourseProperties | null>(null);
   
   const [modules, setModules] = useState<ModuleProperties[]>([]);
@@ -137,6 +137,44 @@ export default function ManageCoursePage() { // Renamed component
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
 
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  const handleGenerateAiStructure = async () => {
+    if (!createdCourseId) {
+      toast({ title: "Primero crea el curso", description: "Guarda la información básica antes de usar el Asistente AI.", variant: "destructive" });
+      return;
+    }
+    if (!aiPrompt.trim()) return;
+
+    setIsAiLoading(true);
+    try {
+      const user = auth.currentUser;
+      const idToken = await user?.getIdToken();
+      const response = await fetch(`/api/courses/${createdCourseId}/ai-structure`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify({ prompt: aiPrompt }),
+      });
+      
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || errData.details || "Falló la generación");
+      }
+      
+      toast({ title: "¡Estructura Generada!", description: "El Asistente Consciousness ha construido tus módulos." });
+      setAiPrompt("");
+      // Refresh local state by refetching structure
+      if (typeof fetchCourseStructure === 'function') {
+        await fetchCourseStructure(createdCourseId);
+      }
+    } catch (error: any) {
+      toast({ title: "Error AI", description: error.message, variant: "destructive" });
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   const formStep1 = useForm<Step1FormValues>({
     resolver: zodResolver(step1Schema),
     defaultValues: {
@@ -147,7 +185,7 @@ export default function ManageCoursePage() { // Renamed component
       tipoAcceso: undefined, 
       precio: 0,
       duracionEstimada: '',
-      comisionReferidoPorcentaje: null,
+      referralPolicyId: null,
     },
   });
 
@@ -193,7 +231,7 @@ export default function ManageCoursePage() { // Renamed component
         tipoAcceso: courseDetails.tipoAcceso,
         precio: courseDetails.precio ?? 0,
         duracionEstimada: courseDetails.duracionEstimada || '',
-        comisionReferidoPorcentaje: courseDetails.comisionReferidoPorcentaje === undefined ? null : courseDetails.comisionReferidoPorcentaje,
+        referralPolicyId: courseDetails.referralPolicyId === undefined ? null : courseDetails.referralPolicyId,
       });
       setCoverImagePreviewUrl(courseDetails.imagenPortadaUrl || null);
       setVideoTrailerUrlInput(courseDetails.videoTrailerUrl || '');
@@ -289,20 +327,10 @@ export default function ManageCoursePage() { // Renamed component
 
 
   useEffect(() => {
-    // This effect now handles loading for editing existing courses
-    if (courseIdFromRoute) {
-      setCreatedCourseId(courseIdFromRoute); // Ensure createdCourseId is set for edit mode
-      fetchCourseStructure(courseIdFromRoute);
-    } else {
-      // Reset for new course creation if navigating from an edited course to "new"
-      setCreatedCourseId(null);
-      setCourseDetails(null);
-      setModules([]);
-      setLessonsByModule({});
-      formStep1.reset(); 
-      // etc. for other forms and states
+    if (createdCourseId) {
+      fetchCourseStructure(createdCourseId);
     }
-  }, [courseIdFromRoute, fetchCourseStructure, formStep1]);
+  }, [createdCourseId, fetchCourseStructure]);
 
 
   const fetchLessonsForModule = useCallback(async (courseId: string, moduleId: string, moduleData?: ModuleProperties) => {
@@ -364,7 +392,13 @@ export default function ManageCoursePage() { // Renamed component
   };
 
 
+  const onErrorStep1 = (errors: any) => {
+    console.log("[DEBUG] FormStep1 Validation Errors:", errors);
+    toast({ title: "Campos Incompletos", description: "Por favor, revisa y completa los campos marcados en rojo en Información General.", variant: "destructive" });
+  };
+
   const onSubmitStep1 = async (values: Step1FormValues) => {
+    console.log("[DEBUG] onSubmitStep1 Fired! Captured values:", values);
     if (!auth.currentUser) {
       toast({ title: "Error de autenticación", description: "Debes iniciar sesión.", variant: "destructive" });
       return;
@@ -377,8 +411,9 @@ export default function ManageCoursePage() { // Renamed component
       
       const dto: CreateCourseDto | UpdateCourseDto = { 
         ...values, 
+        precio: Number(values.precio),
         tipoAcceso: values.tipoAcceso as CourseAccessType,
-        comisionReferidoPorcentaje: values.comisionReferidoPorcentaje === undefined || values.comisionReferidoPorcentaje === null ? null : Number(values.comisionReferidoPorcentaje) 
+        referralPolicyId: values.referralPolicyId === undefined ? null : values.referralPolicyId
       };
       
       const response = await fetch(endpoint, {
@@ -398,8 +433,6 @@ export default function ManageCoursePage() { // Renamed component
       }
       if (responseData.courseId && !createdCourseId) {
          setCreatedCourseId(responseData.courseId);
-         // If it was a new course, redirect to the edit-like URL for this new course
-         router.replace(`/dashboard/creator/courses/${responseData.courseId}`, { scroll: false });
       }
       toast({ 
         title: "Paso 1 Completado", 
@@ -671,8 +704,8 @@ export default function ManageCoursePage() { // Renamed component
   const handleLessonFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 100 * 1024 * 1024) { 
-        toast({ title: "Archivo Demasiado Grande", description: "El archivo no debe exceder los 100MB.", variant: "destructive"});
+      if (file.size > 2048 * 1024 * 1024) { 
+        toast({ title: "Archivo Demasiado Grande", description: "El archivo de la lección no debe exceder los 2GB.", variant: "destructive"});
         event.target.value = ''; 
         setLessonContentFile(null);
         return;
@@ -985,19 +1018,15 @@ export default function ManageCoursePage() { // Renamed component
     }
   };
 
-  const pageTitle = courseIdFromRoute 
-    ? `Editando Curso: ${courseDetails?.nombre || 'Cargando...'}` 
-    : "Crear Nuevo Curso";
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px:6">
-      <Card className="max-w-4xl mx-auto shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-3xl font-headline">{pageTitle}</CardTitle>
-          <CardDescription>Completa los siguientes pasos para configurar tu curso.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={currentStep} onValueChange={(newStep) => {
+    <div className="space-y-6 max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pb-12 pt-4">
+      <div className="px-1 mb-2">
+        <h1 className="text-largeTitle font-bold text-foreground">{createdCourseId ? `Editar: ${courseDetails?.nombre || ''}` : "Crear Curso"}</h1>
+        <p className="text-subheadline text-secondary-foreground mt-1">Completa los siguientes pasos para configurar tu curso.</p>
+      </div>
+      <div>
+        <Tabs value={currentStep} onValueChange={(newStep) => {
             if (newStep === "info" || 
                 (newStep === "structure" && createdCourseId) || 
                 (newStep === "settings" && createdCourseId)) {
@@ -1006,7 +1035,7 @@ export default function ManageCoursePage() { // Renamed component
               toast({title: "Paso Bloqueado", description: "Completa los pasos anteriores primero para habilitar esta sección.", variant: "default"});
             }
           }} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="flex flex-col sm:flex-row w-full h-auto sm:h-10 mb-8 sm:mb-6 gap-2">
               <TabsTrigger value="info" className={getTabClass("info")} disabled={isLoading || isSavingSettings}>
                 <Info className="h-5 w-5" /> Información
               </TabsTrigger>
@@ -1018,73 +1047,107 @@ export default function ManageCoursePage() { // Renamed component
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="info">
-              <Card>
-                <CardHeader>
-                  <CardTitle>1. Información Básica del Curso</CardTitle>
-                  <CardDescription>Define los detalles fundamentales de tu curso.</CardDescription>
-                </CardHeader>
-                <CardContent>
+            <TabsContent value="info" className="mt-6">
+                <div className="space-y-6">
                   <Form {...formStep1}>
-                    <form onSubmit={formStep1.handleSubmit(onSubmitStep1)} className="space-y-6">
-                      <FormField control={formStep1.control} name="nombre" render={({ field }) => (<FormItem><FormLabel>Nombre del Curso</FormLabel><FormControl><Input placeholder="Ej: Curso Completo de Next.js y Firebase" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                      <FormField control={formStep1.control} name="descripcionCorta" render={({ field }) => (<FormItem><FormLabel>Descripción Corta</FormLabel><FormControl><Input placeholder="Un resumen atractivo (máx. 200 caracteres)" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                      <FormField control={formStep1.control} name="descripcionLarga" render={({ field }) => (<FormItem><FormLabel>Descripción Larga</FormLabel><FormControl><Textarea rows={6} placeholder="Describe en detalle tu curso..." {...field} /></FormControl><FormDescription>Puedes usar Markdown.</FormDescription><FormMessage /></FormItem>)} />
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <FormField control={formStep1.control} name="categoria" render={({ field }) => (<FormItem><FormLabel>Categoría</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona categoría" /></SelectTrigger></FormControl><SelectContent>{courseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-                        <FormField control={formStep1.control} name="tipoAcceso" render={({ field }) => (<FormItem><FormLabel>Tipo de Acceso</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona tipo de acceso" /></SelectTrigger></FormControl><SelectContent><SelectItem value="unico">Pago Único</SelectItem><SelectItem value="suscripcion">Suscripción</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                    <form onSubmit={formStep1.handleSubmit(onSubmitStep1, onErrorStep1)} className="space-y-6">
+                      <h2 className="text-footnote text-secondary-foreground uppercase pl-4 mb-2 tracking-wider font-medium">Información General</h2>
+                      <div className="ios-list">
+                        <div className="ios-list-item min-h-[44px] flex-col items-start !items-stretch py-3">
+                            <FormField control={formStep1.control} name="nombre" render={({ field }) => (<FormItem><FormLabel className="text-body font-medium mb-1 block">Nombre del Curso</FormLabel><FormControl><Input className="border-0 bg-secondary/30 dark:bg-secondary/50 rounded-md px-3 py-2 text-body focus-visible:ring-1 focus-visible:ring-primary/20 placeholder:text-muted-foreground" placeholder="Ej: Curso Completo de Next.js y Firebase" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        </div>
+                        <div className="ios-list-item min-h-[44px] flex-col items-start !items-stretch py-3">
+                           <FormField control={formStep1.control} name="descripcionCorta" render={({ field }) => (<FormItem><FormLabel className="text-body font-medium mb-1 block">Descripción Corta</FormLabel><FormControl><Input className="border-0 bg-secondary/30 dark:bg-secondary/50 rounded-md px-3 py-2 text-body focus-visible:ring-1 focus-visible:ring-primary/20 placeholder:text-muted-foreground" placeholder="Un resumen atractivo" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        </div>
+                        <div className="ios-list-item min-h-[44px] flex-col items-start !items-stretch py-3">
+                           <FormField control={formStep1.control} name="descripcionLarga" render={({ field }) => (<FormItem><FormLabel className="text-body font-medium mb-1 block">Descripción Larga</FormLabel><FormControl><Textarea className="border-0 bg-secondary/30 dark:bg-secondary/50 rounded-md px-3 py-2 text-body focus-visible:ring-1 focus-visible:ring-primary/20 placeholder:text-muted-foreground resize-none" rows={6} placeholder="Describe en detalle tu curso..." {...field} /></FormControl><FormDescription className="text-xs text-secondary-foreground mt-2">Puedes usar Markdown.</FormDescription><FormMessage /></FormItem>)} />
+                        </div>
                       </div>
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <FormField control={formStep1.control} name="precio" render={({ field }) => (<FormItem><FormLabel>Precio (€)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Ej: 49.99" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={formStep1.control} name="duracionEstimada" render={({ field }) => (<FormItem><FormLabel>Duración Estimada</FormLabel><FormControl><Input placeholder="Ej: 20 horas de video" {...field} /></FormControl><FormMessage /></FormItem>)} />
+
+                      <h2 className="text-footnote text-secondary-foreground uppercase pl-4 mb-2 tracking-wider font-medium mt-6">Categoría y Precios</h2>
+                      <div className="ios-list">
+                        <div className="ios-list-item flex flex-col sm:flex-row sm:items-center py-2 min-h-[44px] gap-2 md:gap-4">
+                           <div className="flex-1 w-full"><FormField control={formStep1.control} name="categoria" render={({ field }) => (<FormItem className="flex items-center justify-between m-0 space-y-0"><FormLabel className="text-body font-medium flex-shrink-0 m-0">Categoría</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="w-auto border-0 focus:ring-0 shadow-none bg-secondary/20 rounded-md px-3 py-2 text-secondary-foreground sm:text-right h-auto gap-2 [&>svg]:opacity-50"><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl><SelectContent>{courseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select></FormItem>)} /></div>
+                        </div>
+                        <div className="ios-list-item flex flex-col sm:flex-row sm:items-center py-2 min-h-[44px] gap-2 md:gap-4">
+                           <div className="flex-1 w-full"><FormField control={formStep1.control} name="tipoAcceso" render={({ field }) => (<FormItem className="flex items-center justify-between m-0 space-y-0"><FormLabel className="text-body font-medium flex-shrink-0 m-0">Tipo de Acceso</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="w-auto border-0 focus:ring-0 shadow-none bg-secondary/20 rounded-md px-3 py-2 text-secondary-foreground sm:text-right h-auto gap-2 [&>svg]:opacity-50"><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl><SelectContent><SelectItem value="unico">Pago Único</SelectItem><SelectItem value="suscripcion">Suscripción</SelectItem></SelectContent></Select></FormItem>)} /></div>
+                        </div>
+                        <div className="ios-list-item flex flex-col sm:flex-row sm:items-center py-2 min-h-[44px] gap-2 md:gap-4">
+                           <div className="flex-1 w-full"><FormField control={formStep1.control} name="precio" render={({ field }) => (<FormItem className="flex items-center justify-between m-0 space-y-0"><FormLabel className="text-body font-medium flex-shrink-0 m-0">Precio (€)</FormLabel><FormControl><Input className="w-28 sm:text-right border-0 bg-secondary/20 rounded-md focus-visible:ring-0 px-3 py-2 h-auto text-secondary-foreground" type="number" step="0.01" placeholder="Ej: 49.99" {...field} /></FormControl></FormItem>)} /></div>
+                        </div>
+                        <div className="ios-list-item flex flex-col sm:flex-row sm:items-center py-2 min-h-[44px] gap-2 md:gap-4">
+                           <div className="flex-1 w-full"><FormField control={formStep1.control} name="duracionEstimada" render={({ field }) => (<FormItem className="flex items-center justify-between m-0 space-y-0"><FormLabel className="text-body font-medium flex-shrink-0 m-0">Duración Est.</FormLabel><FormControl><Input className="w-36 sm:text-right border-0 bg-secondary/20 rounded-md focus-visible:ring-0 px-3 py-2 h-auto text-secondary-foreground" placeholder="Ej: 20 horas" {...field} /></FormControl></FormItem>)} /></div>
+                        </div>
                       </div>
-                      <FormField 
-                        control={formStep1.control} 
-                        name="comisionReferidoPorcentaje" 
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Comisión por Referido (%)</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input 
-                                  type="number" 
-                                  placeholder="Ej: 10" 
-                                  {...field} 
-                                  value={field.value === null ? '' : field.value} // Manejar null para input vacío
-                                  onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
-                                  className="pl-8"
-                                />
-                                <Percent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              </div>
-                            </FormControl>
-                            <FormDescription>Porcentaje (0-100) que se dará como comisión. Déjalo vacío si no aplica.</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )} 
-                      />
-                      <div className="flex justify-end pt-4"><Button type="submit" disabled={isLoading}>{isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{createdCourseId ? "Actualizar y Continuar" : "Guardar y Continuar"} <ArrowRight className="ml-2 h-4 w-4" /></Button></div>
+
+                      <h2 className="text-footnote text-secondary-foreground uppercase pl-4 mb-2 tracking-wider font-medium mt-6">Afiliados</h2>
+                      <div className="ios-list">
+                        <div className="ios-list-item flex flex-col sm:flex-row sm:items-center py-2 min-h-[44px] gap-2 md:gap-4">
+                           <div className="flex-1 w-full"><FormField control={formStep1.control} name="referralPolicyId" render={({ field }) => (<FormItem className="flex items-center justify-between m-0 space-y-0"><FormLabel className="text-body font-medium flex-shrink-0 m-0">Política de Referidos</FormLabel><FormControl><ReferralPolicySelector value={field.value as string | null} onChange={field.onChange} /></FormControl></FormItem>)} /></div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end pt-4"><Button type="submit" disabled={isLoading} className="ios-button rounded-full px-6">{isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{createdCourseId ? "Actualizar y Continuar" : "Guardar y Continuar"} <ArrowRight className="ml-2 h-4 w-4" /></Button></div>
                     </form>
                   </Form>
-                </CardContent>
-              </Card>
+              </div>
             </TabsContent>
 
-            <TabsContent value="structure">
-              <Card>
-                <CardHeader>
-                  <CardTitle>2. Estructura y Contenido del Curso</CardTitle>
-                  <CardDescription>Organiza los módulos y añade lecciones a tu curso. Puedes arrastrar los módulos o lecciones para reordenarlos.</CardDescription>
-                </CardHeader>
-                <CardContent>
+            <TabsContent value="structure" className="mt-6">
+              <div className="space-y-6">
+                  <h2 className="text-footnote text-secondary-foreground uppercase pl-4 mb-2 tracking-wider font-medium">Estructura y Contenido</h2>
                   {createdCourseId ? (
                      <DragDropContext onDragEnd={onDragEnd}>
+                      
+                      {/* AI Course Builder Card */}
+                      <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 mb-8 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                        <div className="relative z-10 flex flex-col gap-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                              <Sparkles className="h-4 w-4" />
+                            </div>
+                            <h3 className="text-headline font-semibold flex items-center text-primary">
+                              Asistente Consciousness
+                            </h3>
+                          </div>
+                          <p className="text-body text-secondary-foreground">
+                            ¿Bloqueo de creador? Cuéntale a nuestra IA de qué trata tu curso, cuántas lecciones quieres y deja que estructure el esqueleto mágicamente.
+                          </p>
+                          <Textarea 
+                            className="w-full bg-background mt-2 mb-2 focus-visible:ring-primary/50 text-body resize-none" 
+                            rows={3} 
+                            placeholder="Ej: Crea un curso de 3 módulos sobre meditación vipassana para principiantes..."
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
+                            disabled={isAiLoading || isReorderingModules}
+                          />
+                          <div className="flex justify-end">
+                            <Button 
+                              onClick={handleGenerateAiStructure} 
+                              disabled={isAiLoading || !aiPrompt.trim()} 
+                              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-medium shadow-sm transition-all"
+                            >
+                              {isAiLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                              {isAiLoading ? 'Estructurando con IA...' : 'Generar Estructura'}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
                       <p className="mb-4 text-sm text-muted-foreground">Editando estructura para: {courseDetails?.nombre || `ID: ${createdCourseId}`}</p>
                       
                       <Form {...moduleForm}>
-                        <form onSubmit={moduleForm.handleSubmit(onAddModule)} className="space-y-4 mb-6 p-4 border rounded-md shadow-sm">
-                          <FormField control={moduleForm.control} name="moduleName" render={({ field }) => (<FormItem className="flex-grow"><FormLabel>Nombre del Nuevo Módulo</FormLabel><FormControl><Input placeholder="Ej: Introducción a..." {...field} disabled={isModuleLoading || isReorderingModules} /></FormControl><FormMessage /></FormItem>)} />
-                          <FormField control={moduleForm.control} name="moduleDescription" render={({ field }) => (<FormItem className="flex-grow"><FormLabel>Descripción del Módulo (Opcional)</FormLabel><FormControl><Textarea placeholder="Una breve descripción del módulo" {...field} disabled={isModuleLoading || isReorderingModules} rows={2} /></FormControl><FormMessage /></FormItem>)} />
-                          <Button type="submit" disabled={isModuleLoading || isReorderingModules}>{isModuleLoading || isReorderingModules ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4"/>}Añadir Módulo</Button>
+                        <form onSubmit={moduleForm.handleSubmit(onAddModule, (e) => { toast({title: "Incompleto", description: "Revisa el nombre del módulo."}) })} className="space-y-4 mb-6">
+                           <div className="ios-list">
+                             <div className="ios-list-item min-h-[44px] flex-col items-start !items-stretch py-3">
+                                <FormField control={moduleForm.control} name="moduleName" render={({ field }) => (<FormItem className="flex-grow"><FormLabel className="text-body font-medium mb-1 block">Nombre del Módulo</FormLabel><FormControl><Input className="border-0 bg-secondary/30 dark:bg-secondary/50 rounded-md px-3 py-2 text-body focus-visible:ring-1 focus-visible:ring-primary/20 placeholder:text-muted-foreground" placeholder="Ej: Introducción a..." {...field} disabled={isModuleLoading || isReorderingModules} /></FormControl><FormMessage /></FormItem>)} />
+                             </div>
+                             <div className="ios-list-item min-h-[44px] flex-col items-start !items-stretch py-3">
+                                <FormField control={moduleForm.control} name="moduleDescription" render={({ field }) => (<FormItem className="flex-grow"><FormLabel className="text-body font-medium mb-1 block">Descripción (Opcional)</FormLabel><FormControl><Textarea className="border-0 bg-secondary/30 dark:bg-secondary/50 rounded-md px-3 py-2 text-body focus-visible:ring-1 focus-visible:ring-primary/20 placeholder:text-muted-foreground resize-none" placeholder="Breve descripción del módulo" {...field} disabled={isModuleLoading || isReorderingModules} rows={2} /></FormControl><FormMessage /></FormItem>)} />
+                             </div>
+                           </div>
+                          <div className="flex justify-end pt-1"><Button type="submit" className="ios-button rounded-full" size="sm" disabled={isModuleLoading || isReorderingModules}>{isModuleLoading || isReorderingModules ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4"/>}Añadir Módulo</Button></div>
                         </form>
                       </Form>
 
@@ -1106,11 +1169,11 @@ export default function ManageCoursePage() { // Renamed component
                             ignoreContainerClipping={false} 
                           >
                             {(providedDroppableModules) => (
-                              <div {...providedDroppableModules.droppableProps} ref={providedDroppableModules.innerRef} className="space-y-2">
+                              <div {...providedDroppableModules.droppableProps} ref={providedDroppableModules.innerRef}>
                                 <Accordion 
                                   type="single" 
                                   collapsible 
-                                  className="w-full" 
+                                  className="ios-list w-full" 
                                   value={expandedModuleId || undefined} 
                                   onValueChange={(value) => {
                                     handleToggleModuleLessons(value);
@@ -1125,12 +1188,12 @@ export default function ManageCoursePage() { // Renamed component
                                           ref={providedDraggableModule.innerRef}
                                           {...providedDraggableModule.draggableProps}
                                         >
-                                          <AccordionItem value={module.id} className="border-b bg-secondary/30 rounded-md mb-2 shadow-sm">
-                                            <div className="flex items-center justify-between w-full hover:bg-secondary/50 rounded-t-md data-[state=open]:rounded-b-none transition-colors pr-2">
-                                              <div {...providedDraggableModule.dragHandleProps} className="p-2 cursor-grab opacity-60 hover:opacity-100">
+                                          <AccordionItem value={module.id} className="ios-list-item flex-col items-stretch !p-0 border-b last:border-b-0 border-border !min-h-[44px] bg-transparent">
+                                            <div className="flex items-center justify-between w-full transition-colors pr-2 h-auto">
+                                              <div {...providedDraggableModule.dragHandleProps} className="p-3 cursor-grab opacity-30 hover:opacity-100 text-muted-foreground mr-1">
                                                   <GripVertical className="h-5 w-5" />
                                               </div>
-                                              <AccordionTrigger className="flex-grow text-left hover:no-underline px-2 py-3 group data-[state=closed]:hover:bg-secondary/40 data-[state=open]:bg-secondary/60">
+                                              <AccordionTrigger className="flex-grow text-left hover:no-underline py-3 px-1 group outline-none [&[data-state=open]>svg]:rotate-180">
                                                 <div className="flex justify-between items-center w-full">
                                                   <div>
                                                     <span className="font-medium">{module.nombre}</span>
@@ -1166,45 +1229,29 @@ export default function ManageCoursePage() { // Renamed component
                                                   </Button>
                                               </div>
                                             </div>
-                                          <AccordionContent className="pt-0 pb-2 px-2 border-t border-primary/10 ml-0">
-                                            <Card className="shadow-none border-0 rounded-none">
-                                              <CardHeader className="px-2 pt-3 pb-2">
-                                                <CardTitle className="text-base">Lecciones del Módulo: {module.nombre}</CardTitle>
-                                              </CardHeader>
-                                              <CardContent className="px-2 pb-2">
+                                          <AccordionContent className="pt-0 pb-0 ml-0 overflow-hidden bg-secondary/5 dark:bg-white/5 border-t border-border">
+                                            <div className="px-4 py-3">
+                                              <div className="mb-3">
+                                                <h4 className="text-sm font-medium text-secondary-foreground mb-1">Lecciones del Módulo: {module.nombre}</h4>
+                                              </div>
                                                 <Form {...lessonForm}>
-                                                  <form onSubmit={lessonForm.handleSubmit((data) => onAddLesson(module.id, data))} className="space-y-4 mb-6 p-3 border rounded-md bg-background">
-                                                    <h5 className="font-medium text-sm">Añadir Nueva Lección</h5>
-                                                    <FormField control={lessonForm.control} name="lessonName" render={({ field }) => (<FormItem><FormLabel className="text-xs">Nombre Lección</FormLabel><FormControl><Input placeholder="Título de la lección" {...field} disabled={isLessonLoading[module.id] || isUploadingContent || isReorderingLessons[module.id]} /></FormControl><FormMessage /></FormItem>)} />
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                      <FormField 
-                                                          control={lessonForm.control} 
-                                                          name="lessonContentType" 
-                                                          render={({ field }) => (
-                                                              <FormItem>
-                                                                  <FormLabel className="text-xs">Tipo Contenido</FormLabel>
-                                                                  <Select 
-                                                                      onValueChange={(value) => {
-                                                                          field.onChange(value);
-                                                                          setSelectedLessonContentType(value as LessonContentType);
-                                                                          setLessonContentFile(null); 
-                                                                          lessonForm.setValue('lessonContentText', ''); 
-                                                                      }} 
-                                                                      value={field.value} 
-                                                                      disabled={isLessonLoading[module.id] || isUploadingContent || isReorderingLessons[module.id]}
-                                                                  >
-                                                                      <FormControl><SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger></FormControl>
-                                                                      <SelectContent>{lessonContentTypes.map(type => <SelectItem key={type} value={type}>{type.replace('_', ' ').replace(/\\b\\w/g, l => l.toUpperCase())}</SelectItem>)}</SelectContent>
-                                                                  </Select>
-                                                                  <FormMessage />
-                                                              </FormItem>
-                                                          )} 
-                                                      />
-                                                      <FormField control={lessonForm.control} name="lessonDuration" render={({ field }) => (<FormItem><FormLabel className="text-xs">Duración Estimada</FormLabel><FormControl><Input placeholder="Ej: 10 min, 3 págs" {...field} disabled={isLessonLoading[module.id] || isUploadingContent || isReorderingLessons[module.id]} /></FormControl><FormMessage /></FormItem>)} />
+                                                  <form onSubmit={lessonForm.handleSubmit((data) => onAddLesson(module.id, data), (e) => toast({title: "Incompleto", description: "Revisa los campos de la lección", variant: "destructive"}))} className="space-y-4 mb-6 pt-2">
+                                                    <div className="ios-list">
+                                                      <div className="ios-list-item min-h-[44px] flex-col items-start !items-stretch py-3">
+                                                         <FormField control={lessonForm.control} name="lessonName" render={({ field }) => (<FormItem><FormLabel className="text-xs font-medium mb-1 block">Nombre Lección</FormLabel><FormControl><Input className="border-0 bg-secondary/30 dark:bg-secondary/50 rounded-md px-3 py-2 text-xs focus-visible:ring-1 focus-visible:ring-primary/20 placeholder:text-muted-foreground" placeholder="Título de la lección" {...field} disabled={isLessonLoading[module.id] || isUploadingContent || isReorderingLessons[module.id]} /></FormControl><FormMessage /></FormItem>)} />
+                                                      </div>
+                                                      <div className="ios-list-item flex flex-col sm:flex-row sm:items-center py-2 min-h-[44px] gap-2 md:gap-4">
+                                                         <div className="flex-1 w-full">
+                                                           <FormField control={lessonForm.control} name="lessonContentType" render={({ field }) => ( <FormItem className="flex items-center justify-between m-0 space-y-0"><FormLabel className="text-xs font-medium flex-shrink-0 m-0">Tipo Contenido</FormLabel><Select onValueChange={(value) => { field.onChange(value); setSelectedLessonContentType(value as LessonContentType); setLessonContentFile(null); lessonForm.setValue('lessonContentText', ''); }} value={field.value} disabled={isLessonLoading[module.id] || isUploadingContent || isReorderingLessons[module.id]}><FormControl><SelectTrigger className="w-auto border-0 focus:ring-0 shadow-none bg-secondary/20 rounded-md px-3 py-2 text-xs h-auto gap-2 text-secondary-foreground"><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl><SelectContent>{lessonContentTypes.map(type => <SelectItem key={type} value={type}>{type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>)}</SelectContent></Select></FormItem>)} />
+                                                         </div>
+                                                      </div>
+                                                      <div className="ios-list-item flex flex-col sm:flex-row sm:items-center py-2 min-h-[44px] gap-2 md:gap-4">
+                                                          <div className="flex-1 w-full"><FormField control={lessonForm.control} name="lessonDuration" render={({ field }) => (<FormItem className="flex items-center justify-between m-0 space-y-0"><FormLabel className="text-xs font-medium flex-shrink-0 m-0">Duración Estimada</FormLabel><FormControl><Input className="w-32 sm:text-right border-0 bg-secondary/20 rounded-md px-3 py-2 text-xs focus-visible:ring-0 h-auto" placeholder="Ej: 10 min, 3 págs" {...field} disabled={isLessonLoading[module.id] || isUploadingContent || isReorderingLessons[module.id]} /></FormControl></FormItem>)} /></div>
+                                                      </div>
                                                     </div>
                                                     {renderLessonContentField(lessonForm, lessonForm.watch('lessonContentType'), !!(isLessonLoading[module.id] || isUploadingContent || isReorderingLessons[module.id]))}
-                                                    <FormField control={lessonForm.control} name="lessonIsPreview" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-background"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isLessonLoading[module.id] || isUploadingContent || isReorderingLessons[module.id]} /></FormControl><div className="space-y-1 leading-none"><FormLabel className="text-xs">¿Es vista previa gratuita?</FormLabel></div></FormItem>)} />
-                                                    <Button type="submit" size="sm" disabled={isLessonLoading[module.id] || !createdCourseId || isUploadingContent || isReorderingLessons[module.id]}>{isLessonLoading[module.id] || isUploadingContent || isReorderingLessons[module.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}Añadir Lección</Button>
+                                                    <FormField control={lessonForm.control} name="lessonIsPreview" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 p-3 bg-secondary/20 rounded-md mb-2 mt-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isLessonLoading[module.id] || isUploadingContent || isReorderingLessons[module.id]} /></FormControl><div className="space-y-1 leading-none"><FormLabel className="text-xs font-medium">¿Es vista previa gratuita?</FormLabel></div></FormItem>)} />
+                                                    <div className="flex justify-end pt-1"><Button type="submit" size="sm" className="ios-button rounded-full text-xs px-4" disabled={isLessonLoading[module.id] || !createdCourseId || isUploadingContent || isReorderingLessons[module.id]}>{isLessonLoading[module.id] || isUploadingContent || isReorderingLessons[module.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-3 w-3" />}Añadir Lección</Button></div>
                                                   </form>
                                                 </Form>
                                                 
@@ -1222,14 +1269,14 @@ export default function ManageCoursePage() { // Renamed component
                                                           ignoreContainerClipping={false}
                                                       >
                                                           {(providedDroppableLessons) => (
-                                                              <ul {...providedDroppableLessons.droppableProps} ref={providedDroppableLessons.innerRef} className="divide-y divide-border">
+                                                              <ul {...providedDroppableLessons.droppableProps} ref={providedDroppableLessons.innerRef} className="ios-list my-2 bg-background border border-border shadow-sm">
                                                                   {(lessonsByModule[module.id] || []).map((lesson, lessonIndex) => (
                                                                       <Draggable key={lesson.id} draggableId={lesson.id} index={lessonIndex} isDragDisabled={!!(isLessonLoading[module.id] || isReorderingLessons[module.id])} type="LESSON">
                                                                           {(providedDraggableLesson) => (
                                                                               <li
                                                                                   ref={providedDraggableLesson.innerRef}
                                                                                   {...providedDraggableLesson.draggableProps}
-                                                                                  className="text-foreground/90 hover:bg-secondary/20 p-2 rounded-sm flex justify-between items-center text-sm"
+                                                                                  className="ios-list-item min-h-[44px] flex justify-between items-center bg-transparent py-2 border-b last:border-b-0 border-border"
                                                                               >
                                                                                   <div className="flex items-center">
                                                                                       <div {...providedDraggableLesson.dragHandleProps} className="mr-2 p-1 cursor-grab opacity-50 hover:opacity-100">
@@ -1288,8 +1335,7 @@ export default function ManageCoursePage() { // Renamed component
                                                       </Droppable>
                                                   </div>
                                                 )}
-                                              </CardContent>
-                                            </Card>
+                                            </div>
                                           </AccordionContent>
                                           </AccordionItem>
                                         </div>
@@ -1311,83 +1357,40 @@ export default function ManageCoursePage() { // Renamed component
                       <Button type="button" variant="outline" onClick={handlePreviousStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule || isEditingLesson || isDeletingLesson || isUploadingContent || isReorderingModules || Object.values(isReorderingLessons).some(v => v) }>Anterior</Button>
                       <Button type="button" onClick={handleNextStep} disabled={isLoading || isModuleLoading || isSavingSettings || isEditingModule || isEditingLesson || isDeletingLesson || isUploadingContent || !createdCourseId || isReorderingModules || Object.values(isReorderingLessons).some(v => v) }>Siguiente <ArrowRight className="ml-2 h-4 w-4" /></Button>
                   </div>
-                </CardContent>
-              </Card>
+              </div>
             </TabsContent>
 
-            <TabsContent value="settings">
-               <Card>
-                <CardHeader>
-                  <CardTitle>3. Publicación y Configuración Adicional</CardTitle>
-                  <CardDescription>Define la imagen de portada, video trailer y el estado de publicación.</CardDescription>
-                </CardHeader>
-                <CardContent>
+            <TabsContent value="settings" className="mt-6">
+               <div className="space-y-6">
+                  <h2 className="text-footnote text-secondary-foreground uppercase pl-4 mb-2 tracking-wider font-medium">Publicación y Media</h2>
                    {createdCourseId ? (
                     <div className="space-y-8">
                        <p className="mb-1 text-sm text-muted-foreground">Ajustes para: {courseDetails?.nombre || `ID: ${createdCourseId}`}</p>
-                      <Card className="p-4 shadow-sm">
-                          <div className="flex items-center gap-2 mb-3">
-                              <ImageIcon className="h-5 w-5 text-primary"/>
-                              <h4 className="font-semibold text-lg">Imagen de Portada</h4>
-                          </div>
-                          {coverImagePreviewUrl && (
-                            <div className="mb-4 relative aspect-video max-w-sm mx-auto rounded-md overflow-hidden border">
-                              <Image src={coverImagePreviewUrl} alt="Vista previa de portada" layout="fill" objectFit="cover" data-ai-hint="course cover preview"/>
-                            </div>
-                          )}
-                          <div className="relative">
-                            <Input 
-                                id="coverImage"
-                                type="file" 
-                                accept="image/png, image/jpeg, image/webp, image/gif"
-                                onChange={handleCoverImageChange} 
-                                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
-                                disabled={isSavingSettings || isUploadingCover}
-                            />
-                             <Button type="button" variant="outline" className="w-full pointer-events-none relative">
-                                {isUploadingCover && <UploadCloud className="mr-2 h-4 w-4 animate-pulse" />}
-                                {!isUploadingCover && <ImageIcon className="mr-2 h-4 w-4" />}
-                                {isUploadingCover ? 'Subiendo...' : (coverImageFile ? (coverImageFile.name.length > 30 ? coverImageFile.name.substring(0,27) + '...' : coverImageFile.name) : 'Seleccionar Imagen de Portada')}
-                            </Button>
-                           </div>
-                           <p className="mt-1 text-xs text-muted-foreground text-center">Sube una imagen atractiva (recomendado 1200x675px, máx 5MB).</p>
-                      </Card>
-                       <Card className="p-4 shadow-sm">
-                          <div className="flex items-center gap-2 mb-3">
-                              <FileText className="h-5 w-5 text-primary"/>
-                              <h4 className="font-semibold text-lg">Video Trailer (Opcional)</h4>
-                          </div>
-                          <Input 
-                            placeholder="URL de YouTube o Vimeo" 
-                            value={videoTrailerUrlInput}
-                            onChange={(e) => setVideoTrailerUrlInput(e.target.value)}
-                            disabled={isSavingSettings}
-                          />
-                           <p className="mt-1 text-xs text-muted-foreground">Un video corto para promocionar tu curso.</p>
-                      </Card>
-                       <Card className="p-4 shadow-sm">
-                          <div className="flex items-center gap-2 mb-3">
-                              <Settings className="h-5 w-5 text-primary"/>
-                              <h4 className="font-semibold text-lg">Estado de Publicación</h4>
-                          </div>
-                            <Select 
-                                onValueChange={(value) => setSelectedStatus(value as CourseStatus)} 
-                                value={selectedStatus}
-                                disabled={isSavingSettings}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona un estado" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                {courseStatuses.map(status => (
-                                    <SelectItem key={status} value={status}>
-                                    {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
-                                    </SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                           <p className="mt-1 text-xs text-muted-foreground">Define si el curso es un borrador o está publicado.</p>
-                      </Card>
+                      <div className="ios-list">
+                         <CourseCoverManager 
+                             courseId={createdCourseId}
+                             courseContext={courseDetails?.descripcionCorta || courseDetails?.nombre || ''}
+                             previewUrl={coverImagePreviewUrl}
+                             fileName={coverImageFile?.name}
+                             isUploading={isUploadingCover}
+                             disabled={isSavingSettings}
+                             onFileSelect={(e) => {
+                               handleCoverImageChange(e);
+                             }}
+                             onAiSuccess={(url) => {
+                               setCoverImagePreviewUrl(url);
+                               setCoverImageFile(null); // clears manual selection
+                             }}
+                         />
+                         <div className="ios-list-item min-h-[44px] flex-col items-start !items-stretch py-3">
+                             <div className="flex items-center gap-2 mb-3"><FileText className="h-5 w-5 text-primary"/><h4 className="font-semibold text-sm">Video Trailer (Opcional)</h4></div>
+                             <Input className="border-0 bg-secondary/30 dark:bg-secondary/50 rounded-md px-3 py-2 text-body focus-visible:ring-1 focus-visible:ring-primary/20 placeholder:text-muted-foreground" placeholder="URL de YouTube o Vimeo" value={videoTrailerUrlInput} onChange={(e) => setVideoTrailerUrlInput(e.target.value)} disabled={isSavingSettings} />
+                             <p className="mt-2 text-xs text-muted-foreground">Un video corto para promocionar tu curso.</p>
+                         </div>
+                         <div className="ios-list-item flex flex-col sm:flex-row sm:items-center py-3 min-h-[44px] gap-2 md:gap-4">
+                             <div className="flex-1 w-full"><div className="flex items-center justify-between m-0 space-y-0"><div className="flex items-center gap-2 flex-shrink-0 m-0"><Settings className="h-5 w-5 text-primary"/><h4 className="text-body font-medium">Estado de Publicación</h4></div><Select onValueChange={(value) => setSelectedStatus(value as CourseStatus)} value={selectedStatus} disabled={isSavingSettings}><SelectTrigger className="w-auto border-0 focus:ring-0 shadow-none bg-secondary/20 rounded-md px-3 py-2 text-secondary-foreground sm:text-right h-auto gap-2 [&>svg]:opacity-50"><SelectValue placeholder="Selecciona un estado" /></SelectTrigger><SelectContent>{courseStatuses.map(status => (<SelectItem key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}</SelectItem>))}</SelectContent></Select></div></div>
+                         </div>
+                      </div>
 
                       <div className="flex justify-end pt-4">
                         <Button onClick={onSaveSettings} disabled={isSavingSettings || isUploadingCover}>
@@ -1405,9 +1408,9 @@ export default function ManageCoursePage() { // Renamed component
                          type="button" 
                          onClick={() => {
                            if (createdCourseId) {
-                             router.push(`/dashboard/creator/courses`); 
+                             router.push(`/dashboard/courses`); 
                            } else {
-                             router.push('/dashboard/creator/courses');
+                             router.push('/dashboard/courses');
                            }
                          }} 
                          disabled={isLoading || isSavingSettings || isModuleLoading || isEditingModule || isEditingLesson || isDeletingLesson || isUploadingContent || !createdCourseId || isReorderingModules || Object.values(isReorderingLessons).some(v => v)}
@@ -1415,12 +1418,10 @@ export default function ManageCoursePage() { // Renamed component
                          {createdCourseId ? "Finalizar e Ir al Listado" : "Ir al Listado (Guarda primero)"}
                        </Button>
                     </div>
-                </CardContent>
-              </Card>
+               </div>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* Delete Module Confirmation Dialog */}
         <AlertDialog open={showDeleteModuleDialog} onOpenChange={setShowDeleteModuleDialog}>

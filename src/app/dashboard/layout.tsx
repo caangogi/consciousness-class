@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
+import { NotificationBell } from '@/components/community/NotificationBell';
 
 
 const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficon.png?alt=media&token=5b954603-a0a1-4b06-9b3e-db85ed6d4728";
@@ -71,10 +72,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
   
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[256px_1fr] lg:grid-cols-[256px_1fr]">
+    <div className="grid fixed inset-0 w-full md:grid-cols-[256px_1fr] lg:grid-cols-[256px_1fr] overflow-hidden bg-background">
       <DashboardSidebar />
-      <div className="flex flex-col">
-        <header className="flex h-14 items-center justify-between gap-4 border-b bg-muted/40 px-4 md:hidden">
+      <div className="flex flex-col h-full overflow-hidden">
+        <header className="flex h-14 items-center justify-between gap-4 border-b border-black/5 dark:border-white/10 bg-white/70 dark:bg-black/40 backdrop-blur-2xl px-4 md:hidden sticky top-0 z-40">
           <Sheet>
             <SheetTrigger asChild>
               <Button size="icon" variant="outline" className="sm:hidden">
@@ -102,8 +103,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                       key={item.href + item.label} 
                       href={item.href}
                       className={cn(
-                          "flex items-center h-10 gap-3 rounded-lg px-3 text-muted-foreground hover:text-foreground transition-colors text-sm",
-                          isActive && 'bg-primary/10 text-primary font-semibold'
+                          "flex items-center h-10 gap-3 rounded-lg px-3 text-muted-foreground hover:text-foreground transition-all text-sm",
+                          isActive && 'bg-primary text-white font-medium hover:text-white shadow-sm'
                       )}
                     >
                       <item.icon className="h-4 w-4" />
@@ -124,12 +125,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
            <div className="md:hidden">
             {/*  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" /> */}
            </div>
-           <div className="ml-auto">
+           <div className="ml-auto flex items-center gap-1">
+             <NotificationBell />
              <ThemeToggle />
            </div>
         </header>
-        <main className="flex-1 p-4 md:p-6 lg:p-8 bg-background overflow-auto">
-          {children}
+        <main className="flex-1 p-4 md:p-8 lg:p-10 bg-background overflow-auto">
+          <div className="mx-auto max-w-6xl w-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>

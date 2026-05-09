@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Filter, Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import type { CourseAccessType } from '@/features/course/domain/entities/course.entity';
+import type { CourseAccessType } from '@/backend/course/domain/entities/course.entity';
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<CourseCardData[]>([]);

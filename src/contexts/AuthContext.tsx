@@ -8,10 +8,9 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'; // For loading state
 
-type UserRole = 'student' | 'creator' | 'superadmin' | null;
+type UserRole = 'student' | 'creator' | 'admin' | 'superadmin' | null;
 
-// Placeholder email for superadmin role during development
-const SUPERADMIN_DEV_EMAIL = 'superadmin@example.com'; // Puedes cambiar esto a tu email de prueba
+const SUPERADMIN_DEV_EMAIL = 'caangogi@gmail.com'; // Automáticamente superadmin en local
 
 export interface UserProfile extends FirebaseUser {
   role?: UserRole;
@@ -60,14 +59,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const fetchAndSetUserProfile = useCallback(async (user: FirebaseUser | null) => {
     if (user) {
       const userDocRef = doc(db, 'usuarios', user.uid);
-      const userDocSnap = await getDoc(userDocRef);
       let fetchedRole: UserRole = 'student';
       let userProfileData: Partial<UserProfile> = {};
 
-      if (userDocSnap.exists()) {
-        const data = userDocSnap.data();
-        console.log(`[AuthContext] Raw Firestore data for ${user.uid} during fetchAndSetUserProfile:`, JSON.stringify(data));
-        fetchedRole = data.role || 'student';
+      try {
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          console.log(`[AuthContext] Raw Firestore data for ${user.uid} during fetchAndSetUserProfile:`, JSON.stringify(data));
+          fetchedRole = data.role || 'student';
         userProfileData = {
           nombre: data.nombre,
           apellido: data.apellido,
@@ -86,6 +86,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         };
       } else {
          console.warn(`[AuthContext] User document for ${user.uid} not found in Firestore. Defaulting profile fields.`);
+         userProfileData = {
+             cursosInscritos: [],
+             referidosExitosos: 0,
+             balanceCredito: 0,
+             balanceComisionesPendientes: 0,
+             balanceIngresosPendientes: 0,
+             bio: '', 
+             creatorVideoUrl: null, 
+         };
+        }
+      } catch (error: any) {
+         console.error(`[AuthContext] Error fetching profile for ${user.uid}. Possibly offline:`, error.message);
+         // Fallback a los datos por defecto si falla la conexión
          userProfileData = {
              cursosInscritos: [],
              referidosExitosos: 0,

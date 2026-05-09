@@ -1,14 +1,14 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Activity, ArrowRight, BookOpen, BarChartBig, Users, Settings, Gift, DollarSign, Award, Loader2, AlertTriangle, RefreshCw } from "lucide-react"; 
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
+import type { CourseProperties } from '@/backend/course/domain/entities/course.entity';
 import { auth } from '@/lib/firebase/config'; // Import auth for token
 
 interface CreatorCourseSummary extends Pick<CourseProperties, 'id' | 'nombre' | 'estado' | 'totalEstudiantes'> {}
@@ -30,6 +30,8 @@ interface DashboardStats {
   card3Description: string;
   card3IsLink?: boolean;
   card3Href?: string;
+  card3ColorClass?: string;
+  card3BgClass?: string;
 }
 
 export default function DashboardPage() {
@@ -113,18 +115,22 @@ export default function DashboardPage() {
   }, [currentUser, userRole, authLoading, fetchCreatorCourses, fetchRecentUsersCount]);
 
 
-  const roleSpecificLinks = {
+  const roleSpecificLinks: Record<string, { title: string; description: string; href: string; icon: React.ElementType }[]> = {
     student: [
-      { title: "Mis Cursos", description: "Accede a tus cursos inscritos y continúa tu aprendizaje.", href: "/dashboard/student", icon: BookOpen },
-      { title: "Mi Perfil y Referidos", description: "Actualiza tu información y gestiona tus referidos.", href: "/dashboard/student", icon: Users },
+      { title: "Mis Cursos", description: "Accede a tus cursos inscritos y continúa tu aprendizaje.", href: "/dashboard/learning", icon: BookOpen },
+      { title: "Ajustes", description: "Actualiza tu información y configuración.", href: "/dashboard/settings", icon: Settings },
     ],
     creator: [
-      { title: "Gestionar Cursos", description: "Crea, edita y publica tus cursos.", href: "/dashboard/creator/courses", icon: BookOpen },
-      { title: "Estadísticas de Creator", description: "Analiza el rendimiento de tus cursos e ingresos.", href: "/dashboard/creator", icon: BarChartBig },
+      { title: "Gestionar Productos", description: "Crea, edita y publica tus activos.", href: "/dashboard/products", icon: BookOpen },
+      { title: "Ajustes de Creador", description: "Configuración global de tu cuenta.", href: "/dashboard/settings", icon: Settings },
+    ],
+    admin: [
+      { title: "Catálogo General", description: "Revisar todos los activos.", href: "/dashboard/products", icon: BookOpen },
+      { title: "Gestión de Usuarios", description: "Administra todos los usuarios.", href: "/dashboard/users", icon: Users },
     ],
     superadmin: [
-      { title: "Gestión de Usuarios", description: "Administra todos los usuarios de la plataforma.", href: "/dashboard/superadmin", icon: Users },
-      { title: "Configuración Global", description: "Ajusta los parámetros generales de Consciousness Class.", href: "/dashboard/superadmin/settings", icon: Settings },
+      { title: "Gestión de Usuarios", description: "Administra todos los usuarios de la plataforma.", href: "/dashboard/users", icon: Users },
+      { title: "Configuración Global", description: "Ajusta los parámetros generales de Consciousness Class.", href: "/dashboard/settings", icon: Settings },
     ],
   };
 
@@ -152,6 +158,8 @@ export default function DashboardPage() {
           card3Title: "Comisiones Pendientes",
           card3Icon: DollarSign,
           card3Description: "Recompensas por tus referidos.",
+          card3ColorClass: "text-[#34C759] dark:text-[#30D158]",
+          card3BgClass: "bg-[#34C759]/15 dark:bg-[#30D158]/15",
         };
       case 'creator':
         const publishedCourses = creatorCourses.filter(c => c.estado === 'publicado').length;
@@ -169,6 +177,8 @@ export default function DashboardPage() {
           card3Title: "Ingresos Pendientes",
           card3Icon: DollarSign,
           card3Description: "Ganancias de tus cursos por liquidar.",
+          card3ColorClass: "text-[#34C759] dark:text-[#30D158]",
+          card3BgClass: "bg-[#34C759]/15 dark:bg-[#30D158]/15",
         };
       case 'superadmin':
         return {
@@ -180,12 +190,14 @@ export default function DashboardPage() {
           card2Title: "Cursos en Plataforma (Ej.)",
           card2Icon: BookOpen,
           card2Description: "Total de cursos (Ejemplo).",
-          card3Title: "Configuración",
+          card3Title: "Finanzas",
           card3Value: "Ir",
-          card3Icon: Settings,
-          card3Description: "Accede a la configuración global.",
+          card3Icon: DollarSign,
+          card3Description: "Reportes económicos de la plataforma.",
           card3IsLink: true,
-          card3Href: "/dashboard/superadmin/settings" 
+          card3Href: "/dashboard/finances",
+          card3ColorClass: "text-[#34C759] dark:text-[#30D158]",
+          card3BgClass: "bg-[#34C759]/15 dark:bg-[#30D158]/15",
         };
       default:
         return {
@@ -241,99 +253,123 @@ export default function DashboardPage() {
   const stats = getDashboardStats();
   const links = roleSpecificLinks[userRole] || [];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1, 
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, y: 0, 
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+
   return (
-    <div className="space-y-8">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <CardTitle className="text-3xl font-headline">Bienvenido, {currentUser?.displayName || currentUser?.email}</CardTitle>
-            <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isRefreshing || isLoadingStats}>
-              {isRefreshing ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-2 h-3 w-3" />}
-              Actualizar Datos
-            </Button>
-          </div>
-          <CardDescription>Aquí puedes gestionar tu actividad en Consciousness Class.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Desde esta página central, puedes navegar a las diferentes secciones de tu panel de control.
-            Utiliza el menú lateral para acceder a todas las funcionalidades disponibles para tu rol ({userRole}).
-          </p>
-        </CardContent>
-      </Card>
-
-      {statsError && (
-        <Card className="shadow-md bg-destructive/10 border-destructive text-destructive-foreground">
-            <CardHeader className="flex flex-row items-center gap-2 pb-2">
-                <AlertTriangle className="h-5 w-5" />
-                <CardTitle className="text-sm font-medium">Error al cargar estadísticas</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-xs">{statsError}</p>
-            </CardContent>
-        </Card>
-      )}
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{stats.card1Title}</CardTitle>
-            <stats.card1Icon className={`h-5 w-5 text-muted-foreground ${stats.card1Value === '...' && isLoadingStats ? 'animate-spin' : ''}`} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{isLoadingStats && typeof stats.card1Value !== 'number' && stats.card1Value !== 'Ir' ? <Skeleton className="h-7 w-16"/> : stats.card1Value}</div> 
-            <p className="text-xs text-muted-foreground">{stats.card1Description}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{stats.card2Title}</CardTitle>
-            <stats.card2Icon className={`h-5 w-5 text-muted-foreground ${stats.card2Value === '...' && isLoadingStats ? 'animate-spin' : ''}`} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{isLoadingStats && typeof stats.card2Value !== 'number' ? <Skeleton className="h-7 w-12"/> : stats.card2Value}</div> 
-            <p className="text-xs text-muted-foreground">{stats.card2Description}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{stats.card3Title}</CardTitle>
-            <stats.card3Icon className={`h-5 w-5 text-muted-foreground ${stats.card3Value === '...' && isLoadingStats ? 'animate-spin' : ''}`} />
-          </CardHeader>
-          <CardContent>
-            {stats.card3IsLink && stats.card3Href ? (
-                <Button variant="outline" size="sm" asChild>
-                    <Link href={stats.card3Href}>{stats.card3Value} <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                </Button>
-            ) : (
-                <div className="text-2xl font-bold">{isLoadingStats && typeof stats.card3Value !== 'string' ? <Skeleton className="h-7 w-20"/> : stats.card3Value}</div>
-            )}
-            <p className="text-xs text-muted-foreground">{stats.card3Description}</p>
-          </CardContent>
-        </Card>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 pb-12 pt-4">
+      <div className="flex justify-between items-center mb-6 px-1">
+        <h1 className="text-largeTitle font-bold text-foreground">Inicio</h1>
+        <Button onClick={handleRefresh} variant="ghost" size="sm" className="text-primary hover:bg-transparent" disabled={isRefreshing || isLoadingStats}>
+          {isRefreshing ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}
+          Refrescar
+        </Button>
       </div>
       
-      <div className="mt-8">
-        <h2 className="text-2xl font-headline font-semibold mb-4">Accesos Rápidos</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {links.map(link => (
-            <Card key={link.title} className="shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <link.icon className="h-8 w-8 text-primary mb-2" />
-                <CardTitle className="font-headline">{link.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">{link.description}</p>
-                <Button variant="outline" asChild size="sm">
-                  <Link href={link.href}>Ir a {link.title} <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      {statsError && <p className="text-destructive text-footnote pl-1 mb-4">{statsError}</p>}
+      
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
+      >
+        {/* Perfil - Hero Card */}
+        <motion.div variants={itemVariants} className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 border border-border/50 rounded-[28px] p-6 lg:p-8 bg-brand-muslin dark:bg-black/30 shadow-sm relative overflow-hidden group">
+          <div className="absolute -top-10 -right-10 p-8 opacity-5 dark:opacity-10 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity">
+            <Award className="w-56 h-56 text-brand-clove dark:text-brand-sandstone transform rotate-12 scale-150" />
+          </div>
+          <div className="relative z-10 flex flex-col justify-between h-full min-h-[140px]">
+            <div>
+               <p className="text-subheadline text-brand-clove/70 dark:text-brand-sandstone/70 mb-2 font-medium capitalize tracking-wide">
+                 Tu Cuenta • {userRole}
+               </p>
+               <h2 className="text-[28px] md:text-largeTitle font-bold text-brand-clove dark:text-brand-sandstone leading-tight">
+                 Hola, {currentUser?.displayName?.split(' ')[0] || 'Aventurero'}!
+               </h2>
+            </div>
+            <div className="mt-6 flex gap-2">
+              <span className="inline-flex h-8 items-center rounded-full bg-brand-clove/10 dark:bg-brand-sandstone/10 px-4 text-xs font-medium text-brand-clove dark:text-brand-sandstone">
+                  Bienvenido al panel
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Card 1 */}
+        <motion.div variants={itemVariants} className="col-span-1 md:col-span-1 border border-border/50 rounded-[24px] p-6 bg-card shadow-sm hover:shadow-apple transition-shadow flex flex-col justify-between min-h-[140px]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-brand-chambray/10 p-3 rounded-[16px]"><stats.card1Icon className="h-6 w-6 text-brand-chambray"/></div>
+            </div>
+            <div>
+              <span className="text-largeTitle font-bold block mb-1 text-foreground">
+                 {isLoadingStats && typeof stats.card1Value !== 'number' && stats.card1Value !== 'Ir' ? <Skeleton className="h-8 w-16" /> : stats.card1Value}
+              </span>
+              <span className="text-body font-medium text-secondary-foreground">{stats.card1Title}</span>
+            </div>
+        </motion.div>
+
+        {/* Card 2 */}
+        <motion.div variants={itemVariants} className="col-span-1 md:col-span-1 border border-border/50 rounded-[24px] p-6 bg-card shadow-sm hover:shadow-apple transition-shadow flex flex-col justify-between min-h-[140px]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-brand-terracotta/10 p-3 rounded-[16px]"><stats.card2Icon className="h-6 w-6 text-brand-terracotta"/></div>
+            </div>
+            <div>
+              <span className="text-largeTitle font-bold block mb-1 text-foreground">
+                 {isLoadingStats && typeof stats.card2Value !== 'number' ? <Skeleton className="h-8 w-16" /> : stats.card2Value}
+              </span>
+              <span className="text-body font-medium text-secondary-foreground">{stats.card2Title}</span>
+            </div>
+        </motion.div>
+
+        {/* Card 3 */}
+        <motion.div variants={itemVariants} className="col-span-1 md:col-span-2 lg:col-span-1 border border-border/50 rounded-[24px] p-6 bg-card shadow-sm hover:shadow-apple transition-shadow flex flex-col justify-between min-h-[140px]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`p-3 rounded-[16px] ${stats.card3BgClass || 'bg-primary/5 dark:bg-white/10'}`}>
+                  <stats.card3Icon className={`h-6 w-6 ${stats.card3ColorClass || 'text-primary dark:text-white'}`}/>
+              </div>
+            </div>
+            <div>
+              <span className="text-largeTitle font-bold block mb-1 truncate text-foreground">
+                 {isLoadingStats && typeof stats.card3Value !== 'string' && typeof stats.card3Value !== 'number' ? <Skeleton className="h-8 w-full max-w-[120px]" /> : stats.card3Value}
+              </span>
+              <span className="text-body font-medium text-secondary-foreground">{stats.card3Title}</span>
+            </div>
+        </motion.div>
+
+        {/* Accesos Rápidos Bento */}
+        <motion.div variants={itemVariants} className="col-span-1 md:col-span-3 lg:col-span-3 border border-border/50 rounded-[28px] overflow-hidden bg-secondary/30 dark:bg-black/20 shadow-sm flex flex-col">
+            <div className="px-6 py-5 border-b border-border/50 flex items-center justify-between bg-card/50">
+               <h3 className="text-headline font-semibold text-foreground">Accesos Rápidos</h3>
+            </div>
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 flex-grow gap-3">
+                 {links.map((link: any, idx: number) => (
+                    <Link key={idx} href={link.href} className="flex flex-col sm:flex-row items-start sm:items-center p-4 bg-card rounded-[20px] border border-border/40 hover:border-brand-chambray/40 hover:bg-brand-chambray/5 dark:hover:bg-white/5 transition-all group ios-button min-h-[90px] shadow-sm hover:shadow-md">
+                      <div className="bg-primary/5 dark:bg-white/5 border border-border/50 rounded-full p-3 mb-3 sm:mb-0 sm:mr-4 group-hover:scale-110 group-hover:bg-primary/10 transition-transform"><link.icon className="h-6 w-6 text-primary group-hover:text-brand-chambray transition-colors"/></div>
+                      <div className="flex-1">
+                         <span className="block text-body font-semibold text-foreground mb-0.5 group-hover:text-primary transition-colors">{link.title}</span>
+                         <span className="block text-footnote text-muted-foreground line-clamp-2 leading-snug">{link.description}</span>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-[#C6C6C8] dark:text-[#555] opacity-0 sm:-translate-x-3 group-hover:opacity-100 group-hover:translate-x-0 transition-all hidden sm:block" />
+                    </Link>
+                  ))}
+            </div>
+        </motion.div>
+
+      </motion.div>
     </div>
   );
 }

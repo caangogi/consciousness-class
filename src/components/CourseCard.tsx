@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Users, Clock, Repeat } from 'lucide-react';
-import type { CourseAccessType, CourseProperties } from '@/features/course/domain/entities/course.entity';
+import type { CourseAccessType, CourseProperties } from '@/backend/course/domain/entities/course.entity';
 import React, { useState, useEffect } from 'react';
 
 export interface CourseCardData extends Pick<CourseProperties, 

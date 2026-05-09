@@ -96,7 +96,7 @@ export function Header() {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 mt-2 shadow-soft-xl">
+            <DropdownMenuContent align="end" className="w-56 mt-2 shadow-apple rounded-[18px] border-black/5 dark:border-white/10 p-2">
               <DropdownMenuLabel>
                 <p className="font-medium truncate">{currentUser.displayName || currentUser.email}</p>
                 <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
@@ -130,7 +130,7 @@ export function Header() {
         <Button variant="ghost" asChild className="text-foreground/80 hover:text-foreground hidden md:inline-flex">
           <Link href="/login">Iniciar Sesión</Link>
         </Button>
-        <Button asChild className="rounded-full shadow-sm hover:shadow-md transition-shadow bg-foreground text-background hover:bg-foreground/80 hidden md:inline-flex">
+        <Button asChild className="apple-btn-primary hidden md:inline-flex py-2 px-5 text-sm h-9">
           <Link href="/signup">Comenzar</Link>
         </Button>
         {/* Mobile specific login/signup buttons */}
@@ -139,7 +139,7 @@ export function Header() {
              <Link href="/login">Login</Link>
            </Button>
            {/* Changed Button for mobile "Signup" to avoid asChild with Link for this specific error case */}
-           <Button size="sm" onClick={() => router.push('/signup')}>
+           <Button size="sm" onClick={() => router.push('/signup')} className="apple-btn-primary h-8 px-4 text-xs">
              Signup
            </Button>
         </div>
@@ -187,8 +187,8 @@ export function Header() {
 
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-20 items-center justify-between px-4 md:px-6">
+    <header className="sticky top-0 z-50 w-full border-b border-black/5 dark:border-white/10 bg-white/70 dark:bg-black/40 backdrop-blur-[20px] transition-colors duration-300">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
         <div className="hidden md:block">
             <Logo imageUrl={DESKTOP_LOGO_URL} altText="Consciousness Class Logo" width={180} height={48} />
         </div>
@@ -196,7 +196,7 @@ export function Header() {
             <Logo imageUrl={MOBILE_LOGO_URL} altText="Consciousness Class Logo" width={40} height={40}/>
         </div>
 
-        <nav className="hidden md:flex items-center gap-1 bg-secondary/50 px-2 py-1.5 rounded-full shadow-sm">
+        <nav className="hidden md:flex items-center gap-1 bg-secondary/80 dark:bg-white/10 px-1 py-1 rounded-full border border-black/5 dark:border-white/5">
           {navLinks.map((link) => (
             <Button
               key={link.label}
@@ -205,7 +205,7 @@ export function Header() {
               asChild
               className={cn(
                 "rounded-full px-4 py-1.5 text-sm",
-                isLinkActive(link.href, link.isHashLink) ? "bg-background text-primary shadow-sm" : "text-foreground/70 hover:text-foreground hover:bg-background/70"
+                isLinkActive(link.href, link.isHashLink) ? "bg-white dark:bg-black text-primary shadow-sm" : "text-foreground/70 hover:text-foreground"
               )}
             >
               <Link href={link.href}>{link.label}</Link>

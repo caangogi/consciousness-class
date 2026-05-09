@@ -1,168 +1,93 @@
-
 'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { CheckCircle, Home, BookOpen, Loader2 } from 'lucide-react';
+import { CheckCircle, Home, BookOpen, ArrowRight, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
-import type { CourseProperties } from '@/features/course/domain/entities/course.entity';
-import type { ModuleProperties } from '@/features/course/domain/entities/module.entity';
-import type { LessonProperties } from '@/features/course/domain/entities/lesson.entity';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface ModuleWithLessons extends ModuleProperties {
-  lessons: LessonProperties[];
-}
-
-interface CourseStructureData {
-  course: CourseProperties;
-  modules: ModuleWithLessons[];
-}
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
-  const courseId = searchParams.get('courseId');
-  const paymentType = searchParams.get('type'); // 'subscription' o null/undefined para pago único
+  // Support both legacy courseId and new catalogItemId
+  const catalogItemId = searchParams.get('catalogItemId') || searchParams.get('courseId');
+  
   const { currentUser, loading: authLoading, refreshUserProfile } = useAuth();
-
-  const [isLoadingCourseData, setIsLoadingCourseData] = useState(false);
-  const [firstLessonId, setFirstLessonId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [hasRefreshed, setHasRefreshed] = useState(false);
-
-  const fetchCourseDataForLink = useCallback(async () => {
-    if (!courseId) return;
-    setIsLoadingCourseData(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/learn/course-structure/${courseId}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || errorData.error || 'Error al cargar datos del curso para el enlace.');
-      }
-      const data: CourseStructureData = await response.json();
-      if (data.modules && data.modules.length > 0 && data.modules[0].lessons && data.modules[0].lessons.length > 0) {
-        setFirstLessonId(data.modules[0].lessons[0].id);
-      } else {
-        console.warn(`Curso ${courseId} no tiene lecciones, no se puede generar enlace directo a la primera lección.`);
-        setFirstLessonId('start');
-      }
-    } catch (err: any) {
-      setError(err.message);
-      console.error("Error fetching course data for success page link:", err);
-      setFirstLessonId('start');
-    } finally {
-      setIsLoadingCourseData(false);
-    }
-  }, [courseId]);
+  const [refreshed, setRefreshed] = useState(false);
 
   useEffect(() => {
-    console.log(`[PaymentSuccessPage] useEffect triggered. Session: ${sessionId}, Course: ${courseId}, Type: ${paymentType}, AuthLoading: ${authLoading}, CurrentUser: ${!!currentUser}, HasRefreshed: ${hasRefreshed}`);
-    if (sessionId && courseId) {
-      if (!authLoading && currentUser && !hasRefreshed) {
-        console.log(`[PaymentSuccessPage] Auth loaded and user present (UID: ${currentUser.uid}). Attempting to refresh profile and fetch course data...`);
-        setHasRefreshed(true);
-        refreshUserProfile().then(() => {
-          console.log("[PaymentSuccessPage] User profile refresh COMPLETED.");
-          try {
-            localStorage.removeItem('referral_code');
-            localStorage.removeItem('promoted_course_id');
-            localStorage.removeItem('post_auth_redirect');
-            console.log("[PaymentSuccessPage] Referral codes and post_auth_redirect cleared from localStorage after successful payment.");
-          } catch (e) {
-            console.warn("[PaymentSuccessPage] Could not clear items from localStorage:", e);
-          }
-          fetchCourseDataForLink();
-        }).catch(err => {
-          console.error("[PaymentSuccessPage] Error refreshing user profile on payment success:", err);
-          fetchCourseDataForLink();
-        });
-      } else if (authLoading) {
-        console.log("[PaymentSuccessPage] Waiting for auth to load...");
-      } else if (!currentUser) {
-        console.log("[PaymentSuccessPage] Waiting for user to be present...");
-      } else if (hasRefreshed) {
-        console.log("[PaymentSuccessPage] Profile already refreshed for this session.");
-        if (!firstLessonId && !isLoadingCourseData && !error) {
-            fetchCourseDataForLink();
-        }
-      }
-    } else {
-      console.warn('[PaymentSuccessPage] Reached without session_id or courseId.');
-      setError("Faltan parámetros para confirmar la compra.");
+    if (!sessionId || !catalogItemId) return;
+    if (!authLoading && currentUser && !refreshed) {
+      setRefreshed(true);
+      // Refresh so cursosInscritos is up to date in the context
+      refreshUserProfile().catch(console.warn);
+      // Clear any referral codes stored in localStorage
+      try {
+        localStorage.removeItem('referral_code');
+        localStorage.removeItem('promoted_course_id');
+      } catch {}
     }
-  }, [sessionId, courseId, paymentType, currentUser, authLoading, refreshUserProfile, fetchCourseDataForLink, hasRefreshed, firstLessonId, isLoadingCourseData, error]);
+  }, [sessionId, catalogItemId, authLoading, currentUser, refreshed, refreshUserProfile]);
 
-  const successMessage = paymentType === 'subscription'
-    ? "¡Suscripción Exitosa!"
-    : "¡Pago Exitoso!";
-  const successDescription = paymentType === 'subscription'
-    ? "Gracias por suscribirte. Tu acceso al curso se está activando."
-    : "Gracias por tu compra. Tu acceso al curso se está procesando.";
+  const isValid = sessionId && catalogItemId;
 
   return (
-    <div className="flex min-h-[calc(100vh-theme(spacing.16))] items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-green-500/10 via-background to-background">
-      <Card className="w-full max-w-md shadow-xl text-center">
-        <CardHeader>
-          <div className="mx-auto mb-4 p-3 bg-green-500/10 rounded-full w-fit">
-            <CheckCircle className="h-16 w-16 text-green-600" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-500/10 via-background to-background px-4">
+      <div className="w-full max-w-md text-center space-y-6">
+        
+        {/* Icon */}
+        <div className="mx-auto w-24 h-24 rounded-full bg-green-500/10 flex items-center justify-center">
+          <CheckCircle className="h-14 w-14 text-green-600" />
+        </div>
+
+        {/* Title */}
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-foreground">¡Pago Exitoso!</h1>
+          <p className="text-muted-foreground text-lg">
+            Tu acceso se está procesando. En breve podrás acceder al contenido desde tu área privada.
+          </p>
+        </div>
+
+        {/* Error / Loading state */}
+        {!isValid && (
+          <p className="text-sm text-muted-foreground bg-secondary/50 rounded-2xl p-4">
+            La compra fue registrada. Si no ves el acceso de inmediato, espera unos segundos y recarga tu librería.
+          </p>
+        )}
+
+        {authLoading && (
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm">Verificando tu acceso...</span>
           </div>
-          <CardTitle className="text-3xl font-headline">{successMessage}</CardTitle>
-          <CardDescription>
-            {successDescription}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(authLoading && !currentUser) ? (
-             <p className="text-muted-foreground flex items-center justify-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verificando tu compra/suscripción...</p>
-          ) : error ? (
-            <p className="text-destructive">{error}</p>
-          ): (
-            <>
-                <p className="text-muted-foreground">
-                Recibirás un correo electrónico de confirmación en breve.
-                La inscripción al curso se completará automáticamente.
-                </p>
-                {courseId && (
-                    <p className="text-sm text-muted-foreground">
-                        ID del Curso: {courseId}
-                    </p>
-                )}
-            </>
-          )}
-        </CardContent>
-        <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center">
-           {courseId && (!authLoading || currentUser) && !error && (
-             isLoadingCourseData ? (
-                <Button disabled>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando curso...
-                </Button>
-             ) : firstLessonId ? (
-                <Button asChild>
-                    <Link href={`/learn/${courseId}/${firstLessonId}`}>
-                    <BookOpen className="mr-2 h-4 w-4"/> Ir al Curso
-                    </Link>
-                </Button>
-             ) : (
-                <Button asChild>
-                    <Link href={`/courses/${courseId}`}>
-                    <BookOpen className="mr-2 h-4 w-4"/> Ver Detalles del Curso
-                    </Link>
-                </Button>
-             )
-           )}
-          <Button variant="outline" asChild>
-            <Link href="/dashboard">
-              <Home className="mr-2 h-4 w-4"/> Ir al Dashboard
+        )}
+
+        {/* CTAs */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+          <Button asChild size="lg" className="rounded-2xl ios-button">
+            <Link href="/dashboard/learning">
+              <BookOpen className="mr-2 h-5 w-5" /> Ir a mi Librería
             </Link>
           </Button>
-        </CardFooter>
-      </Card>
+          <Button asChild variant="outline" size="lg" className="rounded-2xl">
+            <Link href="/products">
+              <ArrowRight className="mr-2 h-5 w-5" /> Seguir explorando
+            </Link>
+          </Button>
+        </div>
+
+        <div>
+          <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1">
+            <Home className="h-3 w-3" /> Ir al Dashboard
+          </Link>
+        </div>
+
+        {/* Debug ID in dev */}
+        {process.env.NODE_ENV === 'development' && catalogItemId && (
+          <p className="text-[10px] text-muted-foreground/50 font-mono">item: {catalogItemId}</p>
+        )}
+      </div>
     </div>
   );
 }
-
-    

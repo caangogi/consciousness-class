@@ -10,7 +10,10 @@ import { Skeleton } from '@/components/ui/skeleton'; // For loading state
 
 type UserRole = 'student' | 'creator' | 'admin' | 'superadmin' | null;
 
-const SUPERADMIN_DEV_EMAIL = 'caangogi@gmail.com'; // Automáticamente superadmin en local
+// Dev-superadmin override is opt-in via env var only.
+// The previous hardcoded fallback 'caangogi@gmail.com' was a real prod
+// backdoor (any sign-in with that email landed superadmin). Removed.
+// Mirror of the server-side rule in src/lib/auth/rbac.ts.
 
 export interface UserProfile extends FirebaseUser {
   role?: UserRole;
@@ -110,7 +113,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
          };
       }
 
-      if (user.email === process.env.NEXT_PUBLIC_SUPERADMIN_DEV_EMAIL || user.email === SUPERADMIN_DEV_EMAIL) { // Check both env and fallback
+      const devSuperEmail = process.env.NEXT_PUBLIC_SUPERADMIN_DEV_EMAIL;
+      if (devSuperEmail && user.email === devSuperEmail) {
         console.warn(`[AuthContext] DEV MODE: User ${user.email} is being assigned 'superadmin' role.`);
         fetchedRole = 'superadmin';
       }

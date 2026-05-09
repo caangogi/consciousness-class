@@ -25,10 +25,12 @@ export async function requireRoles(request: NextRequest, allowedRoles: Role[]) {
     // Check Custom Claims
     const userRole = (decodedToken.role as Role) || 'student';
 
-    // In development or early stages, if an email is marked as superadmin, we force allow
-    const isDevSuperAdmin = 
-      decodedToken.email === process.env.NEXT_PUBLIC_SUPERADMIN_DEV_EMAIL || 
-      decodedToken.email === 'caangogi@gmail.com';
+    // Dev-superadmin bypass — opt-in via env var only.
+    // The previously hardcoded `caangogi@gmail.com` fallback was removed:
+    // it was a real prod backdoor (any token with that email landed superadmin
+    // powers regardless of role). See test #8 in rbac.test.ts.
+    const devSuperEmail = process.env.NEXT_PUBLIC_SUPERADMIN_DEV_EMAIL;
+    const isDevSuperAdmin = !!devSuperEmail && decodedToken.email === devSuperEmail;
 
     if (isDevSuperAdmin || allowedRoles.includes(userRole)) {
       return { uid: decodedToken.uid, decodedToken, role: userRole };

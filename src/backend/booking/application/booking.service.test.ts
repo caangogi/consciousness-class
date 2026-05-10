@@ -98,3 +98,67 @@ describe('BookingService.cancelBooking', () => {
     }
   );
 });
+
+describe('BookingService.markNoShow', () => {
+  let mockRepo: { getById: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn> };
+  let service: BookingService;
+
+  beforeEach(() => {
+    mockRepo = {
+      getById: vi.fn(),
+      save: vi.fn(async () => {}),
+    };
+    service = new BookingService(mockRepo as any);
+  });
+
+  it('throws "Booking not found" when the id does not exist', async () => {
+    mockRepo.getById.mockResolvedValueOnce(null);
+    await expect(service.markNoShow('does_not_exist', NOW))
+      .rejects.toThrow(/Booking not found/i);
+    expect(mockRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('reads the booking by id from the repo', async () => {
+    // The booking ended >30min ago so markNoShow is legal.
+    const booking = makeBooking({ status: 'scheduled', startOffsetMs: -2 * HOUR });
+    mockRepo.getById.mockResolvedValueOnce(booking);
+    await service.markNoShow('b_42', NOW);
+    expect(mockRepo.getById).toHaveBeenCalledWith('b_42');
+  });
+
+  it('returns the booking with status=no_show when the entity guard accepts the transition', async () => {
+    // booking ended 1h ago → past the 30min grace window
+    const booking = makeBooking({ status: 'scheduled', startOffsetMs: -2 * HOUR });
+    mockRepo.getById.mockResolvedValueOnce(booking);
+    const result = await service.markNoShow('b_42', NOW);
+    expect(result.status).toBe('no_show');
+  });
+
+  it('persists the updated booking via repo.save before returning', async () => {
+    const booking = makeBooking({ status: 'scheduled', startOffsetMs: -2 * HOUR });
+    mockRepo.getById.mockResolvedValueOnce(booking);
+    await service.markNoShow('b_42', NOW);
+    expect(mockRepo.save).toHaveBeenCalledTimes(1);
+    expect(mockRepo.save).toHaveBeenCalledWith(booking);
+  });
+
+  it.each<BookingStatus>(['pending_payment', 'completed', 'cancelled', 'no_show'])(
+    'propagates the entity guard when current status is %s (only scheduled is legal)',
+    async (status) => {
+      const booking = makeBooking({ status, startOffsetMs: -2 * HOUR });
+      mockRepo.getById.mockResolvedValueOnce(booking);
+      await expect(service.markNoShow('b_42', NOW))
+        .rejects.toThrow(/illegal transition/i);
+      expect(mockRepo.save).not.toHaveBeenCalled();
+    }
+  );
+
+  it('propagates the entity guard when called BEFORE the +30min grace window after endTime', async () => {
+    // booking ended only 5min ago → still inside grace
+    const booking = makeBooking({ status: 'scheduled', startOffsetMs: -65 * 60 * 1000 });
+    mockRepo.getById.mockResolvedValueOnce(booking);
+    await expect(service.markNoShow('b_42', NOW))
+      .rejects.toThrow(/grace/i);
+    expect(mockRepo.save).not.toHaveBeenCalled();
+  });
+});

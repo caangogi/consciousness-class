@@ -60,16 +60,17 @@ Este sprint introduce un **ledger de créditos** separado del Wallet de dinero (
 
 Estas son **decisiones PM** requeridas como gating items. Casi todas se responden mejor tras revisar el estudio de pricing.
 
-| # | Pregunta | Recomendación (revisar tras el research) | Estado |
-|---|----------|------------------------------------------|--------|
-| **D-AC-1** | Definición de la unidad de crédito | **1 crédito = 1 milésima de USD-equivalente del coste Gemini en precio retail** (es decir, 1000 créditos = $1). La conversión crédito→llamada es una pequeña tabla de lookup por modelo. Internamente mostramos créditos, nunca USD crudo al usuario. | ⏳ abierta |
-| **D-AC-2** | Cuota mensual del tier free | **500 créditos/mes ≈ $0.50** (per estudio: cubre ~7 covers + 50 turnos de editor + 3 magic docs + 30 consultas RAG — un creador "probando el producto"). Recalibrar tras 2 semanas de modo logging-only. | ⏳ abierta |
-| **D-AC-3** | Cuota mensual del tier pro | **5000 créditos/mes (€9/mes plan plataforma)** ≈ $5 de coste real → ~44% margen bruto sobre el coste Gemini directo. | ⏳ abierta |
-| **D-AC-4** | Pricing de packs de top-up | **€5 = 2500 créditos · €20 = 12000 créditos (20% bonus) · €50 = 35000 créditos (40% bonus)**. Los bonuses incentivan packs grandes y mejoran nuestra contribución. | ⏳ abierta |
-| **D-AC-5** | Política de expiración | **Créditos otorgados (mensuales): expiran fin de mes, sin rollover. Créditos comprados (top-up): SÍ rollover (es dinero real del creador, no podemos confiscarlo).** | ⏳ abierta |
-| **D-AC-6** | Comportamiento al quedarse sin créditos | **Bloqueo duro + UX claro**: "Te has quedado sin créditos AI este mes. Renueva el día X o compra un pack." NO throttle silencioso (engaña al usuario que cree que la AI funciona mal). | ⏳ abierta |
-| **D-AC-7** | Creadores preexistentes en el lanzamiento | **Otorgar 1 mes de tier Pro como buena fe.** Después caen a su tier real (free salvo upgrade). Comunicación clara por email + in-app. | ⏳ abierta |
-| **D-AC-8** | Modelo de tiers — ¿planes AI separados o bundled con el plan general de plataforma? | **Bundled: el plan general del creador determina su tier AI**. NO hay "suscripción AI" aparte. Más simple, mejor experiencia. | ⏳ abierta |
+| # | Pregunta | Decisión bloqueada | Estado |
+|---|----------|--------------------|--------|
+| **D-AC-1** | Definición de la unidad de crédito | **1 crédito = 1 milésima de USD-equivalente del coste Gemini en precio retail** (es decir, 1000 créditos = $1). La conversión crédito→llamada es una pequeña tabla de lookup por modelo. Internamente mostramos créditos, nunca USD crudo al usuario. | ✅ caangogi · 2026-05-10 |
+| **D-AC-2** | Cuota mensual del tier free | **500 créditos/mes ≈ $0.50** (per estudio: cubre ~7 covers + 50 turnos de editor + 3 magic docs + 30 consultas RAG — un creador "probando el producto"). Recalibrar tras 2 semanas de modo logging-only. | ✅ caangogi · 2026-05-10 |
+| **D-AC-3** | Cuota mensual del tier pro | **5000 créditos/mes (€9/mes plan plataforma)** ≈ $5 de coste real → ~44% margen bruto sobre el coste Gemini directo. | ✅ caangogi · 2026-05-10 |
+| **D-AC-4** | Pricing de packs de top-up | **€5 = 2500 créditos · €20 = 12000 créditos (20% bonus) · €50 = 35000 créditos (40% bonus)**. Los bonuses incentivan packs grandes y mejoran nuestra contribución. | ✅ caangogi · 2026-05-10 |
+| **D-AC-5** | Política de expiración | **Créditos otorgados (mensuales): expiran fin de mes, sin rollover. Créditos comprados (top-up): SÍ rollover (es dinero real del creador, no podemos confiscarlo).** | ✅ caangogi · 2026-05-10 |
+| **D-AC-6** | Comportamiento al quedarse sin créditos | **Bloqueo duro + UX claro**: "Te has quedado sin créditos AI este mes. Renueva el día X o compra un pack." NO throttle silencioso (engaña al usuario que cree que la AI funciona mal). | ✅ caangogi · 2026-05-10 |
+| **D-AC-7** | Creadores preexistentes en el lanzamiento | **Otorgar 1 mes de tier Pro como buena fe.** Después caen a su tier real (free salvo upgrade). Comunicación clara por email + in-app. | ✅ caangogi · 2026-05-10 |
+| **D-AC-8** | Modelo de tiers — ¿planes AI separados o bundled con el plan general de plataforma? | **Bundled: el plan general del creador determina su tier AI**. NO hay "suscripción AI" aparte. Más simple, mejor experiencia. | ✅ caangogi · 2026-05-10 |
+| **D-AC-9** *(añadida)* | Routing per-feature: ¿todas las llamadas AI por el mismo backend, o split por sensibilidad de datos? | **Split per-feature.** Journaling (Fase 6.1) y RAG Companion (Fase 6.2) van **siempre** por Vertex AI con DPA firmado, independientemente del tier del creador. Editor/cover/magic-doc/structure pueden ir por AI Studio paid tier. La razón: datos de salud (Art. 9 GDPR) en Journaling NO son negociables. Ver §11 abajo. | ✅ caangogi · 2026-05-10 (decisión derivada de la conversación sobre la pregunta crítica) |
 
 > **Mecanismo de sign-off:** PM reemplaza ⏳ por ✅ + iniciales + fecha en esta tabla. El reviewer puede tirar atrás cualquier decisión; nueva revisión del PRD si alguna decisión flipa.
 
@@ -165,6 +166,33 @@ Superficies UI:
 - ¿Hay venta B2B donde la plataforma paga Gemini directo desde un budget separado vs cargarlo al creador?
 - ¿Cuál es nuestro techo aceptable de gasto mensual Gemini al MRR actual?
 - **🚨 Crítica:** ¿el free tier de AI Studio entrena con los datos del usuario? (impacto: si sí → no podemos usarlo para creadores holísticos sin consentimiento explícito; si no → podemos absorber gratis a usuarios free-tier)
+
+---
+
+## 11 · Routing AI por sensibilidad de datos (decisión D-AC-9)
+
+Aunque el sprint sea "AI Credits", la conversación de PM derivó esta decisión arquitectónica que afecta el wallet:
+
+| Feature AI | Backend obligatorio | Razón |
+|------------|--------------------|-------|
+| `editor` (assistive-edit) | AI Studio paid tier ✅ (o Vertex si se confirma necesario) | Contenido del creador, bajo riesgo |
+| `cover` (Nano Banana ×2) | AI Studio paid tier ✅ | Prompts estéticos, sin sensibilidad |
+| `magic-doc` (lead magnet) | AI Studio paid tier ✅ | Texto autoría del creador |
+| `course-structure` | AI Studio paid tier ✅ | Metadatos de curso, sin sensibilidad |
+| **`journaling-sentiment` (Fase 6.1)** | **Vertex AI · región EU · DPA firmado · zero-retention** | Datos de salud (GDPR Art. 9) — NEGOCIABLE solo con consentimiento granular del estudiante |
+| **`rag-companion` (Fase 6.2)** | **Vertex AI · región EU · DPA firmado** | Propiedad intelectual del creador (PDFs, cursos completos) |
+| `agente-secretarial` (Fase 6.3) | Vertex AI · DPA firmado | Conversaciones con pacientes — datos personales identificables |
+
+**Implicación para el wallet:**
+- `AICreditWallet.tryDebit()` recibe el `featureSlug` y el wrapper de AI elige el backend correcto via `GEMINI_BACKEND_<feature>` env var
+- El coste por llamada depende del backend (Vertex tiene pricing similar pero ligeramente distinto a AI Studio paid tier)
+- La tabla de costes en `src/lib/ai/pricing.ts` carga el coste por (modelo, backend) tuple, no solo por modelo
+
+**Tarea pendiente del founder (NO bloquea el sprint):**
+- Investigar si AI Studio free tier entrena con datos del usuario — ver §9 pregunta crítica
+- Si sí: TODO va por paid tier o Vertex (la economía no cambia, ya costeamos así)
+- Si no: editor/cover/magic-doc/structure de creadores free pueden ir por AI Studio free tier sin consumir nuestro presupuesto, mejorando margen
+- Acción concreta: pregunta escrita a Google Cloud sales + lectura de https://ai.google.dev/gemini-api/terms y https://cloud.google.com/terms/service-terms
 
 ---
 

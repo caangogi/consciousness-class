@@ -216,4 +216,20 @@ export class BookingService {
     await this.bookingRepo.save(booking);
     return booking;
   }
+
+  /**
+   * Marks a booking as completed. Only legal from 'scheduled' AND only
+   * after endTime (encapsulated in BookingEntity.complete — see F1.3).
+   *
+   * Authorization is the route's responsibility (only the creator or an
+   * admin marks completed — the patient never can).
+   */
+  async completeBooking(bookingId: string, now: Date): Promise<BookingEntity> {
+    const booking = await this.bookingRepo.getById(bookingId);
+    if (!booking) throw new Error('Booking not found');
+
+    booking.complete(now); // throws on illegal transition or before endTime
+    await this.bookingRepo.save(booking);
+    return booking;
+  }
 }

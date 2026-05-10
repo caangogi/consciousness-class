@@ -51,6 +51,7 @@ export const navItems: NavItem[] = [
   { href: '/dashboard/learning/my-bookings', label: 'Mis Reservas', icon: CalendarCheck, roles: ['student', 'admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
   { href: '/dashboard/products', label: 'Mis Productos', icon: BookOpen, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-terracotta dark:text-brand-terracotta' },
   { href: '/dashboard/availability', label: 'Mi Agenda', icon: Calendar, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
+  { href: '/dashboard/coaching/bookings', label: 'Reservas Recibidas', icon: CalendarCheck, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-olive dark:text-brand-olive' },
   { href: '/dashboard/users', label: 'Usuarios', icon: Users, roles: ['admin', 'superadmin'], colorClass: 'text-brand-clove dark:text-brand-sandstone' },
   { href: '/dashboard/finances', label: 'Finanzas', icon: DollarSign, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
   { href: '/dashboard/settings/ai', label: 'Modelos IA', icon: Sparkles, roles: ['admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },

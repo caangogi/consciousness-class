@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Trash2, Save, Clock, Globe, CheckCircle } from 'lucide-react';
+import { Loader2, Plus, Trash2, Save, Clock, Globe, CheckCircle, CalendarOff } from 'lucide-react';
 import type { WeeklySchedule, TimeSlot } from '@/backend/booking/domain/entities/availability.entity';
 
 // Default empty schedule to avoid undefined.map errors
@@ -38,6 +38,12 @@ export default function AvailabilityPage() {
   const [saved, setSaved] = useState(false);
   const [timezone, setTimezone] = useState('Europe/Madrid');
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>(buildDefaultSchedule());
+  /** Vacation / blocked-date overrides. Today the UI only creates entries
+   *  with available=false (blocking days). The shape supports available=true
+   *  for "open a normally-closed day" but that's deferred — most creators
+   *  use the weekly schedule + vacation blocks. */
+  const [exceptions, setExceptions] = useState<Array<{ date: string; available: boolean }>>([]);
+  const [newExceptionDate, setNewExceptionDate] = useState<string>('');
 
   useEffect(() => {
     const fetchAvailability = async () => {
@@ -59,6 +65,11 @@ export default function AvailabilityPage() {
             if (incoming[i]) safe[i] = incoming[i];
           }
           setWeeklySchedule(safe);
+          // Load exceptions, sort ascending so the list reads naturally.
+          const incomingExc = Array.isArray(data.availability.exceptions)
+            ? data.availability.exceptions
+            : [];
+          setExceptions([...incomingExc].sort((a, b) => a.date.localeCompare(b.date)));
         }
       } catch (err) {
         console.error('Failed to load availability:', err);
@@ -80,7 +91,7 @@ export default function AvailabilityPage() {
       const res = await fetch('/api/creator/availability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ timezone, weeklySchedule }),
+        body: JSON.stringify({ timezone, weeklySchedule, exceptions }),
       });
       if (res.ok) {
         setSaved(true);
@@ -128,6 +139,55 @@ export default function AvailabilityPage() {
       const slots = (prev[dayIdx]?.slots ?? []).filter((_, i) => i !== slotIdx);
       return { ...prev, [dayIdx]: { ...prev[dayIdx], slots } };
     });
+  };
+
+  /** Format YYYY-MM-DD → "10 de mayo de 2026" for display. */
+  function formatExceptionDate(date: string): string {
+    try {
+      // parse as local-noon to avoid TZ off-by-one shifts on the date label
+      const [y, m, d] = date.split('-').map(Number);
+      return new Date(y, (m ?? 1) - 1, d ?? 1, 12).toLocaleDateString('es-ES', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      });
+    } catch {
+      return date;
+    }
+  }
+
+  function todayIso(): string {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  const addException = () => {
+    if (!newExceptionDate) return;
+    if (exceptions.some(e => e.date === newExceptionDate)) {
+      toast({
+        title: 'Esa fecha ya está bloqueada',
+        description: 'Cada día puede aparecer una sola vez en la lista.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (newExceptionDate < todayIso()) {
+      toast({
+        title: 'Fecha en el pasado',
+        description: 'Solo puedes bloquear días futuros.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const next = [...exceptions, { date: newExceptionDate, available: false }];
+    next.sort((a, b) => a.date.localeCompare(b.date));
+    setExceptions(next);
+    setNewExceptionDate('');
+  };
+
+  const removeException = (date: string) => {
+    setExceptions(prev => prev.filter(e => e.date !== date));
   };
 
   if (loading) {
@@ -252,6 +312,71 @@ export default function AvailabilityPage() {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* ── Vacation / blocked dates ── */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 text-[13px] font-medium uppercase tracking-widest text-muted-foreground">
+          <CalendarOff className="w-3.5 h-3.5" />
+          Vacaciones y días bloqueados
+        </div>
+
+        <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-xl p-5 shadow-sm space-y-4">
+          <p className="text-[12px] text-muted-foreground">
+            Bloquea días concretos en los que no quieres recibir reservas (vacaciones, festivos, viajes).
+            Aparecerán como no disponibles para los pacientes aunque tu horario semanal lo permita.
+          </p>
+
+          {/* Add new */}
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={newExceptionDate}
+              min={todayIso()}
+              onChange={e => setNewExceptionDate(e.target.value)}
+              className="h-10 rounded-xl border border-border/50 bg-secondary/30 px-3 text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition flex-1 max-w-xs"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={addException}
+              disabled={!newExceptionDate}
+              className="rounded-xl"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Bloquear día
+            </Button>
+          </div>
+
+          {/* List */}
+          {exceptions.length === 0 ? (
+            <p className="text-[13px] text-muted-foreground/70 italic pt-2">
+              Sin días bloqueados. Tu horario semanal aplica todos los días.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border/30 -mx-1">
+              {exceptions.map((exc) => (
+                <li
+                  key={exc.date}
+                  className="flex items-center justify-between px-1 py-2.5"
+                >
+                  <span className="text-[14px] text-foreground capitalize">
+                    {formatExceptionDate(exc.date)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeException(exc.date)}
+                    className="p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    aria-label={`Quitar bloqueo del ${exc.date}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
 

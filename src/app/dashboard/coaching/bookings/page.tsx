@@ -21,7 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import {
   Calendar, Clock, Loader2, XCircle, CheckCircle2, AlertTriangle,
-  User, Mail, UserX,
+  User, Mail, UserX, Check,
 } from 'lucide-react';
 
 type BookingStatus = 'pending_payment' | 'scheduled' | 'completed' | 'cancelled' | 'no_show';
@@ -81,6 +81,13 @@ function canMarkNoShow(b: Booking): boolean {
   return Date.now() >= endTs + NO_SHOW_GRACE_MS;
 }
 
+/** Complete is legal only after endTime (no grace — the session either
+ *  happened or didn't, no ambiguity). Matches BookingEntity.complete. */
+function canComplete(b: Booking): boolean {
+  if (b.status !== 'scheduled') return false;
+  return Date.now() >= new Date(b.endTime).getTime();
+}
+
 export default function CreatorBookingsPage(): React.ReactElement {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -116,7 +123,7 @@ export default function CreatorBookingsPage(): React.ReactElement {
 
   async function callBookingAction(
     bookingId: string,
-    path: 'cancel' | 'mark-no-show',
+    path: 'cancel' | 'mark-no-show' | 'complete',
     successMsg: string,
   ): Promise<void> {
     setPendingActionId(bookingId);
@@ -196,6 +203,7 @@ export default function CreatorBookingsPage(): React.ReactElement {
               pendingActionId={pendingActionId}
               onCancel={(id) => callBookingAction(id, 'cancel', 'Reserva cancelada.')}
               onNoShow={(id) => callBookingAction(id, 'mark-no-show', 'Marcada como no-show.')}
+              onComplete={(id) => callBookingAction(id, 'complete', 'Sesión marcada como completada.')}
             />
           ))}
         </section>
@@ -213,6 +221,7 @@ export default function CreatorBookingsPage(): React.ReactElement {
               pendingActionId={pendingActionId}
               onCancel={(id) => callBookingAction(id, 'cancel', 'Reserva cancelada.')}
               onNoShow={(id) => callBookingAction(id, 'mark-no-show', 'Marcada como no-show.')}
+              onComplete={(id) => callBookingAction(id, 'complete', 'Sesión marcada como completada.')}
             />
           ))}
         </section>
@@ -226,13 +235,15 @@ interface BookingCardProps {
   pendingActionId: string | null;
   onCancel: (id: string) => void;
   onNoShow: (id: string) => void;
+  onComplete: (id: string) => void;
 }
 
-function BookingCard({ booking: b, pendingActionId, onCancel, onNoShow }: BookingCardProps) {
+function BookingCard({ booking: b, pendingActionId, onCancel, onNoShow, onComplete }: BookingCardProps) {
   const cfg = STATUS_CONFIG[b.status];
   const StatusIcon = cfg.icon;
   const cancellable = b.status === 'scheduled' || b.status === 'pending_payment';
   const noShowable = canMarkNoShow(b);
+  const completable = canComplete(b);
   const isBusy = pendingActionId === b.id;
 
   return (
@@ -269,8 +280,42 @@ function BookingCard({ booking: b, pendingActionId, onCancel, onNoShow }: Bookin
           )}
         </div>
 
-        {(cancellable || noShowable) && (
+        {(cancellable || noShowable || completable) && (
           <div className="flex flex-wrap gap-2 pt-1">
+            {completable && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={isBusy}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    {isBusy ? (
+                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-1.5" />
+                    )}
+                    Marcar completada
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Marcar sesión como completada?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Confirmas que la sesión con <strong>{b.patientName ?? 'el paciente'}</strong>{' '}
+                      se realizó correctamente. La reserva pasará a estado &quot;Completada&quot; en el historial.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Volver</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onComplete(b.id)}>
+                      Sí, completada
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             {noShowable && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>

@@ -1,173 +1,177 @@
-# PRD · AI Pricing & Credits System Sprint
+# PRD · Sprint Sistema de Créditos AI y Pricing
 
 | | |
 |---|---|
-| **Status** | Draft (skeleton — awaiting pricing research from parallel agent) |
+| **Estado** | Borrador (esqueleto — pendiente investigación de pricing y decisiones del founder) |
 | **Owner** | caangogi |
-| **Author** | Claude Code (placeholder; full PRD lands once pricing research is in) |
-| **Created** | 2026-05-10 |
-| **Estimated duration** | TBD — ~3 sprints once decisions are locked |
-| **Critical path?** | YES for Fase 6.0.4 (hard caps por creador) and any GA launch of AI features |
+| **Autor** | Claude Code (placeholder; el PRD completo aterriza una vez se resuelvan las decisiones de §3) |
+| **Creado** | 2026-05-10 |
+| **Duración estimada** | TBD — ~3 sprints una vez bloqueadas las decisiones |
+| **¿Camino crítico?** | SÍ para Fase 6.0.4 (hard caps por creador) y para cualquier lanzamiento GA de features AI |
 
-> **Status note:** this PRD is a SKELETON. The pricing-research file [`documentation/research/gemini-pricing-2026-05.md`](../research/gemini-pricing-2026-05.md) (parallel agent in flight at the time of writing) is the input to the §3 decisions. Once that lands, the founder picks the §3 answers and this PRD gets fleshed out per the structure used in [wallet-ledger-migration.md](./wallet-ledger-migration.md).
-
----
-
-## 1 · Why this exists
-
-The AI features shipped in FASE CORE (assistive editor, Nano Banana cover gen, course structure, magic-doc lead magnets) and the ones planned for Fase 6 (Journaling sentiment, RAG Companion, Agente Secretarial) all consume Gemini API calls. **Each call has a real-money cost we currently don't track, don't cap, and don't bill back to creators.**
-
-A single creator with an inactive account costs the platform €0/mo. A creator who:
-- Generates 50 AI covers per month with Nano Banana → ~€2/mo
-- Uses the assistive editor 200 turns → ~€0.05/mo
-- Generates 30 lead magnets → ~€0.15/mo
-- (Future) RAG companion 500 student queries → ~€0.50/mo
-- (Future) Journaling 30 entries × sentiment scoring → ~€0.10/mo
-
-→ **Roughly €3/mo per active "heavy" creator.** Sustainable until ~1000 active creators (€3k/mo cost, manageable). Above that, or if a single creator goes wild on Nano Banana, costs balloon.
-
-**Today there is NO mechanism to:**
-- Know which creator burned how much in Gemini calls
-- Stop a runaway loop (an automation that calls AI 10k times)
-- Bill enterprise tiers for higher usage
-- Show the creator their consumption (transparency = trust)
-
-This sprint introduces a **credits ledger** separate from the money Wallet (D1) so we can manage AI consumption as its own product surface.
-
-> **Related but different:** the money Wallet (`src/backend/wallet/`) handles real money flows (Stripe payments, creator earnings, payouts). The AI credits ledger handles a non-redeemable internal accounting unit. Mixing them would muddle two unrelated mental models.
+> **Nota de estado:** este PRD es un ESQUELETO. El estudio de pricing en [`documentation/research/gemini-pricing-2026-05.md`](../research/gemini-pricing-2026-05.md) ya está entregado. Una vez el founder firme las decisiones de §3, este PRD se completa siguiendo la estructura usada en [wallet-ledger-migration.md](./wallet-ledger-migration.md).
 
 ---
 
-## 2 · Goals & non-goals
+## 1 · Por qué existe
 
-### Goals
-- **G1** Single source of truth for AI credit balance per user: `AICreditWallet` ledger.
-- **G2** Every AI call (existing + future) consumes credits BEFORE invoking the model. If insufficient → 402-style "out of credits" response surfaced as a clean UX.
-- **G3** Monthly automatic top-up per tier (free / pro / enterprise) via cron. Unused credits expire end-of-month (no rollover) — keeps the math simple and prevents hoarding.
-- **G4** Manual top-up purchase via Stripe (creator buys €5/€20/€50 packs of credits). Transactions land in the credits ledger.
-- **G5** Superadmin dashboard with usage by creator + total platform burn + alerting on cost spikes.
-- **G6** Creator dashboard surface: "Te quedan X créditos AI este mes (renueva el día Y)".
+Las features AI ya en producción (editor asistivo, generación de portadas Nano Banana, generador de estructura de cursos, lead magnets / "documento mágico") y las planificadas para Fase 6 (sentiment del Journaling, RAG Companion, Agente Secretarial) consumen llamadas a la API de Gemini. **Cada llamada tiene un coste real en dinero que hoy NO trackeamos, NO limitamos, y NO repercutimos al creador.**
 
-### Non-goals
-- Per-user real-money Gemini billing (we never bill the creator the literal Gemini cost — credits are an opaque unit).
-- Cross-currency conversion for credit packs (all in EUR).
-- Reseller / white-label credit pools (the entire credit system is per-individual creator UID).
-- Migration of currently-uncapped usage to credits without a grace window (the rollout is gradual — see §6 strategy below).
+Un creador con cuenta inactiva cuesta a la plataforma €0/mes. Un creador que:
+- Genera 50 portadas con Nano Banana al mes → ~€2/mes
+- Usa el editor asistivo 200 veces → ~€0.05/mes
+- Genera 30 lead magnets → ~€0.15/mes
+- (Futuro) RAG companion: 500 consultas de estudiantes → ~€0.50/mes
+- (Futuro) Journaling: 30 entradas × análisis de sentimiento → ~€0.10/mes
 
----
+→ **Aproximadamente €3/mes por creador "activo intensivo".** Sostenible hasta ~1000 creadores activos (€3k/mes de coste, manejable). Por encima de eso, o si un creador se desboca con Nano Banana, los costes se disparan.
 
-## 3 · Decisions to lock BEFORE coding starts
+**Hoy NO existe ningún mecanismo para:**
+- Saber qué creador ha quemado cuánto en llamadas Gemini
+- Frenar un loop descontrolado (una automatización que llame a la AI 10k veces)
+- Cobrar tiers enterprise por uso superior
+- Mostrar al creador su consumo (transparencia = confianza)
 
-These are **PM calls** required as gating items. Most cannot be answered until the pricing research file is reviewed.
+Este sprint introduce un **ledger de créditos** separado del Wallet de dinero (D1) para gestionar el consumo AI como su propia superficie de producto.
 
-| # | Question | Recommendation (placeholder; revisit post-research) | Status |
-|---|----------|-----------------------------------------------------|--------|
-| **D-AC-1** | Credit unit definition | **1 credit = 1 USD-equivalent of Gemini cost at retail price** (so the credit-to-call conversion is a small lookup table per model). Internally we display credits, never raw USD. | ⏳ open |
-| **D-AC-2** | Free tier monthly grant | TBD — need pricing research. Sized to support ~50 AI covers + ~200 assistive turns + ~30 magic docs (typical "trying-the-product" creator). | ⏳ open |
-| **D-AC-3** | Pro tier monthly grant | TBD. ~5x free tier as starting hypothesis. | ⏳ open |
-| **D-AC-4** | Top-up pack pricing | TBD. €5 / €20 / €50 with bonus % at higher tiers? Need the per-call cost data first. | ⏳ open |
-| **D-AC-5** | Expiry policy | **Monthly expiry, no rollover** for granted credits. Top-up packs DO roll over (purchased credits are real money). | ⏳ open |
-| **D-AC-6** | Out-of-credits behavior | **Hard block + clear UX**: "Te has quedado sin créditos AI este mes. Renueva el día X o compra un pack." NOT silent throttle. | ⏳ open |
-| **D-AC-7** | Pre-existing creators on launch | One-time grant of 1 month of Pro tier as goodwill. Then drops to their actual tier (free unless they upgraded). | ⏳ open |
-| **D-AC-8** | Tier model — separate paid AI plans, OR bundled with overall platform plan? | TBD — needs broader product packaging decision. Most likely: bundled (creator's overall plan determines AI tier, no separate "AI subscription"). | ⏳ open |
-
-> **Sign-off:** PM replaces ⏳ with ✅ + initials + date once pricing data arrives.
+> **Relacionado pero distinto:** el Wallet de dinero (`src/backend/wallet/`) gestiona flujos reales de dinero (pagos Stripe, ingresos del creador, payouts). El ledger de créditos AI gestiona una unidad contable interna no redimible. Mezclarlos confundiría dos modelos mentales independientes.
 
 ---
 
-## 4 · Current state (quick audit, full audit lands with §6 plan)
+## 2 · Objetivos y no-objetivos
 
-- **5 AI endpoints in production** (assistive-edit, ai-cover ×2, ai-generate, ai-structure). All use `src/lib/ai/genai.client.ts` directly. NONE check or decrement any credit balance.
-- **No `AICreditWallet` entity exists.** Greenfield.
-- **No usage logging** — `AIUsageLog` is planned for Fase 6.0.3 but not built yet. **The credits sprint must build it as a hard prereq** (you cannot decrement a balance without recording what was consumed and at what cost).
-- Stripe integration already supports one-time payments (used for course purchases) — top-up packs reuse the same `checkout.session.completed` flow with a metadata flag `purchase_type: 'ai_credits_topup'`.
-- The webhook idempotency guard (F1.4b) already covers the top-up purchase flow safely — no duplicate credit grants on Stripe re-deliveries.
+### Objetivos
+- **G1** Fuente única de verdad para el balance de créditos AI por usuario: ledger `AICreditWallet`.
+- **G2** Toda llamada AI (existente + futura) consume créditos ANTES de invocar el modelo. Si insuficiente → respuesta tipo 402 ("sin créditos") con UX limpia.
+- **G3** Top-up automático mensual por tier (free / pro / enterprise) vía cron. Los créditos no usados expiran a fin de mes (sin rollover) — mantiene la matemática simple y previene acumulación abusiva.
+- **G4** Compra manual de packs de créditos vía Stripe (el creador compra packs de €5/€20/€50). Las transacciones aterrizan en el ledger de créditos.
+- **G5** Dashboard superadmin con uso por creador + quema total de plataforma + alertas en picos de coste.
+- **G6** Superficie en el dashboard del creador: "Te quedan X créditos AI este mes (renueva el día Y)".
+
+### No-objetivos
+- Facturación real a creadores del coste exacto de Gemini (los créditos son una unidad opaca, nunca le cobramos al creador el coste literal).
+- Conversión cross-currency para los packs de créditos (todo en EUR).
+- Pools de créditos compartidos para reseller / white-label (todo el sistema es por UID individual).
+- Migrar el uso actualmente sin cap a créditos sin ventana de gracia (rollout gradual — ver §6 abajo).
 
 ---
 
-## 5 · Target state (to-be)
+## 3 · Decisiones a bloquear ANTES de empezar a programar
+
+Estas son **decisiones PM** requeridas como gating items. Casi todas se responden mejor tras revisar el estudio de pricing.
+
+| # | Pregunta | Recomendación (revisar tras el research) | Estado |
+|---|----------|------------------------------------------|--------|
+| **D-AC-1** | Definición de la unidad de crédito | **1 crédito = 1 milésima de USD-equivalente del coste Gemini en precio retail** (es decir, 1000 créditos = $1). La conversión crédito→llamada es una pequeña tabla de lookup por modelo. Internamente mostramos créditos, nunca USD crudo al usuario. | ⏳ abierta |
+| **D-AC-2** | Cuota mensual del tier free | **500 créditos/mes ≈ $0.50** (per estudio: cubre ~7 covers + 50 turnos de editor + 3 magic docs + 30 consultas RAG — un creador "probando el producto"). Recalibrar tras 2 semanas de modo logging-only. | ⏳ abierta |
+| **D-AC-3** | Cuota mensual del tier pro | **5000 créditos/mes (€9/mes plan plataforma)** ≈ $5 de coste real → ~44% margen bruto sobre el coste Gemini directo. | ⏳ abierta |
+| **D-AC-4** | Pricing de packs de top-up | **€5 = 2500 créditos · €20 = 12000 créditos (20% bonus) · €50 = 35000 créditos (40% bonus)**. Los bonuses incentivan packs grandes y mejoran nuestra contribución. | ⏳ abierta |
+| **D-AC-5** | Política de expiración | **Créditos otorgados (mensuales): expiran fin de mes, sin rollover. Créditos comprados (top-up): SÍ rollover (es dinero real del creador, no podemos confiscarlo).** | ⏳ abierta |
+| **D-AC-6** | Comportamiento al quedarse sin créditos | **Bloqueo duro + UX claro**: "Te has quedado sin créditos AI este mes. Renueva el día X o compra un pack." NO throttle silencioso (engaña al usuario que cree que la AI funciona mal). | ⏳ abierta |
+| **D-AC-7** | Creadores preexistentes en el lanzamiento | **Otorgar 1 mes de tier Pro como buena fe.** Después caen a su tier real (free salvo upgrade). Comunicación clara por email + in-app. | ⏳ abierta |
+| **D-AC-8** | Modelo de tiers — ¿planes AI separados o bundled con el plan general de plataforma? | **Bundled: el plan general del creador determina su tier AI**. NO hay "suscripción AI" aparte. Más simple, mejor experiencia. | ⏳ abierta |
+
+> **Mecanismo de sign-off:** PM reemplaza ⏳ por ✅ + iniciales + fecha en esta tabla. El reviewer puede tirar atrás cualquier decisión; nueva revisión del PRD si alguna decisión flipa.
+
+---
+
+## 4 · Estado actual (auditoría rápida; auditoría completa con el §6 plan)
+
+- **5 endpoints AI en producción** (assistive-edit, ai-cover ×2, ai-generate, ai-structure). Todos usan `src/lib/ai/genai.client.ts` directo. NINGUNO chequea ni decrementa balance de créditos.
+- **No existe entidad `AICreditWallet`**. Greenfield total.
+- **No hay logging de uso** — el `AIUsageLog` está planificado para Fase 6.0.3 pero no construido. **El sprint de créditos debe construirlo como prerequisito hard** (no puedes decrementar un balance sin registrar qué se consumió y a qué coste).
+- La integración Stripe ya soporta pagos one-time (usados para compra de cursos) — los packs de top-up reutilizan el mismo flujo `checkout.session.completed` con metadata `purchase_type: 'ai_credits_topup'`.
+- El guard de idempotencia del webhook (F1.4b) ya cubre el flujo de compra top-up de forma segura — sin grants duplicados de créditos en re-deliveries de Stripe.
+- **NUEVO post-T6.0.1**: la prompt library en `src/lib/ai/prompts/` ya emite `meta.feature` y `meta.version` por llamada. Eso facilita el `AIUsageLog` enormemente — basta con loggear esos campos junto a {tokens, model, cost}.
+
+---
+
+## 5 · Estado objetivo (to-be)
 
 ```
-Every AI endpoint:
-   1. Resolve userId from auth
-   2. Look up cost(modelName, estimatedTokens) — via a static cost table
-      backed by the pricing research
-   3. AICreditWallet.tryDebit(userId, costInCredits)
-        → success: continue with the actual Gemini call, then log to AIUsageLog
-        → fail (insufficient balance): return 402 with the "out of credits" payload
+Cada endpoint AI:
+   1. Resuelve userId desde auth
+   2. Mira coste(modelName, tokensEstimados) — vía tabla estática
+      respaldada por el research de pricing
+   3. AICreditWallet.tryDebit(userId, costeEnCreditos)
+        → éxito: continúa con la llamada Gemini real, luego loggea a AIUsageLog
+        → fallo (balance insuficiente): retorna 402 con payload "sin créditos"
 
-Every billing cycle (cron, monthly):
-   1. For each user, look up tier (from user profile or subscription)
-   2. Reset monthly grant credits to tier amount
-   3. Roll over any purchased credits
+En cada ciclo de billing (cron, mensual):
+   1. Para cada usuario, mira su tier (desde el perfil o suscripción)
+   2. Resetea créditos otorgados al monto del tier
+   3. Mantiene cualquier crédito comprado (rollover de top-up)
 
-UI surfaces:
-   - Creator dashboard: "Créditos AI: 8.40 / 10.00 · renuevan en 12 días"
-     + "Comprar más" button → Stripe checkout with metadata
-   - Superadmin dashboard: weekly burn, top spenders, cost vs revenue per creator
-   - Out-of-credits modal: clear copy + upgrade/topup CTAs
+Superficies UI:
+   - Dashboard del creador: "Créditos AI: 8.40 / 10.00 · renuevan en 12 días"
+     + botón "Comprar más" → checkout Stripe con metadata
+   - Dashboard superadmin: quema semanal, top spenders, coste vs ingreso por creador
+   - Modal "sin créditos": copy claro + CTAs upgrade/topup
 ```
 
 ---
 
-## 6 · Migration strategy (3 phases — TBD pending decisions)
+## 6 · Estrategia de migración (3 fases — TBD pendiente decisiones)
 
 ### AC1 · Foundation (~1 sprint)
-- AICreditWalletEntity + Firestore repo (ledger pattern, balance derived from transactions)
-- Cost table at `src/lib/ai/pricing.ts` populated from pricing research
-- Helper `chargeForAICall(userId, model, estimatedTokens): Promise<{allowed, costInCredits}>`
-- AIUsageLog entity (which is also Fase 6.0.3 — done in this sprint instead, with reciprocal credit tracking)
-- Feature flag `AI_CREDITS_ENFORCEMENT_ENABLED` defaults OFF (logging-only mode first)
+- `AICreditWalletEntity` + repo Firebase (patrón ledger, balance derivado de transacciones)
+- Tabla de costes en `src/lib/ai/pricing.ts` poblada desde el research
+- Helper `chargeForAICall(userId, model, tokensEstimados): Promise<{allowed, costeEnCreditos}>`
+- Entidad `AIUsageLog` (que también es Fase 6.0.3 — se hace en este sprint, con tracking recíproco de créditos)
+- Feature flag `AI_CREDITS_ENFORCEMENT_ENABLED` por defecto OFF (modo logging-only primero)
 
-### AC2 · Logging-only rollout (~2 weeks shadow mode)
-- Flag stays OFF in production. Every AI call logs estimated cost to AIUsageLog.
-- Run in parallel with normal operation for 2 weeks to gather REAL usage data and validate the §3 grant sizing.
-- Adjust §3 numbers based on what we observed.
+### AC2 · Rollout logging-only (~2 semanas modo shadow)
+- El flag se mantiene OFF en producción. Cada llamada AI loggea coste estimado a `AIUsageLog`.
+- Corre en paralelo con la operación normal durante 2 semanas para recopilar datos de uso REALES y validar el sizing de §3.
+- Ajustar los números de §3 según lo observado.
 
 ### AC3 · Enforcement + UX rollout (~1 sprint)
-- Flip feature flag ON.
-- Monthly cron grants credits per tier.
-- Stripe top-up flow live (checkout, webhook handler, credit grant on payment success).
-- Dashboard surfaces ship.
-- Out-of-credits modal in every AI feature.
+- Flipar el feature flag a ON.
+- Cron mensual otorga créditos por tier.
+- Flujo Stripe top-up live (checkout, webhook handler, grant de créditos al pago exitoso).
+- Dashboard surfaces lanzan.
+- Modal "sin créditos" en cada feature AI.
 
 ---
 
-## 7 · Test strategy (preview)
+## 7 · Estrategia de testing (preview)
 
-- **TDD-strict** for `src/backend/ai-credits/` (will be added to the testing-strategy.md TDD-strict watchlist when the sprint starts) — credits are real money proxies, math errors hit the bottom line.
-- Property-based tests for the ledger: `forall txList : sum(txList.amount) === wallet.balance`.
-- Migration script for the goodwill 1-month-Pro grant (D-AC-7) needs idempotency (re-running doesn't double-grant).
-- E2E for the top-up purchase flow via Stripe test mode.
-
----
-
-## 8 · Risks (preview)
-
-| Risk | Mitigation |
-|------|------------|
-| Pricing research is wrong/stale | Treat as input; revisit quarterly. Cost table is data, not code. |
-| Free-tier grant too generous → losses | Logging-only mode (AC2) calibrates BEFORE enforcement |
-| Free-tier grant too stingy → adoption killed | Same — calibration phase + easy lever to bump |
-| Goodwill grant on launch confuses early creators | Clear in-app announcement + email |
-| Out-of-credits UX too punitive | "Renew on X / top-up pack" CTAs, not just "blocked" |
-| Stripe top-up race conditions | F1.4b idempotency already protects |
-| Cost spike from a single runaway creator | Per-creator daily cap on top of monthly cap; alert at 80% |
+- **TDD-strict** para `src/backend/ai-credits/` (se añade a la lista TDD-strict de testing-strategy.md cuando arranque el sprint) — los créditos son proxies de dinero real, errores de matemática golpean el bottom line.
+- Tests basados en propiedades para el ledger: `forall txList : sum(txList.amount) === wallet.balance`.
+- El script de migración del grant goodwill 1-mes-Pro (D-AC-7) necesita idempotencia (re-ejecutar no duplica grants).
+- E2E para el flujo de compra top-up vía Stripe test mode.
 
 ---
 
-## 9 · Open questions (will close once pricing research lands)
+## 8 · Riesgos (preview)
 
-- What is the actual €/€/€ tier structure of the platform itself? (free/pro/enterprise are placeholders)
-- Do we offer enterprise custom contracts with bring-your-own-API-key? (would change the cost model significantly)
-- Is there a B2B sale where the platform pays Gemini directly out of a separate budget vs counting it against the creator?
-- What's our acceptable monthly Gemini spend ceiling at current MRR?
+| Riesgo | Mitigación |
+|--------|------------|
+| El research de pricing está incorrecto/desactualizado | Tratarlo como input; revisar trimestralmente. La tabla de costes es data, no código. |
+| Grant del free-tier demasiado generoso → pérdidas | Modo logging-only (AC2) calibra ANTES del enforcement |
+| Grant del free-tier demasiado tacaño → adopción muerta | Mismo — fase de calibración + lever fácil de subir |
+| El grant goodwill al lanzamiento confunde a creadores tempranos | Anuncio claro in-app + email |
+| UX de "sin créditos" demasiado punitivo | CTAs "renueva el X / compra pack", no solo "bloqueado" |
+| Race conditions en top-up Stripe | F1.4b idempotency ya protege |
+| Pico de coste por un creador descontrolado | Cap diario por creador adicional al cap mensual; alerta al 80% |
+| Free tier de AI Studio entrena con datos | **🚨 Bloqueante** — si se confirma, todo el tráfico va por Vertex/paid AI Studio absorbido por la plataforma. Founder debe responder antes de bloquear D-AC-2 |
 
 ---
 
-## 10 · References
+## 9 · Preguntas abiertas (a cerrar cuando aterricen las decisiones)
 
-- Pricing input (in flight): [documentation/research/gemini-pricing-2026-05.md](../research/gemini-pricing-2026-05.md)
-- Money wallet PRD (separate concern): [documentation/prds/wallet-ledger-migration.md](./wallet-ledger-migration.md)
-- Roadmap viewer: [documentation/index.html](../index.html) § "Sprint AI Pricing & Credits System" callout
-- Testing strategy: [documentation/testing-strategy.md](../testing-strategy.md) — `src/backend/ai-credits/` will join the TDD-strict list
+- ¿Cuál es el €/€/€ real de la estructura de tiers de la plataforma? (free/pro/enterprise son placeholders)
+- ¿Ofrecemos contratos enterprise custom con bring-your-own-API-key? (cambiaría significativamente el modelo de coste)
+- ¿Hay venta B2B donde la plataforma paga Gemini directo desde un budget separado vs cargarlo al creador?
+- ¿Cuál es nuestro techo aceptable de gasto mensual Gemini al MRR actual?
+- **🚨 Crítica:** ¿el free tier de AI Studio entrena con los datos del usuario? (impacto: si sí → no podemos usarlo para creadores holísticos sin consentimiento explícito; si no → podemos absorber gratis a usuarios free-tier)
+
+---
+
+## 10 · Referencias
+
+- Input de pricing: [documentation/research/gemini-pricing-2026-05.md](../research/gemini-pricing-2026-05.md)
+- PRD del wallet de dinero (concepto separado): [documentation/prds/wallet-ledger-migration.md](./wallet-ledger-migration.md)
+- Roadmap viewer: [documentation/index.html](../index.html) § callout "Sprint AI Pricing & Credits System"
+- Estrategia de testing: [documentation/testing-strategy.md](../testing-strategy.md) — `src/backend/ai-credits/` se unirá a la lista TDD-strict
+- Prompt library (T6.0.1, ya en producción): [src/lib/ai/prompts/](../../src/lib/ai/prompts/) — emite `meta.feature` + `meta.version` que el `AIUsageLog` consume

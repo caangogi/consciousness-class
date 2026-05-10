@@ -11,6 +11,7 @@ import { ReferralService } from '@/backend/referrals/application/referral.servic
 import { FirebaseReferralPolicyRepository } from '@/backend/referrals/infrastructure/repositories/firebase-referral-policy.repository';
 import { ProcessedStripeEventEntity } from '@/backend/payments/domain/entities/processed-stripe-event.entity';
 import { FirebaseProcessedStripeEventRepository } from '@/backend/payments/infrastructure/repositories/firebase-processed-stripe-event.repository';
+import { domainEvents } from '@/backend/shared/application/domain-events';
 
 const LOGS_COLLECTION = 'webhookLogs';
 const COMMISSIONS_COLLECTION = 'comisionesRegistradas';
@@ -98,6 +99,23 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
     console.log(`[Stripe Webhook] EnrollmentService completed for User: ${buyerUserId}, Asset: ${courseIdPurchased}.`);
     await writeWebhookLog(eventId, 'enrollment_service_success', { buyerUserId, courseIdPurchased });
 
+    // 1.b · T4.1.1 · Emit enrollment.created. Subscribers (e.g. transactional
+    //       email handler in T4.1.2) MAY rehydrate fields not available inline
+    //       (studentEmail, full asset name, etc.) from Firestore.
+    const creatorUidForEvent =
+      session.metadata?.creatorUid ||
+      (await courseRepository.findById(courseIdPurchased))?.creadorUid ||
+      'unknown';
+    await domainEvents.emit('enrollment.created', {
+      enrollmentId: session.id,
+      studentUid: buyerUserId,
+      studentEmail: session.customer_details?.email ?? null,
+      creatorUid: creatorUidForEvent,
+      assetId: courseIdPurchased,
+      assetType: assetType ?? 'course',
+      paymentMode: 'paid_one_time',
+    });
+
     // 2. Booking Confirmation (if applicable)
     if (bookingId) {
       try {
@@ -106,6 +124,19 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
         await bookingService.confirmBooking(bookingId);
         console.log(`[Stripe Webhook] Confirmed booking: ${bookingId}`);
         await writeWebhookLog(eventId, 'booking_confirmed', { bookingId });
+
+        // 2.b · T4.1.1 · Emit booking.confirmed. Payload uses what we have
+        //        inline from the Stripe session; the email subscriber loads
+        //        the BookingEntity to fill startTime/endTime/meetLink.
+        await domainEvents.emit('booking.confirmed', {
+          bookingId,
+          creatorUid: creatorUidForEvent,
+          patientUid: buyerUserId,
+          patientEmail: session.customer_details?.email ?? null,
+          startTime: '', // hydrated by handler from BookingEntity.startTime
+          endTime: '',   // hydrated by handler from BookingEntity.endTime
+          assetId: courseIdPurchased,
+        });
       } catch (err: any) {
         console.error(`[Stripe Webhook] Error confirming booking ${bookingId}:`, err);
         await writeWebhookLog(eventId, 'booking_confirmation_error', { bookingId, error: err.message });

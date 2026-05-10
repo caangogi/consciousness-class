@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
+import { buildCourseStructurePrompt } from '@/lib/ai/prompts';
+import { logger } from '@/lib/logger';
 import { v4 as uuidv4 } from 'uuid';
 import * as admin from 'firebase-admin';
 
@@ -16,14 +18,12 @@ if (process.env.GEMINI_API_KEY) {
 }
 const ai = new GoogleGenAI(aiConfig);
 
-interface RouteContext {
-  params: { courseId: string };
-}
-
-export async function POST(request: NextRequest, context: RouteContext) {
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ courseId: string }> }
+) {
   try {
-    const routeParams = await context.params;
-    const courseId = routeParams.courseId;
+    const { courseId } = await context.params;
     if (!courseId) {
       return NextResponse.json({ error: 'Falta el ID del curso' }, { status: 400 });
     }
@@ -64,12 +64,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const courseTheme = courseData?.nombre || "Tema Holístico";
-    const courseContext = `
-      Título: ${courseTheme}
-      Categoría: ${courseData?.categoria || "General"}
-      Descripción Corta: ${courseData?.descripcionCorta || "Sin descripción"}
-      Descripción Completa: ${courseData?.descripcionLarga || "Sin detalles adicionales"}
-    `;
+
+    // Build the prompt via the centralized library (T6.0.1).
+    const built = buildCourseStructurePrompt({
+      courseTheme,
+      category: courseData?.categoria,
+      shortDesc: courseData?.descripcionCorta,
+      longDesc: courseData?.descripcionLarga,
+      userInstruction: prompt,
+    });
 
     // 3. Define the Schema for LLM
     const responseSchema: Schema = {
@@ -104,26 +107,22 @@ export async function POST(request: NextRequest, context: RouteContext) {
     };
 
     // 4. Call GenAI Model
-    const modelPrompt = `
-      Eres el "Asistente Consciousness", un experto arquitecto de contenido educacional holístico y psicológico. 
-      Ayudas a terapeutas a desglosar su conocimiento en cursos accionables, empáticos y estructurados.
-      
-      El curso actual tiene el siguiente contexto fundacional:
-      ${courseContext}
-      
-      Instrucción adicional del usuario: "${prompt}"
-      
-      Genera una estructura lógica distribuida en Módulos y Lecciones basado en la instrucción del usuario. 
-      Asegúrate de que cada módulo tanga una breve descripción y sus lecciones distribuidas con nombres atractivos y un tipo de formato adecuado (comúnmente video o audio, o documento_pdf para meditaciones/workbooks).
-    `;
-
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: modelPrompt,
+      contents: built.prompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
       }
+    });
+
+    logger.info('Course structure generated', {
+      uid: creatorUid,
+      courseId,
+      promptFeature: built.meta.feature,
+      promptVersion: built.meta.version,
+      model: 'gemini-2.5-flash',
+      userInstructionLength: prompt.length,
     });
 
     if (!response.text) {

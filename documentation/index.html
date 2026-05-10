@@ -292,6 +292,10 @@
       <div class="callout" style="background: rgba(107,122,79,0.10); border-left-color: var(--olive);">
         <strong>Update 2026-05-09 · Fase 0 cerrada parcialmente.</strong> Hechos: T0.1 (Wallet extraído a <code>src/backend/wallet/</code>) · T0.2 (<code>referral/</code> huérfano eliminado) · cleanup hardcode <code>caangogi@gmail.com</code> bajo TDD-strict. Diferidos a sprint dedicado <strong>"Wallet Ledger Migration"</strong>: T0.3 (unificar webhooks Stripe — los dos NO eran redundantes, el "dup" es la arquitectura objetivo ledger), T0.4 (migración de balances), T0.5 (smoke E2E). Ver <code>documentation/decisions/0001-defer-wallet-ledger-migration.md</code> (ADR) y <code>documentation/prds/wallet-ledger-migration.md</code> (PRD detallado, listo para ejecución cuando se priorice).
       </div>
+
+      <div class="callout" style="background: var(--terracotta-soft); border-left-color: var(--terracotta);">
+        <strong>Nuevo · Sprint dedicado "AI Pricing &amp; Credits System".</strong> Surge al planear Fase 6.0: el coste operativo de los modelos AI (Gemini) no se contempló en el plan inicial. Necesitamos una <strong>entidad <code>AICreditWallet</code> dedicada</strong> (ledger separado del Wallet de dinero — créditos no son redimibles, expiran mensualmente, lifecycle distinto) + estudio de precios + política de tiers. Estudio de pricing en curso en <code>documentation/research/gemini-pricing-2026-05.md</code> (agente paralelo). PRD del sprint pendiente — drafteado en <code>documentation/prds/ai-credits-system.md</code> tras recibir el estudio.
+      </div>
     </section>
 
     <!-- ============= ROADMAP MERMAID ============= -->

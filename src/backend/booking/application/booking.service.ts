@@ -11,8 +11,17 @@ export interface Slot {
 }
 
 export class BookingService {
-  private availabilityRepo = new FirebaseAvailabilityRepository();
-  private bookingRepo = new FirebaseBookingRepository();
+  private availabilityRepo: any;
+  private bookingRepo: any;
+
+  // Optional injection for unit tests. Defaults to the Firebase impls so
+  // existing callers (`new BookingService()`) keep working unchanged.
+  // TODO: introduce IBookingRepository / IAvailabilityRepository interfaces
+  // when the booking domain gets its own hexagonal cleanup pass.
+  constructor(bookingRepo?: any, availabilityRepo?: any) {
+    this.bookingRepo = bookingRepo ?? new FirebaseBookingRepository();
+    this.availabilityRepo = availabilityRepo ?? new FirebaseAvailabilityRepository();
+  }
 
   /**
    * Calculates the available slots for a given creator in a specific month.
@@ -165,10 +174,28 @@ export class BookingService {
   async confirmBooking(bookingId: string): Promise<BookingEntity> {
     const booking = await this.bookingRepo.getById(bookingId);
     if (!booking) throw new Error('Booking not found');
-    
+
     booking.confirm();
     // Here we would ideally integrate Google Meet generation and save it to `meetLink`
-    
+
+    await this.bookingRepo.save(booking);
+    return booking;
+  }
+
+  /**
+   * Cancels a booking. Computes refundEligible per the strict 24h rule
+   * (encapsulated in BookingEntity.cancel — see F1.3 tests).
+   *
+   * The route layer is responsible for:
+   *   - authorization (verifying the requester can cancel this booking)
+   *   - emitting `booking.cancelled` with the cancelledBy actor (the
+   *     service does not know who triggered the cancellation)
+   */
+  async cancelBooking(bookingId: string, now: Date): Promise<BookingEntity> {
+    const booking = await this.bookingRepo.getById(bookingId);
+    if (!booking) throw new Error('Booking not found');
+
+    booking.cancel(now); // throws on illegal transition; route maps to 409
     await this.bookingRepo.save(booking);
     return booking;
   }

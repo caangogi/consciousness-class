@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth, adminDb, adminStorage } from '@/lib/firebase/admin';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
+import { buildAiCoverPrompt } from '@/lib/ai/prompts';
+import { logger } from '@/lib/logger';
 import { v4 as uuidv4 } from 'uuid';
 import * as admin from 'firebase-admin';
 
@@ -18,14 +20,12 @@ if (process.env.GEMINI_API_KEY) {
 }
 const ai = new GoogleGenAI(aiConfig);
 
-interface RouteContext {
-  params: { courseId: string };
-}
-
-export async function POST(request: NextRequest, context: RouteContext) {
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ courseId: string }> }
+) {
   try {
-    const routeParams = await context.params;
-    const courseId = routeParams.courseId;
+    const { courseId } = await context.params;
     if (!courseId) {
       return NextResponse.json({ error: 'Falta el ID del curso' }, { status: 400 });
     }
@@ -57,12 +57,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     // 2. Parse request payload
     const { prompt, aspectRatio = '16:9', style = '', referenceImage } = await request.json();
-    
-    const courseTheme = courseData?.nombre || "Tema Holístico";
-    const enhancedPrompt = `Crea una portada elegante, moderna y profesional. Estilo: ${style || 'Fotorealista y cinemático'}. Sin texto. Concepto visual para un curso llamado: "${courseTheme}". Contexto del curso: ${courseData?.descripcionCorta || ''}. Directriz adicional: ${prompt || 'Crea una composición inspiradora.'}`;
 
-    // 3. Prepare AI request
-    const contents: any[] = [{ text: enhancedPrompt }];
+    // 3. Build prompt via the centralized library (T6.0.1) — passes
+    //    course context (title + short description) so the model has more
+    //    material than the generic asset cover endpoint.
+    const built = buildAiCoverPrompt({
+      prompt,
+      aspectRatio,
+      style,
+      currentTitle: courseData?.nombre || 'Tema Holístico',
+      assetTypeLabel: 'curso',
+      contextDescription: courseData?.descripcionCorta || undefined,
+    });
+
+    // 4. Prepare AI request
+    const contents: any[] = [{ text: built.prompt }];
     
     // Si hay una imagen de referencia (Image-to-Image)
     if (referenceImage) {
@@ -138,13 +147,25 @@ export async function POST(request: NextRequest, context: RouteContext) {
       fechaActualizacion: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    return NextResponse.json({ 
-        message: 'Portada generada con éxito',
-        url: publicUrl 
-    }, { status: 200 });
+    logger.info('AI cover generated (course)', {
+      uid: creatorUid,
+      courseId,
+      promptFeature: built.meta.feature,
+      promptVersion: built.meta.version,
+      model: 'gemini-3.1-flash-image-preview',
+      hasReferenceImage: !!referenceImage,
+      aspectRatio,
+    });
 
+    return NextResponse.json(
+      { message: 'Portada generada con éxito', url: publicUrl },
+      { status: 200 }
+    );
   } catch (error: any) {
-    console.error('Error generating AI cover:', error);
-    return NextResponse.json({ error: 'Error procesando la imagen con IA', details: error.message }, { status: 500 });
+    logger.error('AI cover generation failed (course)', { err: error });
+    return NextResponse.json(
+      { error: 'Error procesando la imagen con IA', details: error.message },
+      { status: 500 }
+    );
   }
 }

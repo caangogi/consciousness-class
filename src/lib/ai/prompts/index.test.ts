@@ -90,6 +90,27 @@ describe('buildAiCoverPrompt', () => {
     const out = buildAiCoverPrompt();
     expect(out.prompt.toLowerCase()).toContain('sin texto superpuesto');
   });
+
+  it('uses the asset-type label "activo digital" by default', () => {
+    const out = buildAiCoverPrompt();
+    expect(out.prompt).toContain('activo digital');
+  });
+
+  it('honors a custom assetTypeLabel ("curso") and includes contextDescription when present', () => {
+    const out = buildAiCoverPrompt({
+      assetTypeLabel: 'curso',
+      currentTitle: 'Mindfulness',
+      contextDescription: 'Curso de 8 semanas para practicantes principiantes',
+    });
+    expect(out.prompt).toContain('para un curso llamado: "Mindfulness"');
+    expect(out.prompt).toContain('Contexto del curso: Curso de 8 semanas para practicantes principiantes');
+    expect(out.prompt).not.toContain('activo digital');
+  });
+
+  it('omits the contextDescription line when not provided', () => {
+    const out = buildAiCoverPrompt({ assetTypeLabel: 'membresía' });
+    expect(out.prompt).not.toMatch(/Contexto de la membresía:/);
+  });
 });
 
 describe('buildMagicDocPrompt', () => {

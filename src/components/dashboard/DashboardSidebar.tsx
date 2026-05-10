@@ -25,6 +25,7 @@ import {
   PlusCircle, // Added for "Crear Nuevo Curso"
   Sparkles,
   Calendar,
+  CalendarCheck,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +48,7 @@ interface NavItem {
 export const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Inicio', icon: LayoutDashboard, roles: ['student', 'creator', 'admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
   { href: '/dashboard/learning', label: 'Mis Cursos', icon: BookOpen, roles: ['student', 'admin', 'superadmin'], colorClass: 'text-brand-terracotta dark:text-brand-terracotta' },
+  { href: '/dashboard/learning/my-bookings', label: 'Mis Reservas', icon: CalendarCheck, roles: ['student', 'admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
   { href: '/dashboard/products', label: 'Mis Productos', icon: BookOpen, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-terracotta dark:text-brand-terracotta' },
   { href: '/dashboard/availability', label: 'Mi Agenda', icon: Calendar, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
   { href: '/dashboard/users', label: 'Usuarios', icon: Users, roles: ['admin', 'superadmin'], colorClass: 'text-brand-clove dark:text-brand-sandstone' },

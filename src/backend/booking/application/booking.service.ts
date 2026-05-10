@@ -199,4 +199,21 @@ export class BookingService {
     await this.bookingRepo.save(booking);
     return booking;
   }
+
+  /**
+   * Marks a booking as no-show. Only legal from 'scheduled' AND only
+   * after the +30min grace window past endTime (encapsulated in
+   * BookingEntity.markNoShow — see F1.3 tests).
+   *
+   * The route layer is responsible for authorization (only the creator
+   * or an admin marks no-show — the patient never can).
+   */
+  async markNoShow(bookingId: string, now: Date): Promise<BookingEntity> {
+    const booking = await this.bookingRepo.getById(bookingId);
+    if (!booking) throw new Error('Booking not found');
+
+    booking.markNoShow(now); // throws on illegal transition or inside grace
+    await this.bookingRepo.save(booking);
+    return booking;
+  }
 }

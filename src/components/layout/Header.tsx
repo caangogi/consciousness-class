@@ -25,9 +25,9 @@ import { ThemeToggle } from '../shared/ThemeToggle';
 
 
 const navLinks = [
-  { href: '/courses', label: 'Cursos', icon: BookOpen, isHashLink: false },
-  { href: '/#pricing', label: 'Precios', icon: DollarSignIcon, isHashLink: true },
-  { href: '/#faq', label: 'FAQ', icon: HelpCircleIcon, isHashLink: true },
+  { href: '/products', label: 'Catálogo', icon: BookOpen, isHashLink: false },
+  { href: '/pricing', label: 'Precios', icon: DollarSignIcon, isHashLink: false },
+  { href: '/comunidad', label: 'Comunidad', icon: HelpCircleIcon, isHashLink: false },
 ];
 
 const DESKTOP_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2FLOGO-COUNSCIUSNESS.png?alt=media&token=1aa283aa-2213-4b2f-8ff0-443a31c1d84b";

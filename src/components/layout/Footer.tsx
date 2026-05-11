@@ -11,6 +11,7 @@ const NAV_COLUMNS: { title: string; links: { href: string; label: string; extern
       { href: '/products', label: 'Catálogo' },
       { href: '/pricing', label: 'Precios' },
       { href: '/comunidad', label: 'Comunidad' },
+      { href: '/manifesto', label: 'Manifesto' },
     ],
   },
   {

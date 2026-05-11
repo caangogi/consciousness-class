@@ -120,6 +120,36 @@ Subscription products and one-shot prices are managed by services (see `manageSt
 - `Error` instances passed in context are auto-serialized (name + message + stack + cause).
 - Pre-existing `console.*` calls (especially in `src/app/api/webhooks/stripe/route.ts`) will be migrated incrementally — don't sweep them in unrelated PRs.
 
+## UI patterns
+
+### Brand mark
+
+`<Logo />` ([src/components/shared/Logo.tsx](src/components/shared/Logo.tsx)) is the single source of truth for the brand block. It renders a `Leaf` glyph (Pluma) in a terracotta-tinted rounded square + the "Consciousness Class" wordmark. **Do not fetch logo PNGs from Firebase Storage** — that path was retired because (a) the bucket 402'd in production when billing wasn't active, and (b) an inline SVG avoids CLS and respects `currentColor` in dark mode. Use `<Logo iconOnly />` in compact headers and the `size` prop (`sm | md | lg`) to scale.
+
+### Empty states
+
+When a list/table has zero rows, **use `<EmptyState />`** from [src/components/shared/EmptyState.tsx](src/components/shared/EmptyState.tsx). It centralizes the dashed-border card + tinted icon square + headline + body + pill CTA pattern. Example:
+
+```tsx
+import { EmptyState } from '@/components/shared/EmptyState';
+import { BookOpen } from 'lucide-react';
+
+<EmptyState
+  icon={BookOpen}
+  tint="chambray"
+  title="Tu librería está vacía"
+  description="Cuando compres un curso, te unas a una membresía o reserves una sesión de coaching, aparecerá aquí."
+  primary={{ label: 'Explorar el catálogo', href: '/products' }}
+/>
+```
+
+Tints available: `chambray | terracotta | sage | olive | primary | muted`. Use `dense` for tighter contexts (inside cards). Use a bespoke component instead of `<EmptyState />` only when the empty state needs extra content (e.g. `/dashboard/products` shows a 6-asset teaser grid) or when it's actually an error/filter-clear state — those have different affordances.
+
+When writing the copy:
+- **Title** is one sentence, no period. Describes the current state from the user's perspective ("Sin movimientos aún", not "No transactions found").
+- **Description** explains *what would populate this surface* and *why it's currently empty*. Avoids dead-end phrasing — invites the next action.
+- **Primary CTA** is the highest-intent action. If you can't think of one, omit it (no CTA is better than a weak CTA).
+
 ## Conventions worth knowing
 
 - The codebase mixes Spanish (domain language: `nombre`, `precio`, `tipoAcceso`, `cursosInscritos`, `inscripciones`) and English (technical terms). Keep new domain fields in Spanish to match — consistency matters more than language preference.

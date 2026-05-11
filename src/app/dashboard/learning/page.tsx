@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase/config';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Loader2, BookOpen, Download, Users, Mic, Briefcase, Globe, PlayCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 const TYPE_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   course:     { label: 'Curso',           icon: BookOpen,   color: 'text-brand-terracotta', bg: 'bg-brand-terracotta/10' },
@@ -58,23 +59,14 @@ export default function LearningPage() {
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border/60 bg-card mt-8 py-14 px-6 text-center">
-          <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-brand-chambray/15 text-brand-chambray mb-4">
-            <BookOpen className="h-7 w-7" aria-hidden="true" />
-          </div>
-          <h3 className="text-base font-semibold text-foreground mb-2">
-            Tu librería está vacía
-          </h3>
-          <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto leading-relaxed">
-            Cuando compres un curso, te unas a una membresía o reserves una sesión de coaching, aparecerá aquí. Da el primer paso hacia tu próximo aprendizaje.
-          </p>
-          <Link
-            href="/products"
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary text-primary-foreground px-6 h-11 text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            Explorar el catálogo
-          </Link>
-        </div>
+        <EmptyState
+          className="mt-8"
+          icon={BookOpen}
+          tint="chambray"
+          title="Tu librería está vacía"
+          description="Cuando compres un curso, te unas a una membresía o reserves una sesión de coaching, aparecerá aquí. Da el primer paso hacia tu próximo aprendizaje."
+          primary={{ label: 'Explorar el catálogo', href: '/products' }}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
           {items.map((item) => {

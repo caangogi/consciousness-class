@@ -30,10 +30,6 @@ const navLinks = [
   { href: '/comunidad', label: 'Comunidad', icon: HelpCircleIcon, isHashLink: false },
 ];
 
-const DESKTOP_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2FLOGO-COUNSCIUSNESS.png?alt=media&token=1aa283aa-2213-4b2f-8ff0-443a31c1d84b";
-const MOBILE_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficon.png?alt=media&token=5b954603-a0a1-4b06-9b3e-db85ed6d4728";
-
-
 export function Header() {
   const { currentUser, userRole, loading, logout } = useAuth();
   const router = useRouter();
@@ -190,10 +186,10 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-black/5 dark:border-white/10 bg-white/70 dark:bg-black/40 backdrop-blur-[20px] transition-colors duration-300">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
         <div className="hidden md:block">
-            <Logo imageUrl={DESKTOP_LOGO_URL} altText="Consciousness Class Logo" width={180} height={48} />
+            <Logo size="md" />
         </div>
         <div className="md:hidden">
-            <Logo imageUrl={MOBILE_LOGO_URL} altText="Consciousness Class Logo" width={40} height={40}/>
+            <Logo iconOnly size="md" />
         </div>
 
         <nav className="hidden md:flex items-center gap-1 bg-secondary/80 dark:bg-white/10 px-1 py-1 rounded-full border border-black/5 dark:border-white/5">
@@ -237,7 +233,7 @@ export function Header() {
                <SheetHeader className="border-b p-4">
                 <SheetTitle className="sr-only">Navegación Principal</SheetTitle>
                 <SheetDescription className="sr-only">Enlaces principales y opciones de autenticación.</SheetDescription>
-                 <Logo imageUrl={MOBILE_LOGO_URL} altText="Consciousness Class Icon" onClick={() => setIsSheetOpen(false)} width={40} height={40}/>
+                 <Logo size="md" onClick={() => setIsSheetOpen(false)} />
               </SheetHeader>
               <nav className="flex flex-col gap-1 px-2 py-2 flex-grow">
                 {navLinks.map((link) => (

@@ -1,60 +1,102 @@
+/**
+ * Logo · brand mark for Consciousness Class.
+ *
+ * Renders a Leaf glyph (Pluma) in a terracotta-tinted rounded square +
+ * the "Consciousness Class" wordmark. Mirrors the brand block in the
+ * site footer so the visual identity stays coherent across every
+ * surface (public site header, dashboard sidebar, mobile sheets,
+ * loading splash).
+ *
+ * Why no image asset:
+ *   - The previous design fetched a PNG from Firebase Storage on every
+ *     paint. With billing not yet active on the project (see Owner
+ *     handover) those requests 402'd in production, leaving every
+ *     header logo broken on cold loads.
+ *   - The Leaf icon is a vector (lucide-react) — no network, no CLS,
+ *     responds to currentColor for dark mode.
+ *
+ * Back-compat: the old `imageUrl`, `altText`, `useIconOnly`, `width`
+ * and `height` props are accepted but ignored — keeps existing call
+ * sites compiling while we migrate them one PR at a time.
+ */
 
 import Link from 'next/link';
-import Image from 'next/image';
-import { GraduationCap } from 'lucide-react';
+import { Leaf } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+type LogoSize = 'sm' | 'md' | 'lg';
 
 interface LogoProps {
-  imageUrl?: string;
-  altText?: string;
-  useIconOnly?: boolean;
+  /** Render only the leaf glyph, no wordmark. Useful in compact headers. */
+  iconOnly?: boolean;
+  /** Visual scale. Defaults to `md` (matches the footer). */
+  size?: LogoSize;
+  /** Extra classes applied to the outer wrapper. */
   className?: string;
+  /** When provided, renders a `<button>` instead of a `<Link>`. */
   onClick?: () => void;
+
+  // ── Back-compat props (deprecated, ignored) ──────────────────────
+  /** @deprecated The logo is now an inline SVG icon — no image is fetched. */
+  imageUrl?: string;
+  /** @deprecated No longer used; kept so existing call sites compile. */
+  altText?: string;
+  /** @deprecated Use `iconOnly` instead. */
+  useIconOnly?: boolean;
+  /** @deprecated The logo no longer renders an `<Image>`; ignored. */
   width?: number;
+  /** @deprecated The logo no longer renders an `<Image>`; ignored. */
   height?: number;
 }
 
-const DEFAULT_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2FLOGO-COUNSCIUSNESS.png?alt=media&token=1aa283aa-2213-4b2f-8ff0-443a31c1d84b";
+const SIZE_TOKENS: Record<LogoSize, { box: string; icon: string; text: string }> = {
+  sm: { box: 'h-7 w-7 rounded-lg', icon: 'h-4 w-4', text: 'text-sm' },
+  md: { box: 'h-9 w-9 rounded-xl', icon: 'h-5 w-5', text: 'text-base' },
+  lg: { box: 'h-11 w-11 rounded-2xl', icon: 'h-6 w-6', text: 'text-lg' },
+};
 
 export function Logo({
-  imageUrl = DEFAULT_LOGO_URL,
-  altText = "Consciousness Class Logo",
-  useIconOnly = false,
+  iconOnly = false,
+  size = 'md',
   className,
   onClick,
-  width = 125, // Default width for desktop
-  height = 76, // Default height for desktop
-}: LogoProps) {
-  let content;
+  // Back-compat: respect useIconOnly when iconOnly isn't explicitly set.
+  useIconOnly,
+}: LogoProps): React.ReactElement {
+  const tokens = SIZE_TOKENS[size];
+  const renderIconOnly = iconOnly || useIconOnly === true;
 
-  if (imageUrl) {
-    content = (
-      <Image
-        src={imageUrl}
-        alt={altText}
-        width={width}
-        height={height}
-        className="object-contain"
-        priority
-      />
-    );
-  } else {
-    content = (
-      <>
-        <GraduationCap className="h-7 w-7 md:h-8 md:w-8" />
-        {!useIconOnly && <span className="ml-2 text-xl md:text-2xl font-bold font-headline">Consciousness Class</span>}
-      </>
-    );
-  }
+  const content = (
+    <>
+      <span
+        className={cn(
+          'flex items-center justify-center bg-brand-terracotta/15 text-brand-terracotta flex-shrink-0',
+          tokens.box
+        )}
+        aria-hidden="true"
+      >
+        <Leaf className={tokens.icon} />
+      </span>
+      {!renderIconOnly && (
+        <span className={cn('font-semibold text-foreground tracking-tight', tokens.text)}>
+          Consciousness Class
+        </span>
+      )}
+    </>
+  );
 
-  const commonClasses = `flex items-center text-primary font-headline ${className || ''}`;
-  const ariaLabel = imageUrl ? altText : "Consciousness Class Home";
+  const wrapperClasses = cn(
+    'inline-flex items-center gap-2 font-headline',
+    className
+  );
 
   if (onClick) {
     return (
       <button
+        type="button"
         onClick={onClick}
-        className={commonClasses}
-        aria-label={ariaLabel}
+        className={wrapperClasses}
+        aria-label="Consciousness Class"
       >
         {content}
       </button>
@@ -62,7 +104,7 @@ export function Logo({
   }
 
   return (
-    <Link href="/" className={commonClasses} aria-label={ariaLabel}>
+    <Link href="/" className={wrapperClasses} aria-label="Consciousness Class">
       {content}
     </Link>
   );

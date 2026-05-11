@@ -18,9 +18,6 @@ import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { NotificationBell } from '@/components/community/NotificationBell';
 
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/consciousness-class.firebasestorage.app/o/WEB%2Ficon.png?alt=media&token=5b954603-a0a1-4b06-9b3e-db85ed6d4728";
-
-
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { currentUser, userRole, loading, logout } = useAuth();
   const router = useRouter();
@@ -68,7 +65,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return (
        <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
-          <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" />
+          <Logo size="md" />
           <p className="text-muted-foreground">Cargando dashboard...</p>
           <div className="mt-4 w-64">
             <Skeleton className="h-4 w-full mb-2" />

@@ -5,9 +5,10 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Activity, ArrowRight, BookOpen, BarChartBig, Users, Settings, Gift, DollarSign, Award, Loader2, AlertTriangle, RefreshCw } from "lucide-react"; 
+import { Activity, ArrowRight, BookOpen, BarChartBig, Users, Settings, Gift, DollarSign, Award, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CreatorOnboardingBanner, type OnboardingStep } from '@/components/dashboard/CreatorOnboardingBanner';
 import type { CourseProperties } from '@/backend/course/domain/entities/course.entity';
 import { auth } from '@/lib/firebase/config'; // Import auth for token
 
@@ -42,6 +43,15 @@ export default function DashboardPage() {
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Onboarding: count creator's catalog items to decide whether to
+  // show the welcome checklist banner. null = still loading, 0 = empty,
+  // N>0 = no banner shown.
+  const [catalogItemCount, setCatalogItemCount] = useState<number | null>(null);
+  const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.sessionStorage.getItem('cc:onboarding-dismissed') === '1';
+  });
 
   const fetchCreatorCourses = useCallback(async () => {
     if (userRole !== 'creator' || !auth.currentUser) return;
@@ -113,6 +123,39 @@ export default function DashboardPage() {
         setIsLoadingStats(false); // No user, so no stats to load
     }
   }, [currentUser, userRole, authLoading, fetchCreatorCourses, fetchRecentUsersCount]);
+
+  /**
+   * Onboarding banner — counts the creator's catalog items so we know
+   * whether to show the welcome checklist. Only fires for creators
+   * (admins / students don't need this banner).
+   */
+  useEffect(() => {
+    if (userRole !== 'creator' || !auth.currentUser || onboardingDismissed) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        const res = await fetch('/api/creator/catalog', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return; // silent — banner is non-critical
+        const data = await res.json();
+        if (cancelled) return;
+        const count = Array.isArray(data.catalogItems) ? data.catalogItems.length : 0;
+        setCatalogItemCount(count);
+      } catch {
+        // silent — banner is non-critical, dashboard works without it
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userRole, currentUser, onboardingDismissed]);
+
+  const handleOnboardingDismiss = () => {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('cc:onboarding-dismissed', '1');
+    }
+    setOnboardingDismissed(true);
+  };
 
 
   const roleSpecificLinks: Record<string, { title: string; description: string; href: string; icon: React.ElementType }[]> = {
@@ -280,8 +323,44 @@ export default function DashboardPage() {
       </div>
       
       {statsError && <p className="text-destructive text-footnote pl-1 mb-4">{statsError}</p>}
-      
-      <motion.div 
+
+      {/* Onboarding banner — only for creators with 0 catalog items, dismissible per session */}
+      {userRole === 'creator' && !onboardingDismissed && catalogItemCount === 0 && (
+        <div className="mb-6">
+          <CreatorOnboardingBanner
+            creatorName={currentUser?.displayName?.split(' ')[0]}
+            onDismiss={handleOnboardingDismiss}
+            steps={[
+              {
+                id: 'profile',
+                title: 'Completa tu perfil',
+                description: 'Añade foto, biografía y video de presentación. Tus estudiantes te conocerán antes de comprar.',
+                done: !!(currentUser?.displayName && (currentUser as any).bio),
+                href: '/dashboard/settings',
+                ctaLabel: 'Completar',
+              },
+              {
+                id: 'first-product',
+                title: 'Crea tu primer producto',
+                description: 'Elige entre curso, sesión 1:1, membresía, podcast, descarga o comunidad. Los 6 formatos están listos.',
+                done: false, // by definition — we got here BECAUSE catalogItemCount === 0
+                href: '/dashboard/products/new',
+                ctaLabel: 'Crear ahora',
+              },
+              {
+                id: 'share',
+                title: 'Comparte tu enlace',
+                description: 'Cuando publiques tu primer producto, recibirás un enlace único para tus redes y emails.',
+                done: false, // depends on first-product being done
+                href: '/dashboard/products',
+                ctaLabel: 'Más tarde',
+              },
+            ]}
+          />
+        </div>
+      )}
+
+      <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"

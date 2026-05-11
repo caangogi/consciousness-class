@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Loader2, AlertTriangle, RefreshCw, BookOpen, ArrowRight, PlayCircle, Download } from 'lucide-react';
+import { PlusCircle, Loader2, AlertTriangle, RefreshCw, BookOpen, ArrowRight, PlayCircle, Download, Users as UsersIcon, Briefcase, Mic, Globe, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -191,13 +191,37 @@ export default function CreatorCatalogPage() {
           ))}
         </div>
       ) : (
-         <div className="ios-list py-12 px-6 text-center flex flex-col items-center justify-center">
-             <BookOpen className="h-12 w-12 text-[#C6C6C8] mb-4" />
-             <h3 className="text-headline font-semibold mb-1">No tienes productos activos</h3>
-             <p className="text-subheadline text-secondary-foreground mb-4">Empieza a compartir tu conocimiento y crea tu primer activo ahora.</p>
-             <Button asChild variant="outline" className="ios-button">
+         <div className="rounded-2xl border border-border/40 bg-card py-12 px-6 text-center">
+             <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-brand-terracotta/15 text-brand-terracotta mb-4">
+               <Sparkles className="h-7 w-7" aria-hidden="true" />
+             </div>
+             <h3 className="text-headline font-semibold mb-2 text-foreground">Aún no tienes productos.</h3>
+             <p className="text-subheadline text-muted-foreground mb-6 max-w-md mx-auto leading-relaxed">
+               Elige el formato que mejor se adapte a lo que ofreces. Tienes 6 tipos disponibles desde el primer día — sin upgrade.
+             </p>
+
+             {/* 6-asset-type teaser grid (visual, no individual CTAs) */}
+             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 max-w-xl mx-auto mb-8">
+               {[
+                 { icon: PlayCircle, label: 'Curso',     color: 'text-brand-terracotta' },
+                 { icon: UsersIcon,  label: 'Membresía', color: 'text-brand-chambray' },
+                 { icon: Briefcase,  label: 'Coaching',  color: 'text-primary' },
+                 { icon: Mic,        label: 'Podcast',   color: 'text-brand-clove' },
+                 { icon: Globe,      label: 'Comunidad', color: 'text-brand-olive' },
+                 { icon: Download,   label: 'Descarga',  color: 'text-brand-sandstone' },
+               ].map(({ icon: Icon, label, color }) => (
+                 <div key={label} className="flex flex-col items-center gap-1.5">
+                   <div className="h-10 w-10 rounded-xl bg-secondary/50 flex items-center justify-center">
+                     <Icon className={cn('h-5 w-5', color)} aria-hidden="true" />
+                   </div>
+                   <span className="text-[11px] text-muted-foreground">{label}</span>
+                 </div>
+               ))}
+             </div>
+
+             <Button asChild size="lg" className="rounded-full px-8 h-11">
                <Link href="/dashboard/products/new">
-                 <PlusCircle className="mr-2 h-4 w-4" /> Crear Primer Producto
+                 <PlusCircle className="mr-2 h-4 w-4" /> Crear mi primer producto
                </Link>
              </Button>
          </div>

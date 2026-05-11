@@ -54,6 +54,7 @@ export const navItems: NavItem[] = [
   { href: '/dashboard/coaching/bookings', label: 'Reservas Recibidas', icon: CalendarCheck, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-olive dark:text-brand-olive' },
   { href: '/dashboard/users', label: 'Usuarios', icon: Users, roles: ['admin', 'superadmin'], colorClass: 'text-brand-clove dark:text-brand-sandstone' },
   { href: '/dashboard/finances', label: 'Finanzas', icon: DollarSign, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
+  { href: '/dashboard/ai-credits', label: 'Créditos AI', icon: Sparkles, roles: ['creator', 'admin', 'superadmin'], colorClass: 'text-brand-terracotta dark:text-brand-terracotta' },
   { href: '/dashboard/settings/ai', label: 'Modelos IA', icon: Sparkles, roles: ['admin', 'superadmin'], colorClass: 'text-brand-chambray dark:text-brand-chambray' },
   { href: '/dashboard/settings', label: 'Ajustes Generales', icon: Settings, roles: ['student', 'creator', 'admin', 'superadmin'] },
 ];

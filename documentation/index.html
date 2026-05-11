@@ -294,7 +294,31 @@
       </div>
 
       <div class="callout" style="background: var(--terracotta-soft); border-left-color: var(--terracotta);">
-        <strong>Nuevo · Sprint dedicado "AI Pricing &amp; Credits System".</strong> Surge al planear Fase 6.0: el coste operativo de los modelos AI (Gemini) no se contempló en el plan inicial. Necesitamos una <strong>entidad <code>AICreditWallet</code> dedicada</strong> (ledger separado del Wallet de dinero — créditos no son redimibles, expiran mensualmente, lifecycle distinto) + estudio de precios + política de tiers. Estudio de pricing en curso en <code>documentation/research/gemini-pricing-2026-05.md</code> (agente paralelo). PRD del sprint pendiente — drafteado en <code>documentation/prds/ai-credits-system.md</code> tras recibir el estudio.
+        <strong>Nuevo · Sprint dedicado "AI Pricing &amp; Credits System".</strong> Surge al planear Fase 6.0: el coste operativo de los modelos AI (Gemini) no se contempló en el plan inicial. Necesitamos una <strong>entidad <code>AICreditWallet</code> dedicada</strong> (ledger separado del Wallet de dinero — créditos no son redimibles, expiran mensualmente, lifecycle distinto) + estudio de precios + política de tiers. Estudio de pricing entregado en <code>documentation/research/gemini-pricing-2026-05.md</code>. PRD completo en <code>documentation/prds/ai-credits-system.md</code> con <strong>9 decisiones PM firmadas D-AC-1..9</strong> (caangogi · 2026-05-10).
+      </div>
+
+      <div class="callout" style="background: rgba(107,122,79,0.10); border-left-color: var(--olive);">
+        <strong>Hoy 2026-05-11 · Bloque UI/UX + Safety + Vertex API.</strong> 8 commits visibles para reunión con Owner esta tarde:
+        <ul style="margin: 8px 0 0; padding-left: 20px; font-size: 14px;">
+          <li><strong>Landing repositioning</strong> — hero creator-first ("Vende cursos, sesiones y comunidad sin pelearte con la infraestructura") + sección nueva "Cómo funciona" en 4 pasos + teaser de precios + header nav reorganizado</li>
+          <li><strong>Nueva página <code>/pricing</code></strong> (548 líneas) — 3 tiers basados en D-AC-2/3/4 + top-up packs + FAQ 6 preguntas (agente paralelo)</li>
+          <li><strong>Nueva página <code>/dashboard/ai-credits</code></strong> — balance mock + historial + modal de top-ups + preview "sin créditos" (materializa D-AC-1..6)</li>
+          <li><strong>Track B safety completo</strong> — <code>detectCrisis()</code> con 32 tests · <code>&lt;MedicalDisclaimer/&gt;</code> · <code>&lt;CrisisHelpResource/&gt;</code> · página <code>/safety/help</code> con recursos (024 · 112 · Teléfono Esperanza). Listos para enchufar en Fase 6.1 / 6.2</li>
+          <li><strong>Vertex AI API habilitada</strong> en proyecto <code>consciousness-class</code> · pending billing activation (post-handover)</li>
+        </ul>
+      </div>
+
+      <div class="callout" style="background: rgba(198,106,61,0.10); border-left-color: var(--terracotta);">
+        <strong>⏳ Pendiente del Owner esta tarde</strong> (handover):
+        <ul style="margin: 8px 0 0; padding-left: 20px; font-size: 14px;">
+          <li>Transferir repo de GitHub a la cuenta del Owner</li>
+          <li>Activar billing en proyecto GCP <code>consciousness-class</code> (resolverá el 402 de Firebase Storage en <code>/products</code>)</li>
+          <li>Reconfigurar Firebase Admin con nueva cuenta del Owner</li>
+          <li>Vincular cuenta Stripe a nombre del Owner</li>
+          <li>Setear env vars en Vercel: <code>VERTEX_AI_PROJECT=consciousness-class</code>, <code>VERTEX_AI_LOCATION=europe-west4</code></li>
+          <li>Asignar rol <code>roles/aiplatform.user</code> al Service Account de Firebase Admin</li>
+          <li>Revisar el research <code>gemini-pricing-2026-05.md</code> + responder a la pregunta crítica sobre training data (research del agente en flight a la hora del commit anterior)</li>
+        </ul>
       </div>
     </section>
 
@@ -584,6 +608,7 @@ graph TD
           <option value="">Todas las fases</option>
           <option>0</option><option>3</option><option>4.1</option><option>4.2</option><option>5.1</option>
           <option>6.0</option><option>6.1</option><option>6.2</option><option>6.3</option>
+          <option>UI</option><option>Safety</option><option>OPS</option>
         </select>
         <select id="task-priority">
           <option value="">Todas las prioridades</option>
@@ -847,6 +872,28 @@ git worktree add ../cc-T6.1.1 -b feature/T6.1.1-journal-entity</pre>
     { id: 'T6.3.3', phase: '6.3', title: 'Crisis keyword filter en agente', priority: 'MUST', deps: ['T6.3.2','T6.1.5'], branch: 'feature/T6.3.3-agent-crisis-filter', agent: 'general-purpose' },
     { id: 'T6.3.4', phase: '6.3', title: 'Identity verification flow para cancelación', priority: 'MUST', deps: ['T6.3.1'], branch: 'feature/T6.3.4-identity-verify', agent: 'general-purpose' },
     { id: 'T6.3.5', phase: '6.3', title: 'WhatsApp Business webhook → agente', priority: 'MUST', deps: ['T4.2.4','T6.3.2'], branch: 'feature/T6.3.5-wa-agent-bridge', agent: 'general-purpose' },
+
+    // UI/UX bloque 2026-05-11 · ya entregados
+    { id: 'UI-A',  phase: 'UI', title: 'Landing Hero repositioning · creator-first + reassurance bullets', priority: 'MUST', deps: [], branch: 'feature/UI-A-landing-hero', agent: 'foreground' },
+    { id: 'UI-B',  phase: 'UI', title: '/pricing page completa · 3 tiers + top-ups + FAQ', priority: 'MUST', deps: [], branch: 'feature/UI-B-pricing-page', agent: 'parallel-agent' },
+    { id: 'UI-F',  phase: 'UI', title: 'Landing · sección "Cómo funciona" 4 pasos', priority: 'SHOULD', deps: ['UI-A'], branch: 'feature/UI-F-how-it-works', agent: 'foreground' },
+    { id: 'UI-E',  phase: 'UI', title: '/dashboard/ai-credits preview · materializa D-AC-1..6 con mock data', priority: 'SHOULD', deps: [], branch: 'feature/UI-E-ai-credits-dashboard', agent: 'foreground' },
+    { id: 'UI-H',  phase: 'UI', title: 'Header nav reorganized · Catálogo · Precios · Comunidad', priority: 'SHOULD', deps: ['UI-B'], branch: 'feature/UI-H-header-nav', agent: 'foreground' },
+
+    // Safety / Track B · ya entregados
+    { id: 'SAFE-1', phase: 'Safety', title: 'detectCrisis() matcher · es+en · 32 tests · normaliza tildes', priority: 'MUST', deps: [], branch: 'feature/SAFE-1-crisis-detect', agent: 'foreground' },
+    { id: 'SAFE-2', phase: 'Safety', title: '<MedicalDisclaimer/> · 3 variantes · ready Fase 6.1/6.2', priority: 'MUST', deps: [], branch: 'feature/SAFE-2-medical-disclaimer', agent: 'foreground' },
+    { id: 'SAFE-3', phase: 'Safety', title: '<CrisisHelpResource/> · 3 modos · recursos ES (024/112/Esperanza)', priority: 'MUST', deps: [], branch: 'feature/SAFE-3-crisis-resource', agent: 'foreground' },
+    { id: 'SAFE-4', phase: 'Safety', title: '/safety/help page · noindex · entry point footer', priority: 'SHOULD', deps: ['SAFE-3'], branch: 'feature/SAFE-4-help-page', agent: 'foreground' },
+
+    // OPS · pendientes del Owner handover
+    { id: 'OPS-1', phase: 'OPS', title: 'Transferir repo GitHub a cuenta del Owner', priority: 'MUST', deps: [], branch: 'n/a — operativo', agent: 'owner' },
+    { id: 'OPS-2', phase: 'OPS', title: 'Activar billing en GCP consciousness-class', priority: 'MUST', deps: [], branch: 'n/a — operativo', agent: 'owner' },
+    { id: 'OPS-3', phase: 'OPS', title: 'Reconfigurar Firebase Admin con cuenta del Owner', priority: 'MUST', deps: ['OPS-2'], branch: 'n/a — operativo', agent: 'owner' },
+    { id: 'OPS-4', phase: 'OPS', title: 'Vincular cuenta Stripe a nombre del Owner', priority: 'MUST', deps: [], branch: 'n/a — operativo', agent: 'owner' },
+    { id: 'OPS-5', phase: 'OPS', title: 'Vercel env vars · VERTEX_AI_PROJECT + VERTEX_AI_LOCATION=europe-west4', priority: 'MUST', deps: ['OPS-2'], branch: 'n/a — operativo', agent: 'owner' },
+    { id: 'OPS-6', phase: 'OPS', title: 'IAM · rol roles/aiplatform.user al SA de Firebase Admin', priority: 'MUST', deps: ['OPS-2','OPS-3'], branch: 'n/a — operativo', agent: 'owner' },
+    { id: 'OPS-7', phase: 'OPS', title: 'Revisar gemini-pricing-2026-05.md + responder pregunta crítica training data', priority: 'MUST', deps: [], branch: 'n/a — operativo', agent: 'owner' },
   ];
 
   // ============== UI ==============

@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap, Award, Users as UsersIcon, Clock, Edit3, Loader2, Percent, DollarSign, Wand2, BookOpen, HelpCircleIcon } from 'lucide-react';
+import { ArrowRight, CheckCircle, MapPin, MessageSquare, Plus, User, Zap, Award, Users as UsersIcon, Clock, Edit3, Loader2, Percent, DollarSign, Wand2, BookOpen, HelpCircleIcon, UserPlus, Sparkles, TrendingUp, Package } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CourseCard, type CourseCardData } from '@/components/CourseCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -265,6 +265,87 @@ export default function HomePage() {
               GDPR · datos en UE
             </span>
           </motion.div>
+        </div>
+      </motion.section>
+
+      {/* How it works Section · 4 steps for the creator journey */}
+      <motion.section
+        className="py-20 md:py-28 bg-secondary/20"
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+      >
+        <div className="container mx-auto px-4 md:px-6">
+          <motion.div
+            className="text-center mb-14 max-w-2xl mx-auto"
+            variants={itemVariants}
+          >
+            <p className="text-xs font-medium tracking-wider uppercase text-brand-terracotta mb-3">
+              Cómo funciona
+            </p>
+            <h2 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight mb-4 text-foreground">
+              De tu sabiduría a tu primer cobro en 4 pasos.
+            </h2>
+            <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+              Sin configurar servidores, sin reinventar la rueda, sin perderte en docs técnicas.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 max-w-6xl mx-auto">
+            {[
+              {
+                step: '01',
+                icon: UserPlus,
+                title: 'Te registras',
+                body: 'Crea tu cuenta en 30 segundos. Sin tarjeta, sin instalaciones.',
+              },
+              {
+                step: '02',
+                icon: Package,
+                title: 'Eliges qué vender',
+                body: 'Curso, sesión 1:1, membresía, podcast, descarga o comunidad. Los 6 formatos cubiertos desde el primer día.',
+              },
+              {
+                step: '03',
+                icon: Sparkles,
+                title: 'Lanzas con IA a tu lado',
+                body: 'Portadas generadas con un prompt, estructura de cursos sugerida, editor asistente con tono empático.',
+              },
+              {
+                step: '04',
+                icon: TrendingUp,
+                title: 'Cobras y creces',
+                body: 'Stripe integrado, comisiones automáticas a tus afiliados multi-nivel, datos de tus alumnos a un click.',
+              },
+            ].map((step) => {
+              const Icon = step.icon;
+              return (
+                <motion.div
+                  key={step.step}
+                  variants={itemVariants}
+                  className="relative"
+                >
+                  <div className="rounded-2xl bg-card border border-border/40 p-6 h-full shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
+                    <div className="flex items-start justify-between mb-5">
+                      <div className="h-10 w-10 rounded-xl bg-brand-terracotta/10 text-brand-terracotta flex items-center justify-center">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span className="text-3xl font-semibold text-muted-foreground/30 tabular-nums leading-none">
+                        {step.step}
+                      </span>
+                    </div>
+                    <h3 className="text-base font-semibold text-foreground mb-2">
+                      {step.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {step.body}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       </motion.section>
 

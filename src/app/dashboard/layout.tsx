@@ -1,11 +1,11 @@
 
 'use client';
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
-import { DashboardSidebar, navItems } from '@/components/dashboard/DashboardSidebar'; 
+import { useEffect, useState } from 'react';
+import { DashboardSidebar, navItems } from '@/components/dashboard/DashboardSidebar';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from '@/components/ui/sheet'; 
-import { Menu as MenuIcon, LogOut } from 'lucide-react'; 
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from '@/components/ui/sheet';
+import { Menu as MenuIcon, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +26,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+  // Controlled state for the mobile sheet so we can auto-close it on
+  // route changes. Without this, tapping a nav link navigates but
+  // leaves the panel open — extremely jarring on mobile.
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  useEffect(() => {
+    setSheetOpen(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     try {
@@ -71,64 +79,104 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     );
   }
   
+  // Derive a friendly page title for the mobile header. We pick the
+  // nav item with the longest matching href so deeper routes like
+  // `/dashboard/learning/my-bookings` beat the more generic
+  // `/dashboard/learning`. Fallback: "Dashboard".
+  const activeNavItem = filteredNavItems
+    .filter((item) =>
+      typeof pathname === 'string' &&
+      (pathname === item.href ||
+        (item.href !== '/dashboard' && pathname.startsWith(item.href)))
+    )
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  const pageTitle = activeNavItem?.label ?? 'Dashboard';
+
   return (
     <div className="grid fixed inset-0 w-full md:grid-cols-[256px_1fr] lg:grid-cols-[256px_1fr] overflow-hidden bg-background">
       <DashboardSidebar />
       <div className="flex flex-col h-full overflow-hidden">
-        <header className="flex h-14 items-center justify-between gap-4 border-b border-black/5 dark:border-white/10 bg-white/70 dark:bg-black/40 backdrop-blur-2xl px-4 md:hidden sticky top-0 z-40">
-          <Sheet>
+        {/* Mobile header (<768px). Hidden on md+ where the sidebar takes over. */}
+        <header className="flex h-14 items-center gap-2 border-b border-black/5 dark:border-white/10 bg-white/70 dark:bg-black/40 backdrop-blur-2xl px-3 md:hidden sticky top-0 z-40">
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
-              <Button size="icon" variant="outline" className="sm:hidden">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 -ml-1"
+                aria-label="Abrir menú de navegación"
+              >
                 <MenuIcon className="h-5 w-5" />
-                <span className="sr-only">Abrir menú</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="sm:max-w-xs flex flex-col p-0">
-             <SheetHeader className="border-b p-4"> 
+            <SheetContent side="left" className="w-[280px] sm:w-[320px] flex flex-col p-0">
+              <SheetHeader className="border-b border-black/5 dark:border-white/10 p-4">
                 <SheetTitle className="sr-only">Navegación del Dashboard</SheetTitle>
                 <SheetDescription className="sr-only">Enlaces y opciones del panel de control.</SheetDescription>
-                 <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" width={40} height={40}/>
-             </SheetHeader>
-              <nav className="flex flex-col gap-1 px-2 py-2 flex-grow overflow-y-auto">
+                <div className="flex items-center gap-3 text-left">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
+                    <AvatarImage
+                      src={currentUser.photoURL || `https://placehold.co/40x40.png?text=${getInitials(currentUser.displayName)}`}
+                      alt={currentUser.displayName || 'User Avatar'}
+                    />
+                    <AvatarFallback>{getInitials(currentUser.displayName)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col overflow-hidden min-w-0">
+                    <span className="text-sm font-semibold truncate">
+                      {currentUser.displayName || currentUser.email}
+                    </span>
+                    <span className="text-xs text-muted-foreground capitalize">{userRole}</span>
+                  </div>
+                </div>
+              </SheetHeader>
+              <nav className="flex flex-col gap-1 px-2 py-3 flex-grow overflow-y-auto">
                 {filteredNavItems.map((item) => {
                   const isActive = typeof pathname === 'string' && typeof item.href === 'string' &&
-                    (pathname === item.href || 
-                     (item.href !== '/dashboard' && 
-                      item.href !== '/dashboard/creator' && 
-                      item.href !== '/dashboard/student' && 
-                      item.href !== '/dashboard/superadmin' && 
+                    (pathname === item.href ||
+                     (item.href !== '/dashboard' &&
+                      item.href !== '/dashboard/creator' &&
+                      item.href !== '/dashboard/student' &&
+                      item.href !== '/dashboard/superadmin' &&
                       pathname.startsWith(item.href)));
                   return (
                     <Link
-                      key={item.href + item.label} 
+                      key={item.href + item.label}
                       href={item.href}
                       className={cn(
-                          "flex items-center h-10 gap-3 rounded-lg px-3 text-muted-foreground hover:text-foreground transition-all text-sm",
-                          isActive && 'bg-primary text-white font-medium hover:text-white shadow-sm'
+                        'flex items-center h-11 gap-3 rounded-lg px-3 text-secondary-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-sm',
+                        isActive && 'bg-primary text-white font-medium hover:text-white hover:bg-primary/90 shadow-sm'
                       )}
                     >
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
+                      <item.icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-white' : item.colorClass || 'text-muted-foreground')} />
+                      <span className="truncate">{item.label}</span>
                     </Link>
                   );
                 })}
               </nav>
-              <div className="border-t p-2 mt-auto flex items-center justify-between">
+              <div className="border-t border-black/5 dark:border-white/10 p-3 mt-auto flex items-center gap-2">
                 <ThemeToggle />
-                <Button variant="ghost" onClick={handleLogout} className="flex items-center h-10 justify-start px-3 text-sm">
+                <Button
+                  variant="ghost"
+                  onClick={handleLogout}
+                  className="flex-1 justify-start h-10 px-3 text-sm text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Cerrar Sesión
                 </Button>
               </div>
             </SheetContent>
           </Sheet>
-           <div className="md:hidden">
-            {/*  <Logo imageUrl={LOGO_URL} altText="Consciousness Class Logo" /> */}
-           </div>
-           <div className="ml-auto flex items-center gap-1">
-             <NotificationBell />
-             <ThemeToggle />
-           </div>
+
+          {/* Current page title — gives the user a "you are here" anchor.
+              Truncates gracefully on small phones. */}
+          <h1 className="text-base font-semibold text-foreground truncate flex-1 min-w-0">
+            {pageTitle}
+          </h1>
+
+          <div className="flex items-center gap-0.5 -mr-1">
+            <NotificationBell />
+            <ThemeToggle />
+          </div>
         </header>
         <main className="flex-1 p-4 md:p-8 lg:p-10 bg-background overflow-auto">
           <div className="mx-auto max-w-6xl w-full">

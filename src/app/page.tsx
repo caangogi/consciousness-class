@@ -181,49 +181,89 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Hero Section */}
       <motion.section
-        className="relative flex-grow flex items-center justify-center py-20 md:py-32 overflow-hidden"
+        className="relative flex-grow flex items-center justify-center py-24 md:py-36 overflow-hidden"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
+        {/* Subtle dotted background — defers to content (HIG Deference) */}
         <div
-          className="absolute inset-0 z-2 h-full w-full bg-background bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(rgba(255,255,255,0.1)_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_60%,transparent_100%)]"
+          aria-hidden="true"
+          className="absolute inset-0 z-0 h-full w-full bg-background bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:18px_18px] [mask-image:radial-gradient(ellipse_55%_55%_at_50%_45%,#000_55%,transparent_100%)]"
         />
 
-        <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
+        <div className="container mx-auto px-4 md:px-6 text-center relative z-10 max-w-5xl">
           <motion.div
-            className="inline-flex items-center gap-2 bg-secondary/70 text-secondary-foreground px-4 py-2 rounded-full text-sm mb-6 shadow-sm"
+            className="inline-flex items-center gap-2 bg-secondary/60 text-secondary-foreground px-4 py-1.5 rounded-full text-xs font-medium tracking-wider uppercase mb-8 shadow-sm border border-border/40"
             variants={itemVariants}
           >
-            <Zap size={16} className="text-primary"/> Consciousness Class Platform
+            <Zap size={14} className="text-brand-terracotta"/>
+            Para creadores holísticos
           </motion.div>
+
           <motion.h1
-            className="font-headline text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-8 text-foreground leading-tight"
+            className="font-headline text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold tracking-tight mb-8 text-foreground leading-[1.05]"
             variants={itemVariants}
           >
-            Eleva tu aprendizaje,
-            <br className="hidden md:block" /> transforma tu <span
+            Vende cursos, sesiones y comunidad{' '}
+            <span
               className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-backgroundShine bg-[200%_auto]"
             >
-              potencial.
+              sin pelearte con la infraestructura.
             </span>
           </motion.h1>
+
           <motion.p
-            className="text-lg md:text-xl text-foreground/70 max-w-2xl mx-auto mb-10"
+            className="text-lg md:text-xl text-foreground/70 max-w-2xl mx-auto mb-12 leading-relaxed"
             variants={itemVariants}
           >
-            Descubre cursos online de alta calidad y únete a una comunidad vibrante enfocada en el crecimiento y la conciencia.
+            Una plataforma todo-en-uno para terapeutas, coaches y creadores del bienestar.{' '}
+            <span className="text-foreground/85">Tú pones la sabiduría — nosotros la tecnología, los pagos, la IA y la cabeza fría.</span>
           </motion.p>
+
           <motion.div
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center"
             variants={itemVariants}
           >
-            <Button size="lg" asChild className="rounded-full px-8 py-6 text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <Link href="/courses">Explorar Cursos <ArrowRight className="ml-2 h-5 w-5" /></Link>
+            <Button
+              size="lg"
+              asChild
+              className="rounded-full px-8 h-12 text-base shadow-md hover:shadow-lg transition-all duration-300"
+            >
+              <Link href="/signup?role=creator">
+                Empezar gratis
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="rounded-full px-8 py-6 text-base shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 border-2 hover:bg-secondary/70">
-              <Link href="/signup?role=creator">Ser Creator <Zap className="ml-2 h-5 w-5 text-accent" /></Link>
+            <Button
+              size="lg"
+              variant="outline"
+              asChild
+              className="rounded-full px-8 h-12 text-base border-border hover:bg-secondary/40 transition-all duration-300"
+            >
+              <Link href="/pricing">
+                Ver precios
+              </Link>
             </Button>
+          </motion.div>
+
+          {/* Subtle reassurance row */}
+          <motion.div
+            className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground"
+            variants={itemVariants}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5 text-primary" />
+              Sin tarjeta para empezar
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5 text-primary" />
+              Stripe + IA integrados
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5 text-primary" />
+              GDPR · datos en UE
+            </span>
           </motion.div>
         </div>
       </motion.section>
@@ -321,31 +361,103 @@ export default function HomePage() {
         </div>
       </motion.section>
 
-      {/* Pricing Placeholder Section */}
-      <section id="pricing" className="py-16 md:py-24 bg-background">
-        <div className="container mx-auto px-4 md:px-6 text-center">
-          <motion.h2
-            className="font-headline text-3xl md:text-4xl font-bold mb-4"
-            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{once: true, amount: 0.5}}
+      {/* Pricing Teaser Section — full page lives at /pricing */}
+      <section id="pricing" className="py-20 md:py-28 bg-background">
+        <div className="container mx-auto px-4 md:px-6">
+          <motion.div
+            className="text-center mb-12 max-w-2xl mx-auto"
+            variants={itemVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.4 }}
           >
-            Precios Flexibles para Todos
-          </motion.h2>
-          <motion.p
-            className="text-lg text-muted-foreground max-w-xl mx-auto mb-12"
-            variants={itemVariants} initial="hidden" whileInView="visible" viewport={{once: true, amount: 0.5}}
+            <p className="text-xs font-medium tracking-wider uppercase text-brand-terracotta mb-3">
+              Precios
+            </p>
+            <h2 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight mb-4 text-foreground">
+              Empieza gratis. Crece a tu ritmo.
+            </h2>
+            <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+              Tres planes pensados para acompañarte desde el primer curso hasta una práctica con varios coaches y miles de estudiantes.
+            </p>
+          </motion.div>
+
+          {/* 3 tier teasers — link to /pricing for full details */}
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
           >
-            Elige la opción que mejor se adapte a tus necesidades. Paga por curso o accede a todo con nuestra suscripción.
-            <br/> <em className="text-sm">(Más detalles sobre la suscripción y precios específicos próximamente)</em>
-          </motion.p>
-          <Card className="max-w-md mx-auto p-6 shadow-soft-xl">
-            <CardHeader>
-              <CardTitle className="text-2xl font-headline">Acceso Completo</CardTitle>
-              <CardDescription>Detalles de nuestros planes de suscripción y precios de cursos individuales estarán disponibles pronto.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin"/>
-            </CardContent>
-          </Card>
+            {/* Free */}
+            <motion.div variants={itemVariants}>
+              <Card className="rounded-2xl shadow-sm hover:shadow-md transition-all h-full">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium text-muted-foreground">Empieza</CardTitle>
+                  <p className="text-3xl font-semibold mt-2 text-foreground">€0<span className="text-sm font-normal text-muted-foreground">/mes</span></p>
+                </CardHeader>
+                <CardContent className="text-sm text-foreground/80 space-y-1.5">
+                  <p>1 producto activo</p>
+                  <p>Hasta 50 estudiantes</p>
+                  <p>500 créditos AI / mes</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Pro — highlighted */}
+            <motion.div variants={itemVariants}>
+              <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all h-full border-brand-terracotta/40 border-2 relative">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-terracotta text-white text-[10px] uppercase tracking-wider font-semibold px-3 py-1 rounded-full">
+                  Más elegida
+                </div>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium text-brand-terracotta">Pro</CardTitle>
+                  <p className="text-3xl font-semibold mt-2 text-foreground">€9<span className="text-sm font-normal text-muted-foreground">/mes</span></p>
+                </CardHeader>
+                <CardContent className="text-sm text-foreground/80 space-y-1.5">
+                  <p>Productos ilimitados</p>
+                  <p>Estudiantes ilimitados</p>
+                  <p>5000 créditos AI / mes</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Enterprise */}
+            <motion.div variants={itemVariants}>
+              <Card className="rounded-2xl shadow-sm hover:shadow-md transition-all h-full">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium text-muted-foreground">Enterprise</CardTitle>
+                  <p className="text-3xl font-semibold mt-2 text-foreground">A medida</p>
+                </CardHeader>
+                <CardContent className="text-sm text-foreground/80 space-y-1.5">
+                  <p>White-label + DPA firmado</p>
+                  <p>Región EU dedicada</p>
+                  <p>SLA y account manager</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+
+          <motion.div
+            className="text-center mt-10"
+            variants={itemVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.4 }}
+          >
+            <Button
+              size="lg"
+              variant="outline"
+              asChild
+              className="rounded-full px-8 h-12 text-base border-border hover:bg-secondary/40"
+            >
+              <Link href="/pricing">
+                Ver detalles completos · FAQ · top-ups
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </motion.div>
         </div>
       </section>
 

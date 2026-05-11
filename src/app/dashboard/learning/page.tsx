@@ -58,14 +58,22 @@ export default function LearningPage() {
       </div>
 
       {items.length === 0 ? (
-        <div className="ios-list mt-8">
-          <div className="ios-list-item justify-center flex-col gap-3 text-secondary-foreground py-16">
-            <BookOpen className="h-10 w-10 opacity-20" />
-            <p>No tienes productos en tu librería actualmente.</p>
-            <Link href="/products" className="text-brand-chambray font-medium hover:underline mt-2">
-              Explorar el catálogo
-            </Link>
+        <div className="rounded-2xl border border-dashed border-border/60 bg-card mt-8 py-14 px-6 text-center">
+          <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-brand-chambray/15 text-brand-chambray mb-4">
+            <BookOpen className="h-7 w-7" aria-hidden="true" />
           </div>
+          <h3 className="text-base font-semibold text-foreground mb-2">
+            Tu librería está vacía
+          </h3>
+          <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto leading-relaxed">
+            Cuando compres un curso, te unas a una membresía o reserves una sesión de coaching, aparecerá aquí. Da el primer paso hacia tu próximo aprendizaje.
+          </p>
+          <Link
+            href="/products"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary text-primary-foreground px-6 h-11 text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            Explorar el catálogo
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">

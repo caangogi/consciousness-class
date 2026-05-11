@@ -144,8 +144,16 @@ export default function FinancesPage() {
         <h2 className="text-title2 font-bold mb-4">Últimos Movimientos</h2>
         <div className="bg-card rounded-2xl border border-black/5 dark:border-white/10 shadow-sm overflow-hidden p-2">
           {transactions.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground text-sm">
-              No hay movimientos en tu Ledger aún.
+            <div className="rounded-2xl border border-dashed border-border/60 bg-card mx-2 my-4 py-12 px-6 text-center">
+              <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-primary/10 text-primary mb-3">
+                <ArrowDownLeft className="h-6 w-6" aria-hidden="true" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-2">
+                Sin movimientos aún
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                Cuando un estudiante te pague o un afiliado cierre una venta, los movimientos aparecerán aquí en tiempo real.
+              </p>
             </div>
           ) : (
             <ul className="divide-y divide-border/50">

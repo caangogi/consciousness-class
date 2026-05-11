@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import {
-  Loader2, Users, Settings, ArrowLeft, Globe, Lock,
+  Settings, ArrowLeft, Globe, Lock,
   BarChart3, FileText, Megaphone, HelpCircle, Film, MessageCircle, FolderX
 } from 'lucide-react';
 import Link from 'next/link';
